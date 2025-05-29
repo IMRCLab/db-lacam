@@ -1,0 +1,4 @@
+[submodule "dynobench"]
+	path = dynobench
+	url = git@github.com:quimortiz/dynobench.git
+	branch = dbecbs-tro

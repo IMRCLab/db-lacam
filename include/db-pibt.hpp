@@ -21,4 +21,5 @@
 
 bool pibt(std::vector<dynobench::TrajWrapper> traj_wrappers,
           dynobench::Model_robot &robot, dynobench::Trajectory &traj_out,
-          Eigen::Ref<Eigen::VectorXd> x0);
+          Eigen::Ref<Eigen::VectorXd> x0,
+          std::vector<dynobench::Trajectory> constrained_trajs);

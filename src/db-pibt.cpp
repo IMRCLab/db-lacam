@@ -30,14 +30,13 @@
 
 using dynobench::FMT;
 using dynobench::Trajectory;
-
+// assumes two-robot case
 bool pibt(std::vector<dynobench::TrajWrapper> traj_wrappers,
           dynobench::Model_robot &robot, dynobench::Trajectory &traj_out,
-          Eigen::Ref<Eigen::VectorXd> x0)
+          Eigen::Ref<Eigen::VectorXd> x0,
+          std::vector<dynobench::Trajectory> constrained_trajs)
 {
   bool motion_valid;
-  Eigen::VectorXd constrained_state(3); // for the unicycle (x,y,theta)
-  constrained_state << 1.0, 1.0, 0.;    // hard-coded
   float delta = 0.5;
   bool collision = false;
   // 1. loop over and compute the tmp_traj (only forwars motion)
@@ -69,29 +68,30 @@ bool pibt(std::vector<dynobench::TrajWrapper> traj_wrappers,
                                       fcl::DefaultCollisionFunction<double>);
     if (collision_data.result.isCollision())
       continue; // if motion collides with env
-    // b.2 check for motion-moiton collision (state-to-state) - can be merged
-    // AABB b.3 check for the distance
-    for (const auto state : traj.states)
+    // b.2 check for motion-moiton collision (state-to-state)
+    if (constrained_trajs.size())
     {
-      if (robot.distance(state, constrained_state) <= delta)
+      // assumes 2-robot case
+      std::vector<Eigen::VectorXd> constrained_states = constrained_trajs.at(0).states;
+      for (size_t j = 0; j < constrained_states.size(); j++) // assume motiona are of equal length
       {
-        std::cout << "collision motion-state! Moving to the next motion"
-                  << std::endl;
-        collision = true;
-        break; // break this loop, and continue with the outer loop
+        if (robot.distance(traj.states.at(j), constrained_states.at(j)) <= delta)
+        {
+          std::cout << "collision motion-state! Moving to the next motion"
+                    << std::endl;
+          collision = true;
+          break; // break this loop, and continue with the outer loop
+        }
       }
     }
     if (collision)
       continue;
     else
     {
+      // update the x0, and save the traj
       x0 = traj.states.back();
-      // extract out the motion to the solution. Could be changed after, used to
-      // visualize
-      traj_out.states.insert(traj_out.states.end(), traj.states.begin(),
-                             traj.states.end());
-      traj_out.actions.insert(traj_out.actions.end(), traj.actions.begin(),
-                              traj.actions.end());
+      traj_out.states = traj.states;
+      traj_out.actions = traj.actions;
       return true;
     }
   }

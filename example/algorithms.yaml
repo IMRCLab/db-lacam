@@ -17,7 +17,7 @@ db-cbs:
 pibt:
   default:
     delta_0: 0.5
-    num_primitives_0: 100
+    num_primitives_0: 300
     alpha: 0.5
     filter_duplicates: True
     heuristic1: "reverse-search"

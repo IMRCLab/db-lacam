@@ -66,6 +66,9 @@ using __SpaceUni2WithCost =
                          nigh::ScaledSpace<nigh::L2Space<double, 1>>,
                          nigh::ScaledSpace<nigh::L2Space<double, 1>>,
                          nigh::ScaledSpace<nigh::L2Space<double, 1>>>;
+// no distance weights
+using SpaceIntegrator1 = nigh::L2Space<double, 2>;
+using __SpaceIntegrator1 = nigh::L2Space<double, 2>;
 
 using SpaceIntegrator2 = nigh::CartesianSpace<
     nigh::L2Space<double, 2>,
@@ -415,6 +418,17 @@ ompl::NearestNeighbors<_T> *nigh_factory2(
           new NearestNeighborsNigh<_T, __SpaceUni2WithCost>(space, data_to_key);
     }
   }
+  else if (startsWith(name, "integrator1_2d"))
+  {
+    auto data_to_key = [robot, fun](_T const &m)
+    {
+      using Vector2d = Eigen::Matrix<double, 2, 1>;
+      Vector2d __x = fun(m);
+      return Eigen::Vector2d(__x.head<2>());
+    };
+    __SpaceIntegrator1 space;
+    out = new NearestNeighborsNigh<_T, __SpaceIntegrator1>(space, data_to_key);
+  }
   else if (startsWith(name, "integrator2_2d"))
   {
     auto data_to_key = [robot, fun](_T const &m)
@@ -685,6 +699,17 @@ ompl::NearestNeighbors<_T> *nigh_factory_t(
       out =
           new NearestNeighborsNigh<_T, __SpaceUni2WithCost>(space, data_to_key);
     }
+  }
+  else if (startsWith(name, "integrator1_2d"))
+  {
+    auto data_to_key = [robot, fun, reverse_search](_T const &m)
+    {
+      using Vector2d = Eigen::Matrix<double, 2, 1>;
+      Vector2d __x = fun(m, reverse_search, robot->translation_invariance);
+      return Eigen::Vector2d(__x.head<2>());
+    };
+    __SpaceIntegrator1 space;
+    out = new NearestNeighborsNigh<_T, __SpaceIntegrator1>(space, data_to_key);
   }
   else if (startsWith(name, "integrator2_2d"))
   {

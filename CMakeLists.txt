@@ -78,7 +78,35 @@ target_link_libraries(db-pibt PRIVATE
   ${LZ4_LIBRARIES}
 )
 
-# main-pibt
+# db-pibt recursive with priority inheritance
+add_library(db-pibt2
+  src/db-pibt2.cpp
+  src/heuristics.cpp
+  src/db_options.cpp
+  src/heuristics.cpp
+  src/motion.cpp
+  # src/map.cpp
+)
+
+target_include_directories(db-pibt2 PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/dynobench/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/deps/nigh/src
+  PUBLIC $<INSTALL_INTERFACE:include>
+         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+         ${OMPL_INCLUDE_DIRS}
+)
+
+target_link_libraries(db-pibt2 PRIVATE 
+  PUBLIC Eigen3::Eigen dynobench::dynobench
+  ${Boost_LIBRARIES}
+  ${YAML_LIBRARIES}
+  ${FCL_LIBRARIES}
+  ${OMPL_LIBRARIES}
+  ${LZ4_LIBRARIES}
+)
+
+# test-pibt
 add_executable(
   test-dbpibt
   src/test-dbpibt.cpp src/db-pibt.cpp src/tdbastar.cpp
@@ -98,5 +126,37 @@ target_include_directories(
 
 target_link_libraries(
   test-dbpibt
+  PUBLIC Eigen3::Eigen dynobench::dynobench
+  PRIVATE fcl ${OMPL_LIBRARIES} ${LZ4_LIBRARIES})
+
+  # check the map used for occupancy tracking
+#   add_executable(occupancy_map
+#   src/map.cpp
+# )
+
+# add_library(map src/map.cpp)
+
+# main dbpibt
+add_executable(
+  main-dbpibt
+  src/main-dbpibt.cpp src/db-pibt.cpp src/db-pibt2.cpp
+  src/tdbastar.cpp
+  src/heuristics.cpp
+  src/db_options.cpp
+  src/motion.cpp
+  src/map.cpp
+)
+
+target_include_directories(
+  main-dbpibt
+  PUBLIC $<INSTALL_INTERFACE:include>
+         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+         ${OMPL_INCLUDE_DIRS}
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
+          ${CMAKE_CURRENT_SOURCE_DIR}/include
+          ${CMAKE_CURRENT_SOURCE_DIR}/deps/nigh/src)
+
+target_link_libraries(
+  main-dbpibt
   PUBLIC Eigen3::Eigen dynobench::dynobench
   PRIVATE fcl ${OMPL_LIBRARIES} ${LZ4_LIBRARIES})

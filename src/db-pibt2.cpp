@@ -74,21 +74,26 @@ bool PIBT::funcDBPIBT(std::vector<std::shared_ptr<AStarNode>> from_nodes, // nod
   bool collision = false;
   bool is_pi = false;
   double gScore, hScore;
+  int num_valid_states = -1;
   for (size_t j = 0; j < lazy_trajs.size(); j++)
   {
     auto &lazy_traj = lazy_trajs[j];
     traj_wrapper.set_size(lazy_traj.motion->traj.states.size());
-    int num_valid_states = -1;
+    num_valid_states = -1;
 
     lazy_traj.compute(traj_wrapper, /*forward*/ true, /*check_state*/ &ff,
                       &num_valid_states);
     if (num_valid_states && num_valid_states < 1)
     {
+      std::cout << "num_valid_states failed" << std::endl;
+      continue;
+    }
+    if (num_valid_states < lazy_traj.motion->traj.states.size())
+    {
       continue;
     }
     tmp_node->state_eig = traj_wrapper.get_state(traj_wrapper.get_size() - 1);
-    hScore =
-        h_functions.at(i)->h(tmp_node->state_eig); // for the last state of the motion
+    hScore = h_functions.at(i)->h(tmp_node->state_eig); // for the last state of the motion
     double cost_motion = (traj_wrapper.get_size() - 1) * robot->ref_dt;
     gScore = from_nodes.at(i)->gScore + cost_motion;
     traj_wrapper.last_state_f = gScore + hScore;
@@ -103,7 +108,14 @@ bool PIBT::funcDBPIBT(std::vector<std::shared_ptr<AStarNode>> from_nodes, // nod
     std::vector<Eigen::VectorXd> us = traj_wrap.get_actions();
     std::vector<Eigen::VectorXd> xs(us.size() + 1,
                                     Eigen::VectorXd::Zero(robot->nx));
-    robot->rollout(now_state, us, xs);
+    num_valid_states = -1;
+    robot->rollout(now_state, us, xs, &ff,
+                   &num_valid_states);
+    if (num_valid_states && num_valid_states < xs.size())
+    {
+      std::cout << "rollout, state violations" << std::endl;
+      continue;
+    }
     // check for collision with env.
     Motion motion;
     dynobench::Trajectory traj;
@@ -137,10 +149,10 @@ bool PIBT::funcDBPIBT(std::vector<std::shared_ptr<AStarNode>> from_nodes, // nod
     occupied_nxt.set_occupied(x_idx, y_idx, i);
     to_motions.at(i) = traj;
     // sanity check
-    if (j != -1)
+    if (j != -1 && to_motions.at(j).is_empty())
     {
-      std::cout << "robot " << j << " hasn't planned, getting PI" << std::endl;
       is_pi = true;
+      std::cout << "robot " << j << " hasn't planned, getting PI" << std::endl;
     }
     // if the other robot hasn't planned yet, call pibt
     if (j != -1 && to_motions.at(j).is_empty() && !funcDBPIBT(from_nodes, to_nodes, to_motions, robots.at(j), j, is_pi))

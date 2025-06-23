@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
   // read motions - homogeneous for now
   std::string motionsFile;
   // motionsFile = "../new_format_motions/unicycle1_v0/unit_length/unicycle1_v0.bin.im.bin.sp.bin";
-  motionsFile = "../new_format_motions/integrator1_2d_v0/handcrafted_motions.bin";
+  motionsFile = "../new_format_motions/integrator1_2d_v0/my_motions.bin";
   std::vector<Motion> motions;
   options_pibt.motionsFile = motionsFile;
   // load motions for a single robot - homogeneous case
@@ -221,8 +221,6 @@ int main(int argc, char *argv[])
     DYNO_CHECK_LEQ(start_node->hScore, 1e5, "hScore should be bounded");
     start_node->handle = opens.at(i).push(start_node);
     dynobench::Trajectory traj;
-    // traj.states.push_back(Eigen::VectorXd::Zero(robots.at(i)->nx));
-    // traj.actions.push_back(Eigen::VectorXd::Zero(robots.at(i)->nu));
     tmp_output_trajs.push_back(traj);
   }
   Time_benchmark time_bench;
@@ -261,7 +259,8 @@ int main(int argc, char *argv[])
   bool step_success = false;
   std::vector<std::shared_ptr<AStarNode>> from_nodes;
   std::vector<std::shared_ptr<AStarNode>> to_nodes;
-  std::vector<size_t> priorities{0, 1, 2};
+  std::vector<size_t> priorities(robots.size());
+  std::iota(priorities.begin(), priorities.end(), 0);
   int reached_goal;
   while (!stop_search())
   {
@@ -296,13 +295,13 @@ int main(int argc, char *argv[])
       return 0;
     }
     // update robot priorities based on distance to goal
-    // std::sort(priorities.begin(), priorities.end(), [&](size_t i, size_t j)
-    //           { return (robots.at(i)->distance(from_nodes.at(i)->state_eig, problem.goals[i])) > (robots.at(j)->distance(from_nodes.at(j)->state_eig, problem.goals[j])); });
-    // std::cout << "updated priorities: " << std::endl;
-    // for (auto p : priorities)
-    // {
-    //   std::cout << p << std::endl;
-    // }
+    std::sort(priorities.begin(), priorities.end(), [&](size_t i, size_t j)
+              { return (robots.at(i)->distance(from_nodes.at(i)->state_eig, problem.goals[i])) > (robots.at(j)->distance(from_nodes.at(j)->state_eig, problem.goals[j])); });
+    std::cout << "updated priorities: " << std::endl;
+    for (auto p : priorities)
+    {
+      std::cout << p << std::endl;
+    }
     pibt.step(from_nodes, to_nodes, tmp_output_trajs, robots, priorities, step_success);
     if (!step_success)
     {

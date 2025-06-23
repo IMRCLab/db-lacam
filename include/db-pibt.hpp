@@ -39,9 +39,9 @@ struct PIBT
   // std::vector<size_t> priorities;
   double delta = 0.5;
   // my map - grid style for now
-  double width = 4.0;     // comes from problem.yaml
-  double height = 4.0;    // comes from problem.yaml
-  double grid_size = 0.5; // my motion primitives have this length
+  double width = 5.0;     // comes from problem.yaml
+  double height = 5.0;    // comes from problem.yaml
+  double grid_size = 1.0; // my motion primitives have this length
   OccupancyMap occupied_nxt;
   OccupancyMap occupied_now;
 

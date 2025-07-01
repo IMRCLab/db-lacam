@@ -110,8 +110,8 @@ int main(int argc, char *argv[])
   }
   // read motions - homogeneous for now
   std::string motionsFile;
-  // motionsFile = "../new_format_motions/unicycle1_v0/unit_length/unicycle1_v0.bin.im.bin.sp.bin";
   motionsFile = "../new_format_motions/integrator1_2d_v0/my_motions.bin";
+  // motionsFile = "../new_format_motions/integrator1_2d_v0/handcrafted_motions.bin";
   std::vector<Motion> motions;
   options_pibt.motionsFile = motionsFile;
   // load motions for a single robot - homogeneous case
@@ -295,13 +295,13 @@ int main(int argc, char *argv[])
       return 0;
     }
     // update robot priorities based on distance to goal
-    std::sort(priorities.begin(), priorities.end(), [&](size_t i, size_t j)
-              { return (robots.at(i)->distance(from_nodes.at(i)->state_eig, problem.goals[i])) > (robots.at(j)->distance(from_nodes.at(j)->state_eig, problem.goals[j])); });
-    std::cout << "updated priorities: " << std::endl;
-    for (auto p : priorities)
-    {
-      std::cout << p << std::endl;
-    }
+    // std::sort(priorities.begin(), priorities.end(), [&](size_t i, size_t j)
+    //           { return (robots.at(i)->distance(from_nodes.at(i)->state_eig, problem.goals[i])) > (robots.at(j)->distance(from_nodes.at(j)->state_eig, problem.goals[j])); });
+    // std::cout << "updated priorities: " << std::endl;
+    // for (auto p : priorities)
+    // {
+    //   std::cout << p << std::endl;
+    // }
     pibt.step(from_nodes, to_nodes, tmp_output_trajs, robots, priorities, step_success);
     if (!step_success)
     {

@@ -42,8 +42,21 @@ void PIBT::step(std::vector<std::shared_ptr<AStarNode>> from_nodes, // current r
   for (size_t i = 0; i < from_nodes.size(); i++)
   {
     Eigen::VectorXd state = from_nodes.at(i)->state_eig;
-    auto [x_idx, y_idx] = world_to_grid(state(0), state(1)); // x,y of the position
-    occupied_now.set_occupied(x_idx, y_idx, i);
+    get_4neighbors(state, i);
+    // auto [x_idx, y_idx] = world_to_grid(state(0), state(1)); // x,y of the position
+    // occupied_now.set_occupied(x_idx, y_idx, i);
+  }
+  // sanity checking
+  for (size_t j = 0; j < from_nodes.size(); ++j)
+  {
+    if (neighbors.find(j) == neighbors.end())
+    {
+      std::cout << "Key " << j << " is missing from the map.\n";
+    }
+    if (neighbors.find(j) != neighbors.end() && neighbors[j].empty())
+    {
+      std::cout << "Key " << j << " has an empty vector.\n";
+    }
   }
   // 2. iteratively call pibt for each robot individually
   for (size_t p : priorities) // 2, 1, 3 can be
@@ -52,7 +65,8 @@ void PIBT::step(std::vector<std::shared_ptr<AStarNode>> from_nodes, // current r
       funcDBPIBT(from_nodes, to_nodes, to_motions, robots.at(p), p);
   }
   occupied_nxt.reset();
-  occupied_now.reset();
+  // occupied_now.reset();
+  neighbors.clear();
   success = true;
 }
 
@@ -72,9 +86,11 @@ bool PIBT::funcDBPIBT(std::vector<std::shared_ptr<AStarNode>> from_nodes, // nod
   expander.expand_lazy(now_state, lazy_trajs);
   auto ff = make_validity_checker(robot);
   bool collision = false;
+  bool invalid_motion = false;
   bool is_pi = false;
   double gScore, hScore;
   int num_valid_states = -1;
+  int j = -1; // other robot that might need PI
   for (size_t j = 0; j < lazy_trajs.size(); j++)
   {
     auto &lazy_traj = lazy_trajs[j];
@@ -104,6 +120,8 @@ bool PIBT::funcDBPIBT(std::vector<std::shared_ptr<AStarNode>> from_nodes, // nod
   // 2. loop over sorted motions, and recursively call pibt if needed
   for (size_t k = 0; k < traj_wrappers.size(); k++)
   {
+    is_pi = false;
+    j = -1;
     auto &traj_wrap = traj_wrappers[k];
     std::vector<Eigen::VectorXd> us = traj_wrap.get_actions();
     std::vector<Eigen::VectorXd> xs(us.size() + 1,
@@ -137,7 +155,23 @@ bool PIBT::funcDBPIBT(std::vector<std::shared_ptr<AStarNode>> from_nodes, // nod
     // check for vertex collision
     if (occupied_nxt.get_cell(x_idx, y_idx) != -1) // already reserved by higher prioritized robot
       continue;
-    int j = occupied_now.get_cell(x_idx, y_idx);
+    // loop over neighbors of all robots, since those are states related to the current state of the robot and might affect/cause future collision
+    for (const auto &[key, vecs] : neighbors)
+    {
+      if (key == i)
+        continue;
+      for (const auto &vec : vecs) // each neighbor of the state, including the state itself (5 in general)
+      {
+        if (vec.isApprox(next_state, 1e-4))
+        {
+          j = key;
+          std::cout << "robot " << j << " might have some collison!" << std::endl;
+          break;
+        }
+      }
+    }
+
+    // int j = occupied_now.get_cell(x_idx, y_idx);
     // check for swap collision if the other robot already has planned next move
     if (j != -1 && !to_motions.at(j).is_empty() && to_nodes.at(j)->state_eig.isApprox(next_state, 1e-4))
       continue;

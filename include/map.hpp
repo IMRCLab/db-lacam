@@ -18,6 +18,10 @@ private:
   double resolution;
   int NIL;
   std::vector<std::vector<int>> grid;
-
+  std::vector<std::vector<int>> neighbor_cells = {
+      {0, 1},
+      {1, 0},
+      {0, -1},
+      {-1, 0}};
   bool in_bounds(int x, int y) const;
 };

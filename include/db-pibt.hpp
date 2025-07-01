@@ -41,9 +41,10 @@ struct PIBT
   // my map - grid style for now
   double width = 5.0;     // comes from problem.yaml
   double height = 5.0;    // comes from problem.yaml
-  double grid_size = 1.0; // my motion primitives have this length
+  double grid_size = 0.5; // my motion primitives have this length
   OccupancyMap occupied_nxt;
   OccupancyMap occupied_now;
+  std::map<size_t, std::vector<Eigen::VectorXd>> neighbors; // neighbor foru cells per robot, only for the current state
 
   PIBT(Expander &expander, std::vector<std::shared_ptr<Heu_fun>> h_functions, dynobench::TrajWrapper traj_wrapper, std::vector<std::shared_ptr<dynobench::Model_robot>> robots) : expander(expander), h_functions(h_functions), traj_wrapper(traj_wrapper), robots(robots), occupied_nxt(width, height, grid_size), occupied_now(width, height, grid_size)
   {
@@ -83,5 +84,30 @@ struct PIBT
     int x_idx = static_cast<int>(std::round(x_m / grid_size));
     int y_idx = static_cast<int>(std::round(y_m / grid_size));
     return {x_idx, y_idx};
+  }
+  // assumes motion primitives are of length 10, and hard-coded for single integrator dynamics
+  void get_4neighbors(const Eigen::VectorXd &pos, size_t robot_id)
+  {
+    std::vector<Eigen::VectorXd> tmp_neighbors;
+
+    tmp_neighbors.push_back(pos);
+
+    Eigen::VectorXd up = pos;
+    up(1) += 1;
+    tmp_neighbors.push_back(up);
+
+    Eigen::VectorXd down = pos;
+    down(1) -= 1;
+    tmp_neighbors.push_back(down);
+
+    Eigen::VectorXd right = pos;
+    right(0) += 1;
+    tmp_neighbors.push_back(right);
+
+    Eigen::VectorXd left = pos;
+    left(0) -= 1;
+    tmp_neighbors.push_back(left);
+
+    neighbors[robot_id] = tmp_neighbors;
   }
 };

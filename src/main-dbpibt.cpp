@@ -110,7 +110,7 @@ int main(int argc, char *argv[])
   }
   // read motions - homogeneous for now
   std::string motionsFile;
-  motionsFile = "../new_format_motions/integrator1_2d_v0/my_motions.bin";
+  motionsFile = "../new_format_motions/integrator1_2d_v0/my_motions.bin"; // important to change map size, grid size = motion lenght / 2
   // motionsFile = "../new_format_motions/integrator1_2d_v0/handcrafted_motions.bin";
   std::vector<Motion> motions;
   options_pibt.motionsFile = motionsFile;
@@ -262,6 +262,7 @@ int main(int argc, char *argv[])
   std::vector<size_t> priorities(robots.size());
   std::iota(priorities.begin(), priorities.end(), 0);
   int reached_goal;
+  int itr = 0;
   while (!stop_search())
   {
     step_success = false;
@@ -294,14 +295,15 @@ int main(int argc, char *argv[])
       output_trajs.to_yaml_format(outputFile.c_str());
       return 0;
     }
-    // update robot priorities based on distance to goal
-    // std::sort(priorities.begin(), priorities.end(), [&](size_t i, size_t j)
-    //           { return (robots.at(i)->distance(from_nodes.at(i)->state_eig, problem.goals[i])) > (robots.at(j)->distance(from_nodes.at(j)->state_eig, problem.goals[j])); });
-    // std::cout << "updated priorities: " << std::endl;
-    // for (auto p : priorities)
-    // {
-    //   std::cout << p << std::endl;
-    // }
+    std::sort(priorities.begin(), priorities.end(), [&](size_t i, size_t j)
+              { return (robots.at(i)->distance(from_nodes.at(i)->state_eig, problem.goals[i])) > (robots.at(j)->distance(from_nodes.at(j)->state_eig, problem.goals[j])); });
+    std::cout << "updated priorities: " << std::endl;
+    for (auto p : priorities)
+    {
+      std::cout << p << std::endl;
+    }
+    itr++;
+    std::cout << "Itr: " << itr << std::endl;
     pibt.step(from_nodes, to_nodes, tmp_output_trajs, robots, priorities, step_success);
     if (!step_success)
     {

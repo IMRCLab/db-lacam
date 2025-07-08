@@ -1,0 +1,7 @@
+buildRelease/
+new_format_motions/
+results/
+.vscode/
+buildDebug/
+deps/
+scripts/__pycache__/

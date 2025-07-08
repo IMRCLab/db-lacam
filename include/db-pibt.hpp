@@ -36,12 +36,11 @@ struct PIBT
   dynobench::TrajWrapper traj_wrapper; // can be hetero
   std::vector<dynobench::TrajWrapper> traj_wrappers;
   std::vector<LazyTraj> lazy_trajs;
-  // std::vector<size_t> priorities;
   double delta = 0.5;
   // my map - grid style for now
-  double width = 5.0;     // comes from problem.yaml
-  double height = 5.0;    // comes from problem.yaml
-  double grid_size = 0.5; // my motion primitives have this length
+  double width = 11;      // comes from problem.yaml
+  double height = 11;     // comes from problem.yaml
+  double grid_size = 1.0; // my motion primitives length / 2, since a=0.5
   OccupancyMap occupied_nxt;
   OccupancyMap occupied_now;
   std::map<size_t, std::vector<Eigen::VectorXd>> neighbors; // neighbor foru cells per robot, only for the current state

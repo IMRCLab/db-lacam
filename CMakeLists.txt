@@ -25,125 +25,47 @@ else()
   message(FATAL_ERROR "Cannot find required LZ4 libraries")
 endif()
 
-add_subdirectory(dynobench)
-
+add_subdirectory(dynoplan)
 # Enable C++17 and warnings
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall -Wextra")
 
-# tdbastar
-add_library(tdbastar src/tdbastar.cpp 
-                     src/db_options.cpp src/heuristics.cpp
-                     src/motion.cpp)
-
-target_include_directories(
-  tdbastar
-  PUBLIC $<INSTALL_INTERFACE:include>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-         ${OMPL_INCLUDE_DIRS}
-  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
-          ${CMAKE_CURRENT_SOURCE_DIR}/deps/nigh/src)
-
-target_link_libraries(
-  tdbastar
-  PUBLIC Eigen3::Eigen dynobench::dynobench
-  PRIVATE fcl ${OMPL_LIBRARIES} ${LZ4_LIBRARIES})
 
 # db-pibt
 add_library(db-pibt
-  src/db-pibt.cpp
-  src/heuristics.cpp
-  src/db_options.cpp
-  src/heuristics.cpp
-  src/motion.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/src/dbastar/heuristics.cpp
 )
 
-target_include_directories(db-pibt PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/dynobench/include
-  ${CMAKE_CURRENT_SOURCE_DIR}/include
-  ${CMAKE_CURRENT_SOURCE_DIR}/deps/nigh/src
-  PUBLIC $<INSTALL_INTERFACE:include>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-         ${OMPL_INCLUDE_DIRS}
+target_include_directories(db-pibt
+  PUBLIC
+    $<INSTALL_INTERFACE:include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    ${OMPL_INCLUDE_DIRS}
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/deps/nigh/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/dynobench/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
+
 
 target_link_libraries(db-pibt PRIVATE 
-  PUBLIC Eigen3::Eigen dynobench::dynobench
+  Eigen3::Eigen
+  idbastar::tdbastar 
   ${Boost_LIBRARIES}
   ${YAML_LIBRARIES}
   ${FCL_LIBRARIES}
   ${OMPL_LIBRARIES}
   ${LZ4_LIBRARIES}
 )
-
-# db-pibt recursive with priority inheritance
-add_library(db-pibt2
-  src/db-pibt2.cpp
-  src/heuristics.cpp
-  src/db_options.cpp
-  src/heuristics.cpp
-  src/motion.cpp
-  # src/map.cpp
-)
-
-target_include_directories(db-pibt2 PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/dynobench/include
-  ${CMAKE_CURRENT_SOURCE_DIR}/include
-  ${CMAKE_CURRENT_SOURCE_DIR}/deps/nigh/src
-  PUBLIC $<INSTALL_INTERFACE:include>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-         ${OMPL_INCLUDE_DIRS}
-)
-
-target_link_libraries(db-pibt2 PRIVATE 
-  PUBLIC Eigen3::Eigen dynobench::dynobench
-  ${Boost_LIBRARIES}
-  ${YAML_LIBRARIES}
-  ${FCL_LIBRARIES}
-  ${OMPL_LIBRARIES}
-  ${LZ4_LIBRARIES}
-)
-
-# test-pibt
-add_executable(
-  test-dbpibt
-  src/test-dbpibt.cpp src/db-pibt.cpp src/tdbastar.cpp
-  src/heuristics.cpp
-  src/db_options.cpp
-  src/motion.cpp
-)
-
-target_include_directories(
-  test-dbpibt
-  PUBLIC $<INSTALL_INTERFACE:include>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-         ${OMPL_INCLUDE_DIRS}
-  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
-          ${CMAKE_CURRENT_SOURCE_DIR}/include
-          ${CMAKE_CURRENT_SOURCE_DIR}/deps/nigh/src)
-
-target_link_libraries(
-  test-dbpibt
-  PUBLIC Eigen3::Eigen dynobench::dynobench
-  PRIVATE fcl ${OMPL_LIBRARIES} ${LZ4_LIBRARIES})
-
-  # check the map used for occupancy tracking
-#   add_executable(occupancy_map
-#   src/map.cpp
-# )
-
-# add_library(map src/map.cpp)
 
 # main dbpibt
 add_executable(
   main-dbpibt
-  src/main-dbpibt.cpp src/db-pibt.cpp src/db-pibt2.cpp
-  src/tdbastar.cpp
-  src/heuristics.cpp
-  src/db_options.cpp
-  src/motion.cpp
+  src/main-dbpibt.cpp 
+  src/db-pibt2.cpp
   src/map.cpp
 )
 
@@ -154,9 +76,14 @@ target_include_directories(
          ${OMPL_INCLUDE_DIRS}
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
           ${CMAKE_CURRENT_SOURCE_DIR}/include
-          ${CMAKE_CURRENT_SOURCE_DIR}/deps/nigh/src)
+          ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/deps/nigh/src
+          ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/dynobench/include
+          ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/include
+          ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/dynobench/deps/json/include)
 
-target_link_libraries(
-  main-dbpibt
-  PUBLIC Eigen3::Eigen dynobench::dynobench
-  PRIVATE fcl ${OMPL_LIBRARIES} ${LZ4_LIBRARIES})
+target_link_libraries(main-dbpibt PRIVATE
+  fcl 
+  idbastar::tdbastar
+  ${OMPL_LIBRARIES} 
+  ${LZ4_LIBRARIES}
+  PUBLIC Eigen3::Eigen)

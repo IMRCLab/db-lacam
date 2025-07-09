@@ -13,13 +13,6 @@
 #include <boost/heap/d_ary_heap.hpp>
 #include <boost/program_options.hpp>
 #include <boost/property_map/property_map.hpp>
-// DYNOBENCH
-#include "dynobench/general_utils.hpp"
-#include "dynobench/motions.hpp"
-#include "dynobench/robot_models.hpp"
-#include "dynobench/robot_models_base.hpp"
-#include "dynobench/multirobot_trajectory.hpp"
-
 // OMPL headers
 #include "ompl/base/Path.h"
 #include "ompl/base/ScopedState.h"
@@ -29,17 +22,26 @@
 #include <ompl/datastructures/NearestNeighbors.h>
 #include <ompl/datastructures/NearestNeighborsGNATNoThreadSafety.h>
 #include <ompl/datastructures/NearestNeighborsSqrtApprox.h>
+// custom->dynoplan
+#include "dynoplan/nigh_custom_spaces.hpp"
+#include "dynoplan/ompl/robots.h"
+#include "dynoplan/tdbastar/tdbastar.hpp"
+#include "dynoplan/tdbastar/options.hpp"
+#include "dynoplan/tdbastar/planresult.hpp"
+// DYNOBENCH
+#include "dynobench/general_utils.hpp"
+#include "dynobench/motions.hpp"
+#include "dynobench/robot_models.hpp"
+#include "dynobench/robot_models_base.hpp"
+#include "dynobench/multirobot_trajectory.hpp"
 // custom
 #include "db-pibt.hpp"
-#include "nigh_custom_spaces.hpp"
-#include "motion.hpp"
-#include "db_options.hpp"
-#include "tdbastar.hpp"
 #include "map.hpp"
 
 namespace fs = std::filesystem;
-#define DYNOBENCH_BASE "../dynobench/"
+#define DYNOBENCH_BASE "../dynoplan/dynobench/"
 using duration = std::chrono::duration<double>;
+using namespace dynoplan;
 
 int main(int argc, char *argv[])
 {
@@ -83,7 +85,7 @@ int main(int argc, char *argv[])
   auto start_time = std::chrono::steady_clock::now();
   YAML::Node cfg = YAML::LoadFile(cfgFile);
   cfg = cfg["pibt"]["default"];
-  Options_dbastar options_pibt; // fine to use tdbastar options
+  Options_tdbastar options_pibt; // fine to use tdbastar options
   options_pibt.outFile = outputFile;
   options_pibt.search_timelimit = timeLimit;
   options_pibt.cost_delta_factor = 0;
@@ -96,7 +98,7 @@ int main(int argc, char *argv[])
   dynobench::Problem problem(inputFile);
   std::string models_base_path = DYNOBENCH_BASE + std::string("models/");
   problem.models_base_path = models_base_path;
-  Out_info out_pibt;
+  Out_info_tdb out_pibt;
   YAML::Node env = YAML::LoadFile(inputFile);
   // create robots
   std::vector<std::shared_ptr<dynobench::Model_robot>> robots;
@@ -127,7 +129,7 @@ int main(int argc, char *argv[])
     auto start_rev = std::chrono::steady_clock::now();
     dynobench::Problem problem_original(inputFile);
     options_pibt.delta = cfg["heuristic1_delta"].as<float>();
-    Out_info out_pibt;
+    Out_info_tdb out_pibt;
     size_t robot_id = 0;
     for (const auto &robot : robots)
     {

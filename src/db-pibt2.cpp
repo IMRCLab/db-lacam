@@ -24,7 +24,6 @@
 #include <boost/graph/undirected_graph.hpp>
 #include <boost/property_map/property_map.hpp>
 // custom
-#include "nigh_custom_spaces.hpp"
 #include "db-pibt.hpp"
 #include "map.hpp"
 

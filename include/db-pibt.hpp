@@ -13,29 +13,27 @@
 #include <ompl/datastructures/NearestNeighbors.h>
 // fcl
 #include <fcl/fcl.h>
+// custom -> dynoplan
+#include "dynoplan/nigh_custom_spaces.hpp"
+#include "dynoplan/tdbastar/tdbastar.hpp"
+#include "dynoplan/dbastar/heuristics.hpp"
 // dynobench
 #include "dynobench/robot_models_base.hpp"
 #include "dynobench/dyno_macros.hpp"
 #include "dynobench/motions.hpp"
 // custom
-#include "nigh_custom_spaces.hpp"
-#include "tdbastar.hpp"
 #include "map.hpp"
 
-bool pibt(std::vector<dynobench::TrajWrapper> traj_wrappers,
-          dynobench::Model_robot &robot, dynobench::Trajectory &traj_out,
-          Eigen::Ref<Eigen::VectorXd> x0,
-          std::vector<dynobench::Trajectory> constrained_trajs);
-
+using namespace dynoplan;
 struct PIBT
 {
-  Expander &expander;                                // homogeneous case
-  std::vector<std::shared_ptr<Heu_fun>> h_functions; // can be hetero
+  Expander &expander;                                          // homogeneous case
+  std::vector<std::shared_ptr<dynoplan::Heu_fun>> h_functions; // can be hetero
   std::vector<std::shared_ptr<dynobench::Model_robot>> robots;
   std::vector<fcl::CollisionObjectd *> robot_objs;
   dynobench::TrajWrapper traj_wrapper; // can be hetero
   std::vector<dynobench::TrajWrapper> traj_wrappers;
-  std::vector<LazyTraj> lazy_trajs;
+  std::vector<dynoplan::LazyTraj> lazy_trajs;
   double delta = 0.5;
   // my map - grid style for now
   double width = 11;      // comes from problem.yaml
@@ -45,7 +43,7 @@ struct PIBT
   OccupancyMap occupied_now;
   std::map<size_t, std::vector<Eigen::VectorXd>> neighbors; // neighbor foru cells per robot, only for the current state
 
-  PIBT(Expander &expander, std::vector<std::shared_ptr<Heu_fun>> h_functions, dynobench::TrajWrapper traj_wrapper, std::vector<std::shared_ptr<dynobench::Model_robot>> robots) : expander(expander), h_functions(h_functions), traj_wrapper(traj_wrapper), robots(robots), occupied_nxt(width, height, grid_size), occupied_now(width, height, grid_size)
+  PIBT(Expander &expander, std::vector<std::shared_ptr<dynoplan::Heu_fun>> h_functions, dynobench::TrajWrapper traj_wrapper, std::vector<std::shared_ptr<dynobench::Model_robot>> robots) : expander(expander), h_functions(h_functions), traj_wrapper(traj_wrapper), robots(robots), occupied_nxt(width, height, grid_size), occupied_now(width, height, grid_size)
   {
     // get robot objs for collision checking. Might need later, not now
     for (const auto &robot : robots)

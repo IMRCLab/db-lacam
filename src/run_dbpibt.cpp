@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
   }
   auto start_time = std::chrono::steady_clock::now();
   YAML::Node cfg = YAML::LoadFile(cfgFile);
-  cfg = cfg["pibt"]["default"];
+  // cfg = cfg["pibt"]["default"];
   Options_tdbastar options_pibt; // fine to use tdbastar options
   options_pibt.outFile = outputFile;
   options_pibt.search_timelimit = timeLimit;

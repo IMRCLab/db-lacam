@@ -233,7 +233,7 @@ class Animation:
       patches.append(draw_sphere_patch(self.ax, state, self.radius, 0, **kwargs))
     elif type == 'integrator1_2d_v0':
       pos = state
-      patches.append(draw_sphere_patch(self.ax, state, self.big_radius*0.6, 0, **kwargs))
+      patches.append(draw_sphere_patch(self.ax, state, self.radius, 0, **kwargs))
     elif type == 'integrator2_2d_v0':
         pos = state[:2]
         patches.append(draw_sphere_patch(self.ax, state, self.radius, 0, **kwargs))

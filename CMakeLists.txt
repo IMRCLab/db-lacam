@@ -63,14 +63,14 @@ target_link_libraries(db-pibt PRIVATE
 
 # main dbpibt
 add_executable(
-  main-dbpibt
-  src/main-dbpibt.cpp 
+  run_dbpibt
+  src/run_dbpibt.cpp 
   src/db-pibt2.cpp
   src/map.cpp
 )
 
 target_include_directories(
-  main-dbpibt
+  run_dbpibt
   PUBLIC $<INSTALL_INTERFACE:include>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
          ${OMPL_INCLUDE_DIRS}
@@ -81,9 +81,27 @@ target_include_directories(
           ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/include
           ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/dynobench/deps/json/include)
 
-target_link_libraries(main-dbpibt PRIVATE
+target_link_libraries(run_dbpibt PRIVATE
   fcl 
   idbastar::tdbastar
   ${OMPL_LIBRARIES} 
   ${LZ4_LIBRARIES}
   PUBLIC Eigen3::Eigen)
+
+# db_cbs
+add_executable(db_cbs
+  src/db_cbs.cpp
+)
+
+target_include_directories(db_cbs PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/include
+)
+
+target_link_libraries(db_cbs PRIVATE 
+  idbastar::optimization
+  idbastar::tdbastar
+  ${Boost_LIBRARIES}
+  ${YAML_LIBRARIES}
+  ompl
+  ${FCL_LIBRARIES}
+)

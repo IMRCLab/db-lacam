@@ -35,7 +35,7 @@
 #include "dynobench/robot_models_base.hpp"
 #include "dynobench/multirobot_trajectory.hpp"
 // custom
-#include "db-pibt.hpp"
+#include "db_pibt.hpp"
 #include "map.hpp"
 
 namespace fs = std::filesystem;
@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
   }
   auto start_time = std::chrono::steady_clock::now();
   YAML::Node cfg = YAML::LoadFile(cfgFile);
-  // cfg = cfg["pibt"]["default"];
+  cfg = cfg["db-pibt"]["default"];
   Options_tdbastar options_pibt; // fine to use tdbastar options
   options_pibt.outFile = outputFile;
   options_pibt.search_timelimit = timeLimit;
@@ -181,7 +181,7 @@ int main(int argc, char *argv[])
     T_m->add(&motions.at(i));
   }
   // add the expander, homogeneous case
-  Expander expander(robots.at(0).get(), T_m, options_pibt.alpha * options_pibt.delta);
+  Expander expander(robots.at(0).get(), T_m, options_pibt.alpha * options_pibt.delta, /*add static motion*/ false);
   // allocate trajectory for the longest motion primitive
   dynobench::TrajWrapper traj_wrapper;
   {

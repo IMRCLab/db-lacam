@@ -62,31 +62,31 @@ target_link_libraries(db_pibt PRIVATE
 )
 
 # main dbpibt
-add_executable(
-  run_dbpibt
-  src/run_dbpibt.cpp 
-  src/db_pibt.cpp
-  src/map.cpp
-)
+# add_executable(
+#   run_dbpibt
+#   src/run_dbpibt.cpp 
+#   src/db_pibt.cpp
+#   src/map.cpp
+# )
 
-target_include_directories(
-  run_dbpibt
-  PUBLIC $<INSTALL_INTERFACE:include>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-         ${OMPL_INCLUDE_DIRS}
-  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
-          ${CMAKE_CURRENT_SOURCE_DIR}/include
-          ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/deps/nigh/src
-          ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/dynobench/include
-          ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/include
-          ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/dynobench/deps/json/include)
+# target_include_directories(
+#   run_dbpibt
+#   PUBLIC $<INSTALL_INTERFACE:include>
+#          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+#          ${OMPL_INCLUDE_DIRS}
+#   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
+#           ${CMAKE_CURRENT_SOURCE_DIR}/include
+#           ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/deps/nigh/src
+#           ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/dynobench/include
+#           ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/include
+#           ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/dynobench/deps/json/include)
 
-target_link_libraries(run_dbpibt PRIVATE
-  fcl 
-  idbastar::tdbastar
-  ${OMPL_LIBRARIES} 
-  ${LZ4_LIBRARIES}
-  PUBLIC Eigen3::Eigen)
+# target_link_libraries(run_dbpibt PRIVATE
+#   fcl 
+#   idbastar::tdbastar
+#   ${OMPL_LIBRARIES} 
+#   ${LZ4_LIBRARIES}
+#   PUBLIC Eigen3::Eigen)
 
 # db_cbs
 add_executable(db_cbs
@@ -105,3 +105,63 @@ target_link_libraries(db_cbs PRIVATE
   ompl
   ${FCL_LIBRARIES}
 )
+
+# db_lacam
+add_library(db_lacam
+  src/db_lacam.cpp
+  src/db_pibt.cpp
+  src/map.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/src/dbastar/heuristics.cpp
+)
+
+target_include_directories(db_lacam
+  PUBLIC
+    $<INSTALL_INTERFACE:include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    ${OMPL_INCLUDE_DIRS}
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/deps/nigh/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/dynobench/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+
+target_link_libraries(db_lacam PRIVATE 
+  Eigen3::Eigen
+  idbastar::tdbastar 
+  ${Boost_LIBRARIES}
+  ${YAML_LIBRARIES}
+  ${FCL_LIBRARIES}
+  ${OMPL_LIBRARIES}
+  ${LZ4_LIBRARIES}
+)
+
+# main dbLacam
+add_executable(
+  run_dblacam
+  src/run_dblacam.cpp 
+  src/db_lacam.cpp
+  src/db_pibt.cpp
+  src/utils.cpp
+  src/map.cpp
+)
+
+target_include_directories(
+  run_dblacam
+  PUBLIC $<INSTALL_INTERFACE:include>
+         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+         ${OMPL_INCLUDE_DIRS}
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
+          ${CMAKE_CURRENT_SOURCE_DIR}/include
+          ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/deps/nigh/src
+          ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/dynobench/include
+          ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/include
+          ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/dynobench/deps/json/include)
+
+target_link_libraries(run_dblacam PRIVATE
+  fcl 
+  idbastar::tdbastar
+  ${OMPL_LIBRARIES} 
+  ${LZ4_LIBRARIES}
+  PUBLIC Eigen3::Eigen)

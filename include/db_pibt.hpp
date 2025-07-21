@@ -23,88 +23,51 @@
 #include "dynobench/motions.hpp"
 // custom
 #include "map.hpp"
+#include "utils.hpp"
 
 using namespace dynoplan;
-struct PIBT
+
+struct db_PIBT
 {
-  Expander &expander;                                          // homogeneous case
-  std::vector<std::shared_ptr<dynoplan::Heu_fun>> h_functions; // can be hetero
   std::vector<std::shared_ptr<dynobench::Model_robot>> robots;
-  std::vector<fcl::CollisionObjectd *> robot_objs;
-  dynobench::TrajWrapper traj_wrapper; // can be hetero
-  std::vector<dynobench::TrajWrapper> traj_wrappers;
-  std::vector<dynoplan::LazyTraj> lazy_trajs;
-  double delta = 0.5;
-  // my map - grid style for now
+  const int N;            // number of robots
   double width = 11;      // comes from problem.yaml
   double height = 11;     // comes from problem.yaml
   double grid_size = 1.0; // my motion primitives length / 2, since a=0.5
   OccupancyMap occupied_nxt;
   OccupancyMap occupied_now;
-  std::map<size_t, std::vector<Eigen::VectorXd>> neighbors; // neighbor foru cells per robot, only for the current state
 
-  PIBT(Expander &expander, std::vector<std::shared_ptr<dynoplan::Heu_fun>> h_functions, dynobench::TrajWrapper traj_wrapper, std::vector<std::shared_ptr<dynobench::Model_robot>> robots) : expander(expander), h_functions(h_functions), traj_wrapper(traj_wrapper), robots(robots), occupied_nxt(width, height, grid_size), occupied_now(width, height, grid_size)
+  // Constructor with robots argument
+  db_PIBT(std::vector<std::shared_ptr<dynobench::Model_robot>> _robots)
+      : robots(std::move(_robots)),
+        occupied_nxt(width, height, grid_size),
+        occupied_now(width, height, grid_size),
+        N(robots.size())
   {
-    // get robot objs for collision checking. Might need later, not now
-    for (const auto &robot : robots)
-    {
-      auto robot_obj = new fcl::CollisionObject(robot->collision_geometries.at(0)); // homogeneous case
-      robot_objs.push_back(robot_obj);
-    }
   }
-  PIBT() = default;
-  bool funcDBPIBT(std::vector<std::shared_ptr<AStarNode>> from_nodes, // current node with state, gscore, hscpre
-                  std::vector<std::shared_ptr<AStarNode>> &to_nodes,
-                  std::vector<dynobench::Trajectory> &to_motions,
-                  std::shared_ptr<dynobench::Model_robot>
-                      robot, // current robot
-                  size_t robot_id,
-                  bool pi = false);
 
-  void step(std::vector<std::shared_ptr<AStarNode>> from_nodes,
-            std::vector<std::shared_ptr<AStarNode>> &to_nodes,
-            std::vector<dynobench::Trajectory> &to_motions,
-            std::vector<std::shared_ptr<dynobench::Model_robot>> robots,
-            std::vector<size_t> priorities,
-            bool &step_success);
+  // Default constructor
+  db_PIBT() = default;
 
-  std::function<bool(Eigen::Ref<Eigen::VectorXd>)>
-  make_validity_checker(std::shared_ptr<dynobench::Model_robot> robot)
-  {
-    return [robot](Eigen::Ref<Eigen::VectorXd> state)
-    {
-      return robot->is_state_valid(state);
-    };
-  }
+  bool set_new_config(std::vector<Eigen::VectorXd> Q_from,
+                      std::vector<Eigen::VectorXd> &Q_to,
+                      std::vector<std::shared_ptr<AStarNode>> &dbN_to,
+                      std::vector<dynobench::Trajectory> &M_to,
+                      const std::vector<int> &order,
+                      std::map<size_t, RobotData> robot_data_rolled);
+
+  bool funcPIBT(size_t robot_id,
+                std::vector<Eigen::VectorXd> Q_from,
+                std::vector<Eigen::VectorXd> &Q_to,
+                std::vector<std::shared_ptr<AStarNode>> &dbN_to,
+                std::vector<dynobench::Trajectory> &M_to,
+                std::map<size_t, RobotData> robot_data_rolled,
+                bool pi = false);
+
   std::pair<int, int> world_to_grid(double x_m, double y_m) const
   {
     int x_idx = static_cast<int>(std::round(x_m / grid_size));
     int y_idx = static_cast<int>(std::round(y_m / grid_size));
     return {x_idx, y_idx};
-  }
-  // assumes motion primitives are of length 10, and hard-coded for single integrator dynamics
-  void get_4neighbors(const Eigen::VectorXd &pos, size_t robot_id)
-  {
-    std::vector<Eigen::VectorXd> tmp_neighbors;
-
-    tmp_neighbors.push_back(pos);
-
-    Eigen::VectorXd up = pos;
-    up(1) += 1;
-    tmp_neighbors.push_back(up);
-
-    Eigen::VectorXd down = pos;
-    down(1) -= 1;
-    tmp_neighbors.push_back(down);
-
-    Eigen::VectorXd right = pos;
-    right(0) += 1;
-    tmp_neighbors.push_back(right);
-
-    Eigen::VectorXd left = pos;
-    left(0) -= 1;
-    tmp_neighbors.push_back(left);
-
-    neighbors[robot_id] = tmp_neighbors;
   }
 };

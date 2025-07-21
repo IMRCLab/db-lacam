@@ -30,165 +30,113 @@
 using dynobench::FMT;
 using dynobench::Trajectory;
 
-void PIBT::step(std::vector<std::shared_ptr<AStarNode>> from_nodes, // current robot positions
-                std::vector<std::shared_ptr<AStarNode>> &to_nodes,  // final state of the used motion
-                std::vector<dynobench::Trajectory> &to_motions,
-                std::vector<std::shared_ptr<dynobench::Model_robot>> robots,
-                std::vector<size_t> priorities,
-                bool &success)
+bool db_PIBT::set_new_config(std::vector<Eigen::VectorXd> Q_from,
+                             std::vector<Eigen::VectorXd> &Q_to,
+                             std::vector<std::shared_ptr<AStarNode>> &dbN_to,
+                             std::vector<dynobench::Trajectory> &M_to,
+                             const std::vector<int> &order,
+                             std::map<size_t, RobotData> robot_data_rolled)
 {
-  // 1. check occupied_now - state or up/down/right/left motions for the current state
-  for (size_t i = 0; i < from_nodes.size(); i++)
+  bool success = true;
+  for (auto i = 0; i < N; i++)
   {
-    Eigen::VectorXd state = from_nodes.at(i)->state_eig;
-    get_4neighbors(state, i);
-    auto [x_idx, y_idx] = world_to_grid(state(0), state(1)); // x,y of the position
+    // set occupied now
+    Eigen::VectorXd now_state = Q_from[i];
+    auto [x_idx, y_idx] = world_to_grid(now_state(0), now_state(1)); // x,y of the position
     occupied_now.set_occupied(x_idx, y_idx, i);
+    // set occupied next
+    if (!M_to[i].is_empty())
+    {
+      // vertex collision
+      Eigen::VectorXd next_state = Q_to[i];
+      auto [x_idx, y_idx] = world_to_grid(next_state(0), next_state(1));
+      if (occupied_nxt.get_cell(x_idx, y_idx) != -1)
+      {
+        success = false;
+        break;
+      }
+      // check for swap collision
+      int j = occupied_now.get_cell(x_idx, y_idx);
+      if (j != -1 && !M_to.at(j).is_empty() && Q_to[j].isApprox(now_state, 1e-4))
+      {
+        success = false;
+        break;
+      }
+      occupied_nxt.set_occupied(x_idx, y_idx, i);
+    }
   }
-  // sanity checking
-  // for (size_t j = 0; j < from_nodes.size(); ++j)
-  // {
-  //   if (neighbors.find(j) == neighbors.end())
-  //   {
-  //     std::cout << "Key " << j << " is missing from the map.\n";
-  //   }
-  //   if (neighbors.find(j) != neighbors.end() && neighbors[j].empty())
-  //   {
-  //     std::cout << "Key " << j << " has an empty vector.\n";
-  //   }
-  // }
-  // 2. iteratively call pibt for each robot individually
-  for (size_t p : priorities) // 2, 1, 3 can be
+  if (success)
   {
-    if (to_motions.at(p).is_empty())
-      funcDBPIBT(from_nodes, to_nodes, to_motions, robots.at(p), p);
+    for (auto p : order)
+    {
+      if (M_to[p].is_empty() && !funcPIBT(p, Q_from, Q_to, dbN_to, M_to, robot_data_rolled))
+      {
+        success = false;
+        break;
+      }
+    }
   }
+  // cleanup
   occupied_nxt.reset();
   occupied_now.reset();
-  neighbors.clear();
-  success = true;
+
+  return success;
 }
 
-bool PIBT::funcDBPIBT(std::vector<std::shared_ptr<AStarNode>> from_nodes, // node is state, gscore, hscore
-                      std::vector<std::shared_ptr<AStarNode>> &to_nodes,  // final state of the used motion
-                      std::vector<dynobench::Trajectory> &to_motions,
-                      std::shared_ptr<dynobench::Model_robot> robot, // robot we consider
-                      size_t /*robot id*/ i,
-                      bool pi)
+bool db_PIBT::funcPIBT(size_t robot_id,
+                       std::vector<Eigen::VectorXd> Q_from,
+                       std::vector<Eigen::VectorXd> &Q_to,
+                       std::vector<std::shared_ptr<AStarNode>> &dbN_to,
+                       std::vector<dynobench::Trajectory> &M_to,
+                       std::map<size_t, RobotData> robot_data_rolled,
+                       bool pi)
 {
-  std::cout << "calling pibt for robot " << i << ", PI: " << pi << std::endl;
-  // 1. get applicable motions for robot_id
-  auto tmp_node = std::make_shared<AStarNode>();
-  lazy_trajs.clear();
-  traj_wrappers.clear();
-  Eigen::VectorXd now_state = from_nodes.at(i)->state_eig;
-  expander.expand_lazy(now_state, lazy_trajs);
-  auto ff = make_validity_checker(robot);
-  bool collision = false;
-  bool invalid_motion = false;
-  double gScore, hScore;
-  int num_valid_states = -1;
-  int j = -1; // other robot that might need PI
-  for (size_t j = 0; j < lazy_trajs.size(); j++)
+  std::cout << "calling pibt for robot " << robot_id << ", PI: " << pi << std::endl;
+  RobotData robot_data = robot_data_rolled[robot_id];
+  for (size_t r = 0; r < robot_data.trajectories.size(); r++)
   {
-    auto &lazy_traj = lazy_trajs[j];
-    traj_wrapper.set_size(lazy_traj.motion->traj.states.size());
-    num_valid_states = -1;
-
-    lazy_traj.compute(traj_wrapper, /*forward*/ true, /*check_state*/ &ff,
-                      &num_valid_states);
-    if (num_valid_states && num_valid_states < 1)
-    {
-      std::cout << "num_valid_states failed" << std::endl;
-      continue;
-    }
-    if (num_valid_states < lazy_traj.motion->traj.states.size())
-    {
-      continue;
-    }
-    tmp_node->state_eig = traj_wrapper.get_state(traj_wrapper.get_size() - 1);
-    hScore = h_functions.at(i)->h(tmp_node->state_eig); // for the last state of the motion
-    double cost_motion = (traj_wrapper.get_size() - 1) * robot->ref_dt;
-    gScore = from_nodes.at(i)->gScore + cost_motion;
-    traj_wrapper.last_state_f = gScore + hScore;
-    traj_wrappers.push_back(traj_wrapper);
+    dynobench::Trajectory traj = robot_data.trajectories[r];
+    Eigen::VectorXd last_state = traj.states.back();
+    // std::cout << "last state: " << last_state.format(dynobench::FMT) << std::endl;
+    // std::cout << "gScore: " << robot_data.last_state_g[r] << ", hScore: " << robot_data.last_state_h[r] << std::endl;
   }
-  // sort applicable motions based on f-value of the last state
-  dynobench::TrajWrapper::SortByLastStateF(traj_wrappers);
-  // 2. loop over sorted motions, and recursively call pibt if needed
-  for (size_t k = 0; k < traj_wrappers.size(); k++)
+  for (size_t i = 0; i < robot_data.trajectories.size(); i++)
   {
-    j = -1;
-    auto &traj_wrap = traj_wrappers[k];
-    std::vector<Eigen::VectorXd> us = traj_wrap.get_actions();
-    std::vector<Eigen::VectorXd> xs(us.size() + 1,
-                                    Eigen::VectorXd::Zero(robot->nx));
-    num_valid_states = -1;
-    robot->rollout(now_state, us, xs, &ff,
-                   &num_valid_states);
-    if (num_valid_states && num_valid_states < xs.size())
-    {
-      std::cout << "rollout, state violations" << std::endl;
-      continue;
-    }
-    // check for collision with env.
-    Motion motion;
-    dynobench::Trajectory traj;
-    traj.start = now_state;
-    traj.states = xs;
-    traj.actions = us;
-    traj.goal = traj.states.back();
-    traj_to_motion(traj, *robot, motion, /*compute collision*/ true);
-    assert(motion.collision_manager);
-    assert(robot->env.get());
-    fcl::DefaultCollisionData<double> collision_data;
-    motion.collision_manager->collide(robot->env.get(), &collision_data,
-                                      fcl::DefaultCollisionFunction<double>);
-    if (collision_data.result.isCollision())
-      continue;
-    Eigen::VectorXd next_state = xs.back();
-    // get grid where the robot is going to go next
+    dynobench::Trajectory traj = robot_data.trajectories[i];
+    Eigen::VectorXd next_state = traj.states.back();
     auto [x_idx, y_idx] = world_to_grid(next_state(0), next_state(1));
     // check for vertex collision
-    if (occupied_nxt.get_cell(x_idx, y_idx) != -1) // already reserved by higher prioritized robot
+    if (occupied_nxt.get_cell(x_idx, y_idx) != -1)
       continue;
-    // loop over neighbors of all robots, since those are states related to the current state of the robot and might affect/cause future collision
-    // for (const auto &[key, vecs] : neighbors)
-    // {
-    //   if (key == i)
-    //     continue;
-    //   for (const auto &vec : vecs) // each neighbor of the state, including the state itself (5 in general)
-    //   {
-    //     if (vec.isApprox(next_state, 1e-4))
-    //     {
-    //       j = key;
-    //       std::cout << "robot " << j << " might have some collison!" << std::endl;
-    //       break;
-    //     }
-    //   }
-    // }
-
+    // check for swap collision
     int j = occupied_now.get_cell(x_idx, y_idx);
-    // check for swap collision if the other robot already has planned next move
-    if (j != -1 && !to_motions.at(j).is_empty() && to_nodes.at(j)->state_eig.isApprox(now_state, 1e-4))
+    Eigen::VectorXd now_state = Q_from[robot_id];
+    std::cout << "robot " << robot_id << " now state: " << std::endl;
+    std::cout << now_state.format(dynobench::FMT) << std::endl;
+    if (j != -1 && !M_to[j].is_empty() && Q_to[j].isApprox(now_state, 1e-4))
       continue;
     // reserve the motion
-    to_nodes.at(i)->state_eig = xs.back();
-    to_nodes.at(i)->gScore = gScore;
-    to_nodes.at(i)->hScore = hScore;
-    occupied_nxt.set_occupied(x_idx, y_idx, i);
-    to_motions.at(i) = traj;
-    // sanity check
-    if (j != -1 && to_motions.at(j).is_empty())
+    Q_to[robot_id] = next_state;
+    // double next_state_g = robot_data.last_state_g[j];
+    // double next_state_h = robot_data.last_state_h[j];
+    auto next_dbN = std::make_shared<AStarNode>();
+    next_dbN->state_eig = next_state;
+    next_dbN->gScore = robot_data.last_state_g[j];
+    next_dbN->hScore = robot_data.last_state_h[j];
+    dbN_to[robot_id] = next_dbN;
+    occupied_nxt.set_occupied(x_idx, y_idx, robot_id);
+    M_to[robot_id] = traj;
+    if (j != -1 && M_to[j].is_empty())
     {
       std::cout << "robot " << j << " hasn't planned, getting PI" << std::endl;
     }
-    // if the other robot hasn't planned yet, call pibt
-    if (j != -1 && to_motions.at(j).is_empty() && !funcDBPIBT(from_nodes, to_nodes, to_motions, robots.at(j), j, /*pi*/ true))
+    if (j != -1 && M_to[j].is_empty() && !funcPIBT(j, Q_from, Q_to, dbN_to, M_to, robot_data_rolled, /*pi*/ true))
     {
-      std::cout << "recursive pibt failed" << std::endl;
+      std::cout << "recursive pibt failed, continue to the next motion" << std::endl;
       continue;
     }
+    std::cout << "robot " << robot_id << " end state: " << std::endl;
+    std::cout << next_state.format(dynobench::FMT) << std::endl;
     return true;
   }
   // if no motion was applicable, then the robot does not move - stay motion primitive is added

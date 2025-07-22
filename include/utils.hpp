@@ -136,3 +136,14 @@ struct RobotData
     last_state_h.clear();
   }
 };
+
+struct ConfigHasher
+{
+  std::size_t operator()(const std::vector<Eigen::VectorXd> &config) const;
+};
+
+struct ConfigEqual
+{
+  bool operator()(const std::vector<Eigen::VectorXd> &a,
+                  const std::vector<Eigen::VectorXd> &b) const;
+};

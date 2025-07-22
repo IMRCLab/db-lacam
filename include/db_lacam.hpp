@@ -41,13 +41,8 @@ struct HNode
   const std::vector<std::shared_ptr<AStarNode>> dbN;
   HNode *parent;
   std::vector<dynobench::Trajectory> M_to;
-  // cost
-  // int g;
-  // int h;
-  // int f;
   int depth;
 
-  std::vector<float> priorities;
   std::vector<int> order;
   std::queue<LNode *> search_tree;
 

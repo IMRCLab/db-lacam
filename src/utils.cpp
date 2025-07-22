@@ -79,3 +79,32 @@ Node::Node(Eigen::VectorXd _state_eig, double _gScore, double _hScore) : state_e
                                                                          gScore(_gScore),
                                                                          hScore(_hScore),
                                                                          fScore(gScore + hScore) {}
+
+std::size_t ConfigHasher::operator()(const std::vector<Eigen::VectorXd> &config) const
+{
+  std::size_t hash = config.size();
+  for (const auto &vec : config)
+  {
+    for (int i = 0; i < vec.size(); ++i)
+    {
+      std::size_t h = std::hash<double>{}(vec[i]);
+      hash ^= h + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    }
+  }
+  return hash;
+}
+
+bool ConfigEqual::operator()(const std::vector<Eigen::VectorXd> &a,
+                             const std::vector<Eigen::VectorXd> &b) const
+{
+  if (a.size() != b.size())
+    return false;
+  for (size_t i = 0; i < a.size(); ++i)
+  {
+    if (a[i].size() != b[i].size())
+      return false;
+    if (!a[i].isApprox(b[i]))
+      return false;
+  }
+  return true;
+}

@@ -42,13 +42,17 @@ bool db_PIBT::set_new_config(std::vector<Eigen::VectorXd> Q_from,
   {
     // set occupied now
     Eigen::VectorXd now_state = Q_from[i];
+    // std::cout << "robot " << i << " current state: " << now_state.format(dynobench::FMT) << std::endl;
     auto [x_idx, y_idx] = world_to_grid(now_state(0), now_state(1)); // x,y of the position
+    // std::cout << "grid: " << x_idx << ", " << y_idx << std::endl;
     occupied_now.set_occupied(x_idx, y_idx, i);
     // set occupied next
     if (!M_to[i].is_empty())
     {
       // vertex collision
+      // std::cout << "Q_to state: " << Q_to[i].format(dynobench::FMT) << std::endl;
       Eigen::VectorXd next_state = Q_to[i];
+      // std::cout << "constraint next state for robot " << i << " " << next_state.format(dynobench::FMT) << std::endl;
       auto [x_idx, y_idx] = world_to_grid(next_state(0), next_state(1));
       if (occupied_nxt.get_cell(x_idx, y_idx) != -1)
       {
@@ -92,33 +96,26 @@ bool db_PIBT::funcPIBT(size_t robot_id,
                        bool pi)
 {
   std::cout << "calling pibt for robot " << robot_id << ", PI: " << pi << std::endl;
+  Eigen::VectorXd now_state = Q_from[robot_id];
+  // std::cout << "robot " << robot_id << " now state " << now_state.format(dynobench::FMT) << std::endl;
   RobotData robot_data = robot_data_rolled[robot_id];
-  for (size_t r = 0; r < robot_data.trajectories.size(); r++)
-  {
-    dynobench::Trajectory traj = robot_data.trajectories[r];
-    Eigen::VectorXd last_state = traj.states.back();
-    // std::cout << "last state: " << last_state.format(dynobench::FMT) << std::endl;
-    // std::cout << "gScore: " << robot_data.last_state_g[r] << ", hScore: " << robot_data.last_state_h[r] << std::endl;
-  }
   for (size_t i = 0; i < robot_data.trajectories.size(); i++)
   {
     dynobench::Trajectory traj = robot_data.trajectories[i];
     Eigen::VectorXd next_state = traj.states.back();
+    // std::cout << "next state : " << next_state.format(dynobench::FMT) << std::endl;
     auto [x_idx, y_idx] = world_to_grid(next_state(0), next_state(1));
+    // std::cout << " next state grid: " << x_idx << ", " << y_idx << std::endl;
     // check for vertex collision
     if (occupied_nxt.get_cell(x_idx, y_idx) != -1)
       continue;
     // check for swap collision
     int j = occupied_now.get_cell(x_idx, y_idx);
-    Eigen::VectorXd now_state = Q_from[robot_id];
-    std::cout << "robot " << robot_id << " now state: " << std::endl;
-    std::cout << now_state.format(dynobench::FMT) << std::endl;
+    // std::cout << "robot " << j << " occupies now" << std::endl;
     if (j != -1 && !M_to[j].is_empty() && Q_to[j].isApprox(now_state, 1e-4))
       continue;
     // reserve the motion
     Q_to[robot_id] = next_state;
-    // double next_state_g = robot_data.last_state_g[j];
-    // double next_state_h = robot_data.last_state_h[j];
     auto next_dbN = std::make_shared<AStarNode>();
     next_dbN->state_eig = next_state;
     next_dbN->gScore = robot_data.last_state_g[j];
@@ -135,8 +132,7 @@ bool db_PIBT::funcPIBT(size_t robot_id,
       std::cout << "recursive pibt failed, continue to the next motion" << std::endl;
       continue;
     }
-    std::cout << "robot " << robot_id << " end state: " << std::endl;
-    std::cout << next_state.format(dynobench::FMT) << std::endl;
+    // std::cout << "robot " << robot_id << " end state: " << std::endl;
     return true;
   }
   // if no motion was applicable, then the robot does not move - stay motion primitive is added

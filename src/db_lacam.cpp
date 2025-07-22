@@ -21,12 +21,7 @@ HNode::HNode(std::vector<Eigen::VectorXd> _Q, std::vector<std::shared_ptr<AStarN
       dbN(_dbN),
       M_to(Q.size()),
       parent(_parent),
-      // g(_g),
-      // h(_h),
-      // f(g + h),
       depth(parent == nullptr ? 0 : parent->depth + 1),
-      priorities(Q.size()),
-      // order(Q.size(), 0),
       order(_order),
       search_tree()
 {
@@ -72,10 +67,13 @@ LaCAM::~LaCAM() {}
 MultiRobotTrajectory LaCAM::solve()
 {
   solver_info(1, "LaCAM begins");
+  // setup search
+  std::unordered_map<std::vector<Eigen::VectorXd>, HNode *, ConfigHasher, ConfigEqual> EXPLORED;
   // insert initial node
   order = get_sorted_order(robots, problem.starts, problem.goals);
   auto H_init = new HNode(problem.starts, dbNodes, order);
   OPEN.push_front(H_init);
+  EXPLORED[H_init->Q] = H_init;
   // search loop
   solver_info(2, "search iteration begins");
   while (!OPEN.empty() && !is_expired(timelimit))
@@ -112,31 +110,38 @@ MultiRobotTrajectory LaCAM::solve()
       {
         dynobench::Trajectory u_traj = rolled_robot_data[i].trajectories[j];
         Eigen::VectorXd u_state = rolled_robot_data[i].trajectories[j].goal; // last state of the motion
-        // double g = rolled_robot_data[i].last_state_g[j];
-        // double h = rolled_robot_data[i].last_state_h[j];
+        if (!robots[i]->is_state_valid(u_state))
+          continue;
         auto u_dbN = std::make_shared<AStarNode>();
         u_dbN->state_eig = u_state;
         u_dbN->gScore = rolled_robot_data[i].last_state_g[j];
         u_dbN->hScore = rolled_robot_data[i].last_state_h[j];
         H->search_tree.push(new LNode(L, i, u_traj, u_state, u_dbN));
       }
-      // for (auto u : rolled_robot_data[i].trajectories)
-      //   H->search_tree.push(new LNode(L, i, u, u.goal));
     }
     // create successors at the high-level search
     std::vector<Eigen::VectorXd> Q_to;
     Q_to.resize(robots.size());
     std::vector<std::shared_ptr<AStarNode>> dbN_to;
     dbN_to.resize(robots.size());
-    auto res = set_new_config(H, L, Q_to, dbN_to, H->M_to, rolled_robot_data);
+    std::vector<dynobench::Trajectory> M_to;
+    M_to.resize(robots.size());
+    auto res = set_new_config(H, L, Q_to, dbN_to, M_to, rolled_robot_data);
+    H->M_to = M_to;
     delete L;
     if (!res)
       continue;
+    if (EXPLORED.find(Q_to) != EXPLORED.end())
+    {
+      std::cout << "Config is already explored!" << std::endl;
+      continue;
+    }
     // always add the node
     order.clear();
     order = get_sorted_order(robots, Q_to, problem.goals);
     auto H_new = new HNode(Q_to, dbN_to, order, H);
     OPEN.push_front(H_new);
+    EXPLORED[H_new->Q] = H_new;
   }
   // backtrack the solution
   {
@@ -196,7 +201,7 @@ void LaCAM::get_applicable_trajs(std::shared_ptr<AStarNode> db_node, RobotData &
       continue;
     }
     Eigen::VectorXd tmp_state = tmp_traj_wrapper.get_state(tmp_traj_wrapper.get_size() - 1);
-    hScore = h_funs[robot_id]->h(tmp_state); // for the last state of the motion
+    hScore = robots[robot_id]->distance(tmp_state, problem.goals[robot_id]); // h_funs[robot_id]->h(tmp_state); // for the last state of the motion
     double cost_motion = (tmp_traj_wrapper.get_size() - 1) * robots[robot_id]->ref_dt;
     gScore = db_node->gScore + cost_motion;
     tmp_traj_wrapper.last_state_g = gScore;
@@ -208,7 +213,6 @@ void LaCAM::get_applicable_trajs(std::shared_ptr<AStarNode> db_node, RobotData &
   dynobench::TrajWrapper::SortByLastStateF(tmp_traj_wrappers);
   // ii. rollout trajs - env collision free
   Eigen::VectorXd x0 = db_node->state_eig;
-  // std::cout << "x0: " << x0.format(dynobench::FMT) << std::endl;
   for (size_t k = 0; k < tmp_traj_wrappers.size(); k++)
   {
     auto &traj_wrap = tmp_traj_wrappers[k];
@@ -241,7 +245,6 @@ void LaCAM::get_applicable_trajs(std::shared_ptr<AStarNode> db_node, RobotData &
     if (collision_data.result.isCollision())
       continue;
 
-    // std::cout << "traj goal: " << traj.goal.format(dynobench::FMT) << std::endl;
     robot_data.trajectories.push_back(traj);
     // need for the Node update
     robot_data.last_state_g.push_back(traj_wrap.last_state_g);

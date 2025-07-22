@@ -89,9 +89,9 @@ bool PIBT::funcDBPIBT(std::vector<std::shared_ptr<AStarNode>> from_nodes, // nod
   double gScore, hScore;
   int num_valid_states = -1;
   int j = -1; // other robot that might need PI
-  for (size_t j = 0; j < lazy_trajs.size(); j++)
+  for (size_t l = 0; l < lazy_trajs.size(); l++)
   {
-    auto &lazy_traj = lazy_trajs[j];
+    auto &lazy_traj = lazy_trajs[l];
     traj_wrapper.set_size(lazy_traj.motion->traj.states.size());
     num_valid_states = -1;
 

@@ -31,9 +31,9 @@ struct db_PIBT
 {
   std::vector<std::shared_ptr<dynobench::Model_robot>> robots;
   const int N;            // number of robots
-  double width = 11;      // comes from problem.yaml
-  double height = 11;     // comes from problem.yaml
-  double grid_size = 1.0; // my motion primitives length / 2, since a=0.5
+  double width = 4.5;       // int
+  double height = 4.5;    // int
+  double grid_size = 0.5; // my motion primitives length / 2, since a=0.5. If the env is small keep 0.5 as size, more precise.
   OccupancyMap occupied_nxt;
   OccupancyMap occupied_now;
 

@@ -11,6 +11,7 @@ OccupancyMap::OccupancyMap(double width_m, double height_m, double grid_resoluti
   cols = static_cast<int>(width_m / resolution);
   // Initialize the grid
   grid = std::vector<std::vector<int>>(rows, std::vector<int>(cols, NIL));
+  // std::cout << "rows, cols: " << rows << ", " << cols << std::endl;
 }
 
 void OccupancyMap::set_occupied(int x_idx, int y_idx, int robot_id)
@@ -25,8 +26,10 @@ int OccupancyMap::get_cell(int x_idx, int y_idx) const
 {
   if (in_bounds(x_idx, y_idx))
   {
+    // std::cout << "x, y: " << x_idx << ", " << y_idx << std::endl;
     return grid[x_idx][y_idx];
   }
+  // std::cout << "outside bounds" << std::endl;
   return NIL; // or throw exception
 }
 
@@ -54,16 +57,3 @@ bool OccupancyMap::in_bounds(int x, int y) const
 {
   return x >= 0 && x < rows && y >= 0 && y < cols;
 }
-
-// int main()
-// {
-//   double width = 2.0;  // meters
-//   double height = 2.0; // meters
-//   double grid_size = 0.5;
-
-//   OccupancyMap map(width, height, grid_size);
-//   auto [x_idx, y_idx] = map.world_to_grid(0.0, 0.5);
-//   std::cout << x_idx << ", " << y_idx << std::endl;
-//   map.set_occupied(x_idx, y_idx, 2); // Robot ID
-//   map.print_map();
-// }

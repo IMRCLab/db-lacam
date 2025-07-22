@@ -30,20 +30,19 @@ using namespace dynoplan;
 struct db_PIBT
 {
   std::vector<std::shared_ptr<dynobench::Model_robot>> robots;
-  const int N;            // number of robots
-  double width = 4.5;       // int
-  double height = 4.5;    // int
-  double grid_size = 0.5; // my motion primitives length / 2, since a=0.5. If the env is small keep 0.5 as size, more precise.
-  OccupancyMap occupied_nxt;
-  OccupancyMap occupied_now;
+  std::vector<fcl::CollisionObjectd *> robot_objs;
+  const int N; // number of robots
 
   // Constructor with robots argument
   db_PIBT(std::vector<std::shared_ptr<dynobench::Model_robot>> _robots)
       : robots(std::move(_robots)),
-        occupied_nxt(width, height, grid_size),
-        occupied_now(width, height, grid_size),
         N(robots.size())
   {
+    for (const auto &robot : robots)
+    {
+      auto robot_obj = new fcl::CollisionObject(robot->collision_geometries.at(0)); // homogeneous case
+      robot_objs.push_back(robot_obj);
+    }
   }
 
   // Default constructor
@@ -64,10 +63,12 @@ struct db_PIBT
                 std::map<size_t, RobotData> robot_data_rolled,
                 bool pi = false);
 
-  std::pair<int, int> world_to_grid(double x_m, double y_m) const
-  {
-    int x_idx = static_cast<int>(std::round(x_m / grid_size));
-    int y_idx = static_cast<int>(std::round(y_m / grid_size));
-    return {x_idx, y_idx};
-  }
+  bool has_inter_robot_collision(dynobench::Trajectory robot_traj, size_t robot_id,
+                                 dynobench::Trajectory other_robot_traj, size_t other_robot_id);
+
+  void update_obj(size_t id, const Eigen::VectorXd state);
+
+  bool is_motion_valid(size_t robot_id,
+                       const dynobench::Trajectory &traj,
+                       const std::vector<dynobench::Trajectory> &M_to);
 };

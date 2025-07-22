@@ -88,38 +88,52 @@ int main(int argc, char *argv[])
   cfg = cfg["db-lacam"]["default"];
   Options_tdbastar planner_options;
   planner_options.outFile = outputFile;
-  // planner_options.search_timelimit = timelimit;
-  planner_options.cost_delta_factor = 0;
-  planner_options.delta = cfg["delta_0"].as<float>();
+  planner_options.cost_delta_factor = 1;
   planner_options.fix_seed = 1;
+  planner_options.delta = cfg["delta_0"].as<float>();
   planner_options.max_motions = cfg["num_primitives_0"].as<size_t>();
-  std::cout << "*** options for pibt search ***" << std::endl;
+  std::cout << "*** options for dblacam search ***" << std::endl;
   planner_options.print(std::cout);
   std::cout << "***" << std::endl;
+  // define the problem
   dynobench::Problem problem(inputFile);
-  std::string models_base_path = DYNOBENCH_BASE + std::string("models/");
-  problem.models_base_path = models_base_path;
-  Out_info_tdb out_pibt;
+  problem.models_base_path = DYNOBENCH_BASE + std::string("models/");
+  Out_info_tdb out_dblacam;
   YAML::Node env = YAML::LoadFile(inputFile);
   // create robots
   std::vector<std::shared_ptr<dynobench::Model_robot>> robots;
   for (size_t k = 0; k < problem.robotTypes.size(); k++)
   {
     std::shared_ptr<dynobench::Model_robot> robot = dynobench::robot_factory(
-        (problem.models_base_path + problem.robotTypes.at(k) + ".yaml").c_str(), problem.p_lb,
+        (problem.models_base_path + problem.robotTypes[k] + ".yaml").c_str(), problem.p_lb,
         problem.p_ub);
     robots.push_back(robot);
-    load_env(*(robots.at(k)), problem); // env enable, smarter needed
+    load_env(*(robots[k]), problem); // env enable, smarter needed
   }
-  // read motions - homogeneous for now
+  // read motions
   std::string motionsFile;
-  motionsFile = "../new_format_motions/integrator1_2d_v0/my_motions.bin";
+  if (problem.robotTypes[0] == "unicycle1_v0")
+  {
+    motionsFile = "../new_format_motions/unicycle1_v0/unit_length/unicycle1_v0.bin.im.bin.sp.bin";
+  }
+  else if (problem.robotTypes[0] == "integrator1_2d_v0")
+  {
+    motionsFile = "../new_format_motions/integrator1_2d_v0/unit_length2/integrator1_2d_v0.bin.im.bin.sp.bin";
+  }
+  else
+  {
+    throw std::runtime_error("Unknown motion filename for this robottype!");
+  }
   std::vector<Motion> motions;
   planner_options.motionsFile = motionsFile;
-  // load motions for a single robot - homogeneous case
-  load_motion_primitives_new(planner_options.motionsFile, *(robots.at(0)), motions,
+  // read and filter duplicates
+  load_motion_primitives_new(planner_options.motionsFile, *(robots[0]), motions,
                              planner_options.max_motions, planner_options.cut_actions,
                              true, planner_options.check_cols);
+
+  disable_motions(robots[0], problem.robotTypes[0], planner_options.delta, /*filter duplicates*/ true, /*alpha*/ 0.5,
+                  planner_options.max_motions, motions);
+
   planner_options.motions_ptr = &motions;
   std::vector<ompl::NearestNeighbors<std::shared_ptr<AStarNode>> *> heuristics(
       robots.size(), nullptr);
@@ -128,7 +142,7 @@ int main(int argc, char *argv[])
     auto start_rev = std::chrono::steady_clock::now();
     dynobench::Problem problem_original(inputFile);
     planner_options.delta = cfg["heuristic1_delta"].as<float>();
-    Out_info_tdb out_pibt;
+    Out_info_tdb out_dblacam;
     size_t robot_id = 0;
     for (const auto &robot : robots)
     {
@@ -141,7 +155,7 @@ int main(int argc, char *argv[])
       problem.goals[robot_id] = tmp_state;
       LowLevelPlan<dynobench::Trajectory> tmp_solution;
       tdbastar(problem, planner_options, tmp_solution.trajectory,
-               /*constraints*/ {}, out_pibt, robot_id, /*reverse_search*/ true,
+               /*constraints*/ {}, out_dblacam, robot_id, /*reverse_search*/ true,
                nullptr, &heuristics[robot_id]);
       std::cout << "computed heuristic with " << heuristics[robot_id]->size()
                 << " entries." << std::endl;
@@ -155,6 +169,7 @@ int main(int argc, char *argv[])
     problem.starts = problem_original.starts;
     problem.goals = problem_original.goals;
     planner_options.delta = cfg["delta_0"].as<float>();
+    planner_options.max_motions = cfg["num_primitives_0"].as<size_t>();
   }
   // check motions
   auto check_motions = [&]
@@ -170,7 +185,7 @@ int main(int argc, char *argv[])
   };
   assert(check_motions());
   ompl::NearestNeighbors<Motion *> *T_m = nullptr;
-  T_m = nigh_factory_t<Motion *>(problem.robotTypes[0], robots.at(0), // homogeneous case
+  T_m = nigh_factory_t<Motion *>(problem.robotTypes[0], robots[0], // homogeneous case
                                  /*reverse_search*/ false);
   // add all motions to Tm
   for (size_t i = 0; i < std::min(motions.size(), planner_options.max_motions);
@@ -178,7 +193,7 @@ int main(int argc, char *argv[])
   {
     T_m->add(&motions.at(i));
   }
-  Expander expander(robots.at(0).get(), T_m, planner_options.alpha * planner_options.delta, /*add static motion*/ false);
+  Expander expander(robots[0].get(), T_m, planner_options.alpha * planner_options.delta, /*add static motion*/ true);
   // for LaCam
   std::vector<std::shared_ptr<Heu_fun>> h_funs;
   std::vector<std::shared_ptr<AStarNode>> dbN_start;
@@ -186,7 +201,7 @@ int main(int argc, char *argv[])
   {
     std::shared_ptr<Heu_fun> h_fun = nullptr;
     h_fun =
-        std::make_shared<Heu_roadmap_bwd<std::shared_ptr<AStarNode>, AStarNode>>(
+        std::make_shared<Heu_roadmap_bwd2<std::shared_ptr<AStarNode>, AStarNode>>(
             robots[i], heuristics[i], problem.goals[i]);
     h_funs.push_back(h_fun);
     dbN_start.push_back(std::make_shared<AStarNode>());

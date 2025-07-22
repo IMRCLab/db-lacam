@@ -40,33 +40,14 @@ bool db_PIBT::set_new_config(std::vector<Eigen::VectorXd> Q_from,
   bool success = true;
   for (auto i = 0; i < N; i++)
   {
-    // set occupied now
-    Eigen::VectorXd now_state = Q_from[i];
-    // std::cout << "robot " << i << " current state: " << now_state.format(dynobench::FMT) << std::endl;
-    auto [x_idx, y_idx] = world_to_grid(now_state(0), now_state(1)); // x,y of the position
-    // std::cout << "grid: " << x_idx << ", " << y_idx << std::endl;
-    occupied_now.set_occupied(x_idx, y_idx, i);
-    // set occupied next
+    // ONLY with planned robots!
     if (!M_to[i].is_empty())
     {
-      // vertex collision
-      // std::cout << "Q_to state: " << Q_to[i].format(dynobench::FMT) << std::endl;
-      Eigen::VectorXd next_state = Q_to[i];
-      // std::cout << "constraint next state for robot " << i << " " << next_state.format(dynobench::FMT) << std::endl;
-      auto [x_idx, y_idx] = world_to_grid(next_state(0), next_state(1));
-      if (occupied_nxt.get_cell(x_idx, y_idx) != -1)
+      if (!is_motion_valid(i, M_to[i], M_to))
       {
         success = false;
         break;
       }
-      // check for swap collision
-      int j = occupied_now.get_cell(x_idx, y_idx);
-      if (j != -1 && !M_to.at(j).is_empty() && Q_to[j].isApprox(now_state, 1e-4))
-      {
-        success = false;
-        break;
-      }
-      occupied_nxt.set_occupied(x_idx, y_idx, i);
     }
   }
   if (success)
@@ -80,9 +61,6 @@ bool db_PIBT::set_new_config(std::vector<Eigen::VectorXd> Q_from,
       }
     }
   }
-  // cleanup
-  occupied_nxt.reset();
-  occupied_now.reset();
 
   return success;
 }
@@ -95,46 +73,105 @@ bool db_PIBT::funcPIBT(size_t robot_id,
                        std::map<size_t, RobotData> robot_data_rolled,
                        bool pi)
 {
-  std::cout << "calling pibt for robot " << robot_id << ", PI: " << pi << std::endl;
+  std::cout << "Calling dbPIBT for robot " << robot_id << ", PI: " << pi << std::endl;
   Eigen::VectorXd now_state = Q_from[robot_id];
-  // std::cout << "robot " << robot_id << " now state " << now_state.format(dynobench::FMT) << std::endl;
+  // std::cout << "robot " << robot_id << " start state: " << now_state.format(dynobench::FMT) << std::endl;
   RobotData robot_data = robot_data_rolled[robot_id];
+  // std::cout << "rolled trajs size: " << robot_data.trajectories.size() << std::endl;
+  bool success;
   for (size_t i = 0; i < robot_data.trajectories.size(); i++)
   {
     dynobench::Trajectory traj = robot_data.trajectories[i];
     Eigen::VectorXd next_state = traj.states.back();
-    // std::cout << "next state : " << next_state.format(dynobench::FMT) << std::endl;
-    auto [x_idx, y_idx] = world_to_grid(next_state(0), next_state(1));
-    // std::cout << " next state grid: " << x_idx << ", " << y_idx << std::endl;
-    // check for vertex collision
-    if (occupied_nxt.get_cell(x_idx, y_idx) != -1)
-      continue;
-    // check for swap collision
-    int j = occupied_now.get_cell(x_idx, y_idx);
-    // std::cout << "robot " << j << " occupies now" << std::endl;
-    if (j != -1 && !M_to[j].is_empty() && Q_to[j].isApprox(now_state, 1e-4))
+    // check for collision with planned robots
+    if (!is_motion_valid(robot_id, traj, M_to))
       continue;
     // reserve the motion
     Q_to[robot_id] = next_state;
     auto next_dbN = std::make_shared<AStarNode>();
     next_dbN->state_eig = next_state;
-    next_dbN->gScore = robot_data.last_state_g[j];
-    next_dbN->hScore = robot_data.last_state_h[j];
+    next_dbN->gScore = robot_data.last_state_g[i];
+    next_dbN->hScore = robot_data.last_state_h[i];
     dbN_to[robot_id] = next_dbN;
-    occupied_nxt.set_occupied(x_idx, y_idx, robot_id);
     M_to[robot_id] = traj;
-    if (j != -1 && M_to[j].is_empty())
+    success = true;
+    // check for collision with unplanned robots (state-by-state)
+    for (const auto &[key, rolled_trajs] : robot_data_rolled)
     {
-      std::cout << "robot " << j << " hasn't planned, getting PI" << std::endl;
+      if (key == robot_id || !M_to[key].is_empty())
+        continue;
+      for (const auto &other_robot_trajs : rolled_trajs.trajectories) // potential motion for the neighbor
+      {
+        if (M_to[key].is_empty() && has_inter_robot_collision(traj, robot_id, other_robot_trajs, key))
+        {
+          int j = key;
+          std::cout << "robot " << j << " hasn't planned, getting PI" << std::endl;
+          success = funcPIBT(j, Q_from, Q_to, dbN_to, M_to, robot_data_rolled, /*pi*/ true);
+          break;
+        }
+      }
+      if (!success)
+        break;
     }
-    if (j != -1 && M_to[j].is_empty() && !funcPIBT(j, Q_from, Q_to, dbN_to, M_to, robot_data_rolled, /*pi*/ true))
-    {
-      std::cout << "recursive pibt failed, continue to the next motion" << std::endl;
+    if (!success)
       continue;
-    }
-    // std::cout << "robot " << robot_id << " end state: " << std::endl;
+    // std::cout << "robot " << robot_id << " end state: " << next_state.format(dynobench::FMT) << std::endl;
     return true;
   }
   // if no motion was applicable, then the robot does not move - stay motion primitive is added
   return false;
+}
+
+void db_PIBT::update_obj(size_t id, const Eigen::VectorXd state)
+{
+  std::vector<fcl::Transform3d> tmp_ts(1);
+  robots[id]->transformation_collision_geometries(state, tmp_ts);
+  fcl::Transform3d &tf = tmp_ts[0];
+  robot_objs[id]->setTranslation(tf.translation());
+  robot_objs[id]->setRotation(tf.rotation());
+  robot_objs[id]->computeAABB();
+};
+
+// pair-wise collision checking for traj-to-traj, assumes equal length motions
+bool db_PIBT::has_inter_robot_collision(dynobench::Trajectory robot_traj, size_t robot_id, dynobench::Trajectory other_robot_traj, size_t other_robot_id)
+{
+  const auto &ego_traj = robot_traj.states;
+  const auto &other_traj = other_robot_traj.states;
+
+  for (size_t s = 0; s < ego_traj.size(); ++s)
+  {
+    const Eigen::VectorXd &state1 = ego_traj[s];
+    const Eigen::VectorXd &state2 = other_traj[s];
+    update_obj(robot_id, state1);
+    update_obj(other_robot_id, state2);
+
+    fcl::CollisionRequestd request;
+    fcl::CollisionResultd result;
+    fcl::collide(robot_objs[robot_id], robot_objs[other_robot_id], request, result);
+
+    if (result.isCollision())
+    {
+      std::cout << "collision between robots, skip the motion!" << std::endl;
+      return true; // collision detected
+    }
+  }
+  return false;
+}
+
+bool db_PIBT::is_motion_valid(size_t robot_id,
+                              const dynobench::Trajectory &traj,
+                              const std::vector<dynobench::Trajectory> &M_to)
+{
+  for (size_t other_robot_id = 0; other_robot_id < M_to.size(); ++other_robot_id)
+  {
+    if (other_robot_id == robot_id || M_to[other_robot_id].is_empty())
+      continue;
+
+    if (has_inter_robot_collision(traj, robot_id, M_to[other_robot_id], other_robot_id))
+    {
+      std::cout << "invalid motion, skip" << std::endl;
+      return false;
+    }
+  }
+  return true;
 }

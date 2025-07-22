@@ -26,11 +26,21 @@ db-pibt:
     heuristic1_num_primitives_0: 100
 db-lacam:
   default:
-    delta_0: 0.01
-    num_primitives_0: 100
-    alpha: 0.01 # 0.5
+    delta_0: 0.5
+    num_primitives_0: 200
+    alpha: 0.5
     filter_duplicates: True
     heuristic1: "reverse-search"
-    heuristic1_delta: 0.01 # 1.0
+    heuristic1_delta: 0.9
+    heuristic1_num_primitives_0: 200
+  '*_integrator':
+    delta_0: 0.01
+    num_primitives_0: 100 
+    heuristic1_delta: 0.01
     heuristic1_num_primitives_0: 100
+  '*alcove_unicycle':
+    delta_0: 0.5
+    num_primitives_0: 200
+    heuristic1_delta: 0.9
+    heuristic1_num_primitives_0: 200
 

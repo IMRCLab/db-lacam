@@ -2,6 +2,7 @@
 #include "db_pibt.hpp"
 #include "utils.hpp"
 #include <cassert>
+#include <chrono>
 
 LNode::LNode() : who(), where(), where_state(), where_dbN(), depth(0) {}
 
@@ -67,6 +68,7 @@ LaCAM::~LaCAM() {}
 MultiRobotTrajectory LaCAM::solve()
 {
   solver_info(1, "LaCAM begins");
+  auto start_time = std::chrono::steady_clock::now();
   // setup search
   std::unordered_map<std::vector<Eigen::VectorXd>, HNode *, ConfigHasher, ConfigEqual> EXPLORED;
   // insert initial node
@@ -169,6 +171,10 @@ MultiRobotTrajectory LaCAM::solve()
       }
     }
   }
+  auto end_time = std::chrono::steady_clock::now();
+  auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
+  std::cout << "elapsed:" << std::setw(6) << elapsed_ms << "ms"
+            << "  loop_cnt:" << std::setw(8) << loop_cnt << "\t";
   return solution;
 }
 
@@ -182,6 +188,8 @@ void LaCAM::get_applicable_trajs(std::shared_ptr<AStarNode> db_node, RobotData &
   expander.expand_lazy(db_node->state_eig, tmp_lazy_trajs);
   auto ff = validity_checker(robots[robot_id]);
   int num_valid_states = -1;
+  double min_f = std::numeric_limits<double>::max();
+  double max_f = std::numeric_limits<double>::lowest();
   double gScore = 0;
   double hScore;
   for (size_t j = 0; j < tmp_lazy_trajs.size(); j++)
@@ -201,21 +209,27 @@ void LaCAM::get_applicable_trajs(std::shared_ptr<AStarNode> db_node, RobotData &
       continue;
     }
     Eigen::VectorXd tmp_state = tmp_traj_wrapper.get_state(tmp_traj_wrapper.get_size() - 1);
-    hScore = robots[robot_id]->distance(tmp_state, problem.goals[robot_id]); // h_funs[robot_id]->h(tmp_state); // for the last state of the motion
+    // hScore = robots[robot_id]->distance(tmp_state, problem.goals[robot_id]); // for single integrator, if the env is small
+    hScore = h_funs[robot_id]->h(tmp_state); // for the last state of the motion
     double cost_motion = (tmp_traj_wrapper.get_size() - 1) * robots[robot_id]->ref_dt;
     gScore = db_node->gScore + cost_motion;
     tmp_traj_wrapper.last_state_g = gScore;
     tmp_traj_wrapper.last_state_h = hScore;
     tmp_traj_wrapper.last_state_f = gScore + hScore;
+    if (tmp_traj_wrapper.last_state_f < min_f)
+      min_f = tmp_traj_wrapper.last_state_f;
+    if (tmp_traj_wrapper.last_state_f > max_f)
+      max_f = tmp_traj_wrapper.last_state_f;
     tmp_traj_wrappers.push_back(tmp_traj_wrapper);
   }
-  // ii. sort based on f-value
-  dynobench::TrajWrapper::SortByLastStateF(tmp_traj_wrappers);
+  // ii. sort/cluster based on f-value
+  dynobench::TrajWrapper wr;
+  std::vector<dynobench::TrajWrapper> sorted_traj_wrappers = wr.GetTopNPerClusterByLastStateF(tmp_traj_wrappers, /*range*/ 0.02, min_f, max_f, /*N*/ 8);
   // ii. rollout trajs - env collision free
   Eigen::VectorXd x0 = db_node->state_eig;
-  for (size_t k = 0; k < tmp_traj_wrappers.size(); k++)
+  for (size_t k = 0; k < sorted_traj_wrappers.size(); k++)
   {
-    auto &traj_wrap = tmp_traj_wrappers[k];
+    auto &traj_wrap = sorted_traj_wrappers[k];
     std::vector<Eigen::VectorXd> us = traj_wrap.get_actions();
     std::vector<Eigen::VectorXd> xs(us.size() + 1,
                                     Eigen::VectorXd::Zero(robots[robot_id]->nx));

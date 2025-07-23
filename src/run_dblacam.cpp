@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
   }
   auto start_time = std::chrono::steady_clock::now();
   YAML::Node cfg = YAML::LoadFile(cfgFile);
-  cfg = cfg["db-lacam"]["default"];
+  // cfg = cfg["db-lacam"]["default"];
   Options_tdbastar planner_options;
   planner_options.outFile = outputFile;
   planner_options.cost_delta_factor = 1;
@@ -129,7 +129,7 @@ int main(int argc, char *argv[])
   // read and filter duplicates
   load_motion_primitives_new(planner_options.motionsFile, *(robots[0]), motions,
                              planner_options.max_motions, planner_options.cut_actions,
-                             true, planner_options.check_cols);
+                             /*shuffle*/ false, planner_options.check_cols);
 
   disable_motions(robots[0], problem.robotTypes[0], planner_options.delta, /*filter duplicates*/ true, /*alpha*/ 0.5,
                   planner_options.max_motions, motions);

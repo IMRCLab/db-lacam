@@ -139,7 +139,7 @@ int main(int argc, char *argv[])
     }
     else if (robotType == "integrator1_2d_v0")
     {
-      motionsFile = "../new_format_motions/integrator1_2d_v0/my_motions.bin";
+      motionsFile = "../new_format_motions/integrator1_2d_v0/unit_length2/integrator1_2d_v0.bin.im.bin.sp.bin";
     }
     else
     {
@@ -199,7 +199,7 @@ int main(int argc, char *argv[])
         options_tdbastar.motionsFile = all_motionsFile[robot_id];
         load_motion_primitives_new(options_tdbastar.motionsFile, *robot, robot_motions_reverse[problem.robotTypes[robot_id]],
                                    options_tdbastar.max_motions,
-                                   options_tdbastar.cut_actions, /*shuffle*/ true, options_tdbastar.check_cols);
+                                   options_tdbastar.cut_actions, /*shuffle*/ false, options_tdbastar.check_cols);
       }
       // start to inf for the reverse search
       problem.starts[robot_id].head(robot->translation_invariance).setConstant(std::sqrt(std::numeric_limits<double>::max()));

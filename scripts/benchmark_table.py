@@ -127,6 +127,7 @@ def get_alg_name(alg_key):
   mapping = {
     "db-cbs": "db-CBS",
     "db-pibt": "db-PIBT",
+    "db-lacam": "db-LaCAM",
   }
 
   if alg_key in mapping:
@@ -205,15 +206,30 @@ def write_table(rows, algs, results_path, fname, trials, T, regret=False):
 
 def main():
   results_path = Path("../results")
-  trial = 1
-  T = 1 * 60
+  trial = 2
+  T = 2 * 60
   rows = [
-    "swap2_unicycle",
-    "swap3_unicycle",
+     "circle2_integrator",
+    "circle4_integrator",
+    "circle6_integrator",
+    "circle8_integrator",
+    "circle10_integrator",
+    "circle2_unicycle",
+    "circle4_unicycle",
+    "circle6_unicycle",
+    "circle8_unicycle",
+    "circle10_unicycle",
+    # difficult cases
+    # "alcove_unicycle",
+    # "atgoal_unicycle",
+    # "swap2_unicycle",
+    # "swap3_unicycle",
+    # "swap4_unicycle",
   ]
   algs = [
     "db-cbs",
     "db-pibt",
+    "db-lacam",
   ]
 
   write_table(rows, algs, results_path, "table.pdf", trial, T)

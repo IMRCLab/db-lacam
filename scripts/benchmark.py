@@ -8,6 +8,7 @@ import tqdm
 import multiprocessing as mp
 from main_dbpibt import run_dbpibt
 from main_dbcbs import run_dbcbs
+from main_dblacam import run_dblacam
 from benchmark_table import write_table
 
 @dataclass
@@ -69,6 +70,9 @@ def execute_task(task: ExecutionTask):
   elif task.alg == "db-cbs":
     run_dbcbs(str(env), str(result_folder), task.timelimit, mycfg)
     visualize_files = [p.name for p in result_folder.glob('result_*')]
+  elif task.alg == "db-lacam":
+    run_dblacam(str(env), str(result_folder), task.timelimit, mycfg)
+    visualize_files = [p.name for p in result_folder.glob('result_*')]
     
   # vis_script = scripts_path / "visualize.py"
   # for file in visualize_files:
@@ -77,17 +81,29 @@ def execute_task(task: ExecutionTask):
 def main():
   parallel = True
   instances = [
-    "swap2_integrator",
-    "circle4_integrator",
-    "circle6_integrator",
-    "circle8_integrator",
-    "circle10_integrator",
+    # "circle2_integrator",
+    # "circle4_integrator",
+    # "circle6_integrator",
+    # "circle8_integrator",
+    # "circle10_integrator",
+    # "circle2_unicycle",
+    # "circle4_unicycle",
+    # "circle6_unicycle",
+    # "circle8_unicycle",
+    "circle10_unicycle",
+    # difficult cases
+    # "alcove_unicycle",
+    # "atgoal_unicycle",
+    # "swap2_unicycle",
+    # "swap3_unicycle",
+    # "swap4_unicycle",
   ]
   algs = [
     "db-cbs",
     "db-pibt",
+    "db-lacam",
   ]
-  trials = 5
+  trials = 1
   timelimit = 2 * 60 
   
   tasks = []

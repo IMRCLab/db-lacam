@@ -28,8 +28,8 @@ robots:
     start: [9, 7, 3.14]
     goal: [2, 8, 3.14] 
   - type: unicycle1_v0 # 6
-    start: [7, 9, 4.71] 
-    goal: [4, 2, 4.71]  
+    start: [7, 9, -1.57] 
+    goal: [4, 2, -1.57]  
   - type: unicycle1_v0 # 8
     start: [2, 8, 0.]
     goal: [7, 2, 0.] 

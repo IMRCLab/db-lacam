@@ -90,9 +90,9 @@ def main():
     # "circle4_unicycle",
     # "circle6_unicycle",
     # "circle8_unicycle",
-    "circle10_unicycle",
+    # "circle10_unicycle",
     # difficult cases
-    # "alcove_unicycle",
+    "alcove_unicycle",
     # "atgoal_unicycle",
     # "swap2_unicycle",
     # "swap3_unicycle",
@@ -103,7 +103,7 @@ def main():
     "db-pibt",
     "db-lacam",
   ]
-  trials = 1
+  trials = 5
   timelimit = 2 * 60 
   
   tasks = []

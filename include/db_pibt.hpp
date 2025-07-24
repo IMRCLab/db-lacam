@@ -50,6 +50,7 @@ struct db_PIBT
 
   bool set_new_config(std::vector<Eigen::VectorXd> Q_from,
                       std::vector<Eigen::VectorXd> &Q_to,
+                      std::vector<std::shared_ptr<AStarNode>> dbN_from,
                       std::vector<std::shared_ptr<AStarNode>> &dbN_to,
                       std::vector<dynobench::Trajectory> &M_to,
                       const std::vector<int> &order,
@@ -58,6 +59,7 @@ struct db_PIBT
   bool funcPIBT(size_t robot_id,
                 std::vector<Eigen::VectorXd> Q_from,
                 std::vector<Eigen::VectorXd> &Q_to,
+                std::vector<std::shared_ptr<AStarNode>> dbN_from,
                 std::vector<std::shared_ptr<AStarNode>> &dbN_to,
                 std::vector<dynobench::Trajectory> &M_to,
                 std::map<size_t, RobotData> robot_data_rolled,

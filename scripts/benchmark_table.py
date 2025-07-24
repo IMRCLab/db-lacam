@@ -206,7 +206,7 @@ def write_table(rows, algs, results_path, fname, trials, T, regret=False):
 
 def main():
   results_path = Path("../results")
-  trial = 2
+  trial = 5
   T = 2 * 60
   rows = [
      "circle2_integrator",
@@ -220,11 +220,11 @@ def main():
     "circle8_unicycle",
     "circle10_unicycle",
     # difficult cases
-    # "alcove_unicycle",
-    # "atgoal_unicycle",
-    # "swap2_unicycle",
-    # "swap3_unicycle",
-    # "swap4_unicycle",
+    "alcove_unicycle",
+    "atgoal_unicycle",
+    "swap2_unicycle",
+    "swap3_unicycle",
+    "swap4_unicycle",
   ]
   algs = [
     "db-cbs",

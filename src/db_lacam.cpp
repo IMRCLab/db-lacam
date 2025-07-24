@@ -26,8 +26,6 @@ HNode::HNode(std::vector<Eigen::VectorXd> _Q, std::vector<std::shared_ptr<AStarN
       order(_order),
       search_tree()
 {
-  // if (parent != nullptr)
-  //   parent->neighbors.insert(this);
   search_tree.push(new LNode());
 }
 
@@ -99,9 +97,11 @@ MultiRobotTrajectory LaCAM::solve()
     auto L = H->search_tree.front();
     H->search_tree.pop();
     // get applicable motions once
+    std::vector<std::shared_ptr<AStarNode>> dbN_to;
     for (size_t r = 0; r < robots.size(); r++)
     {
       get_applicable_trajs(H->dbN[r], rolled_robot_data[r], r);
+      dbN_to.push_back(std::make_shared<AStarNode>());
     }
     // low level search
     if (L->depth < H->Q.size())
@@ -124,8 +124,6 @@ MultiRobotTrajectory LaCAM::solve()
     // create successors at the high-level search
     std::vector<Eigen::VectorXd> Q_to;
     Q_to.resize(robots.size());
-    std::vector<std::shared_ptr<AStarNode>> dbN_to;
-    dbN_to.resize(robots.size());
     std::vector<dynobench::Trajectory> M_to;
     M_to.resize(robots.size());
     auto res = set_new_config(H, L, Q_to, dbN_to, M_to, rolled_robot_data);
@@ -277,7 +275,7 @@ bool LaCAM::set_new_config(HNode *H, LNode *L, std::vector<Eigen::VectorXd> &Q_t
     dbN_to[L->who[d]] = L->where_dbN[d];
     M_to[L->who[d]] = L->where[d];
   }
-  return db_pibt.set_new_config(H->Q, Q_to, dbN_to, M_to, H->order, robot_data_rolled);
+  return db_pibt.set_new_config(H->Q, Q_to, H->dbN, dbN_to, M_to, H->order, robot_data_rolled);
 }
 
 std::vector<int> LaCAM::get_sorted_order(

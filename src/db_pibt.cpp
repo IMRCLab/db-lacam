@@ -32,6 +32,7 @@ using dynobench::Trajectory;
 
 bool db_PIBT::set_new_config(std::vector<Eigen::VectorXd> Q_from,
                              std::vector<Eigen::VectorXd> &Q_to,
+                             std::vector<std::shared_ptr<AStarNode>> dbN_from,
                              std::vector<std::shared_ptr<AStarNode>> &dbN_to,
                              std::vector<dynobench::Trajectory> &M_to,
                              const std::vector<int> &order,
@@ -54,7 +55,7 @@ bool db_PIBT::set_new_config(std::vector<Eigen::VectorXd> Q_from,
   {
     for (auto p : order)
     {
-      if (M_to[p].is_empty() && !funcPIBT(p, Q_from, Q_to, dbN_to, M_to, robot_data_rolled))
+      if (M_to[p].is_empty() && !funcPIBT(p, Q_from, Q_to, dbN_from, dbN_to, M_to, robot_data_rolled))
       {
         success = false;
         break;
@@ -68,6 +69,7 @@ bool db_PIBT::set_new_config(std::vector<Eigen::VectorXd> Q_from,
 bool db_PIBT::funcPIBT(size_t robot_id,
                        std::vector<Eigen::VectorXd> Q_from,
                        std::vector<Eigen::VectorXd> &Q_to,
+                       std::vector<std::shared_ptr<AStarNode>> dbN_from,
                        std::vector<std::shared_ptr<AStarNode>> &dbN_to,
                        std::vector<dynobench::Trajectory> &M_to,
                        std::map<size_t, RobotData> robot_data_rolled,
@@ -75,7 +77,7 @@ bool db_PIBT::funcPIBT(size_t robot_id,
 {
   std::cout << "Calling dbPIBT for robot " << robot_id << ", PI: " << pi << std::endl;
   Eigen::VectorXd now_state = Q_from[robot_id];
-  // std::cout << "robot " << robot_id << " start state: " << now_state.format(dynobench::FMT) << std::endl;
+  std::cout << "robot " << robot_id << " start state: " << now_state.format(dynobench::FMT) << std::endl;
   RobotData robot_data = robot_data_rolled[robot_id];
   // std::cout << "rolled trajs size: " << robot_data.trajectories.size() << std::endl;
   bool success;
@@ -88,11 +90,9 @@ bool db_PIBT::funcPIBT(size_t robot_id,
       continue;
     // reserve the motion
     Q_to[robot_id] = next_state;
-    auto next_dbN = std::make_shared<AStarNode>();
-    next_dbN->state_eig = next_state;
-    next_dbN->gScore = robot_data.last_state_g[i];
-    next_dbN->hScore = robot_data.last_state_h[i];
-    dbN_to[robot_id] = next_dbN;
+    dbN_to[robot_id]->state_eig = next_state;
+    dbN_to[robot_id]->gScore = robot_data.last_state_g[i];
+    dbN_to[robot_id]->hScore = robot_data.last_state_h[i];
     M_to[robot_id] = traj;
     success = true;
     // check for collision with unplanned robots (state-by-state)
@@ -106,7 +106,7 @@ bool db_PIBT::funcPIBT(size_t robot_id,
         {
           int j = key;
           std::cout << "robot " << j << " hasn't planned, getting PI" << std::endl;
-          success = funcPIBT(j, Q_from, Q_to, dbN_to, M_to, robot_data_rolled, /*pi*/ true);
+          success = funcPIBT(j, Q_from, Q_to, dbN_from, dbN_to, M_to, robot_data_rolled, /*pi*/ true);
           break;
         }
       }
@@ -115,10 +115,18 @@ bool db_PIBT::funcPIBT(size_t robot_id,
     }
     if (!success)
       continue;
-    // std::cout << "robot " << robot_id << " end state: " << next_state.format(dynobench::FMT) << std::endl;
+    std::cout << "robot " << robot_id << " end state: " << next_state.format(dynobench::FMT) << std::endl;
     return true;
   }
-  // if no motion was applicable, then the robot does not move - stay motion primitive is added
+  // if no motion was applicable, then the robot does not move
+  std::cout << "robot " << robot_id << " did not find a motion primitive staying where it is" << std::endl;
+  Q_to[robot_id] = Q_from[robot_id];
+  dbN_to[robot_id]->state_eig = Q_from[robot_id];
+  dbN_to[robot_id]->gScore = dbN_from[robot_id]->gScore;
+  dbN_to[robot_id]->hScore = dbN_from[robot_id]->hScore;
+  // keep it open, so the robot has not labeled as if it has planned
+  M_to[robot_id].states.clear();
+  M_to[robot_id].actions.clear();
   return false;
 }
 

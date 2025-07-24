@@ -186,11 +186,11 @@ int main(int argc, char *argv[])
   std::vector<ompl::NearestNeighbors<std::shared_ptr<AStarNode>> *> heuristics(robots.size(), nullptr);
   if (cfg["heuristic1"].as<std::string>() == "reverse-search")
   {
+    auto reverse_start = std::chrono::steady_clock::now();
     std::map<std::string, std::vector<Motion>> robot_motions_reverse;
     options_tdbastar.delta = cfg["heuristic1_delta"].as<float>();
     options_tdbastar.max_motions = cfg["heuristic1_num_primitives_0"].as<size_t>();
     std::cout << "Running the reverse search" << std::endl;
-    auto reverse_start = std::chrono::steady_clock::now();
     options_tdbastar.delta = cfg["heuristic1_delta"].as<float>();
     for (const auto &robot : robots)
     {

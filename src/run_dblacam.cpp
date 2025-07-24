@@ -91,6 +91,7 @@ int main(int argc, char *argv[])
   planner_options.cost_delta_factor = 1;
   planner_options.fix_seed = 1;
   planner_options.delta = cfg["delta_0"].as<float>();
+  planner_options.goal_delta = cfg["goal_delta"].as<float>();
   planner_options.max_motions = cfg["num_primitives_0"].as<size_t>();
   std::cout << "*** options for dblacam search ***" << std::endl;
   planner_options.print(std::cout);
@@ -142,6 +143,7 @@ int main(int argc, char *argv[])
     auto start_rev = std::chrono::steady_clock::now();
     dynobench::Problem problem_original(inputFile);
     planner_options.delta = cfg["heuristic1_delta"].as<float>();
+    planner_options.max_motions = cfg["heuristic1_num_primitives_0"].as<size_t>();
     Out_info_tdb out_dblacam;
     size_t robot_id = 0;
     for (const auto &robot : robots)

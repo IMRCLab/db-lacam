@@ -145,6 +145,7 @@ int main(int argc, char *argv[])
     auto start_rev = std::chrono::steady_clock::now();
     dynobench::Problem problem_original(inputFile);
     planner_options.delta = cfg["heuristic1_delta"].as<float>();
+    planner_options.max_motions = cfg["heuristic1_num_primitives_0"].as<size_t>();
     Out_info_tdb out_pibt;
     size_t robot_id = 0;
     for (const auto &robot : robots)
@@ -171,6 +172,7 @@ int main(int argc, char *argv[])
     problem.starts = problem_original.starts;
     problem.goals = problem_original.goals;
     planner_options.delta = cfg["delta_0"].as<float>();
+    planner_options.max_motions = cfg["num_primitives_0"].as<size_t>();
   }
   std::vector<std::shared_ptr<Heu_fun>> robot_hfuns;
   // check motions
@@ -196,7 +198,7 @@ int main(int argc, char *argv[])
     T_m->add(&motions[i]);
   }
   // add the expander, homogeneous case
-  Expander expander(robots[0].get(), T_m, planner_options.alpha * planner_options.delta, /*add static motion*/ false);
+  Expander expander(robots[0].get(), T_m, planner_options.alpha * planner_options.delta, /*add static motion*/ true);
   dynobench::TrajWrapper traj_wrapper;
   {
     std::vector<Motion *> motions;
@@ -274,8 +276,12 @@ int main(int argc, char *argv[])
   solution.trajectories.resize(robots.size());
   // for the search
   std::map<size_t, RobotData> rolled_robot_data;
+  std::vector<Eigen::VectorXd> Q_to;
+  Q_to.resize(robots.size());
   std::vector<Eigen::VectorXd> Q_from;
-  Q_from.resize(robots.size());
+  std::vector<std::shared_ptr<AStarNode>> dbNode_from;
+  std::vector<std::shared_ptr<AStarNode>> dbNode_to;
+
   std::vector<int> order(robots.size());
   std::iota(order.begin(), order.end(), 0);
   int reached_goal;
@@ -285,6 +291,8 @@ int main(int argc, char *argv[])
   {
     success = false;
     Q_from.clear();
+    dbNode_from.clear();
+    dbNode_to.clear();
     reached_goal = 0;
     for (size_t i = 0; i < robots.size(); i++)
     {
@@ -298,6 +306,8 @@ int main(int argc, char *argv[])
         reached_goal++;
       }
       Q_from.push_back(best_node->state_eig);
+      dbNode_from.push_back(best_node);
+      dbNode_to.push_back(std::make_shared<AStarNode>());
       M_to[i].states.clear();
       M_to[i].actions.clear();
       get_applicable_trajs(expander,
@@ -305,7 +315,6 @@ int main(int argc, char *argv[])
                            traj_wrapper,
                            best_node, rolled_robot_data[i], /*id*/ i);
     }
-
     if (reached_goal == robots.size())
     {
       auto end_time = std::chrono::steady_clock::now();
@@ -317,15 +326,11 @@ int main(int argc, char *argv[])
     }
     std::sort(order.begin(), order.end(), [&](size_t i, size_t j)
               { return (robots[i]->distance(Q_from[i], problem.goals[i])) > (robots[j]->distance(Q_from[j], problem.goals[j])); });
-    std::cout << "updated order: " << std::endl;
     loop_cnt++;
     // prepare _to
-    std::vector<Eigen::VectorXd> Q_to;
-    Q_to.resize(robots.size());
-    std::vector<std::shared_ptr<AStarNode>> dbN_to;
-    dbN_to.resize(robots.size());
+    Q_to.clear();
     // call pibt
-    success = dbpibt.set_new_config(Q_from, Q_to, dbN_to, M_to, order, rolled_robot_data);
+    success = dbpibt.set_new_config(Q_from, Q_to, dbNode_from, dbNode_to, M_to, order, rolled_robot_data);
     if (!success)
     {
       std::cout << "dbPIBT failed!" << std::endl;
@@ -335,20 +340,23 @@ int main(int argc, char *argv[])
     {
       for (size_t j = 0; j < robots.size(); j++)
       {
-        solution.trajectories[j].states.insert(solution.trajectories[j].states.end(),
-                                               M_to[j].states.begin(), M_to[j].states.end());
+        if (!M_to[j].is_empty())
+        {
+          solution.trajectories[j].states.insert(solution.trajectories[j].states.end(),
+                                                 M_to[j].states.begin(), M_to[j].states.end());
 
-        solution.trajectories[j].actions.insert(solution.trajectories[j].actions.end(),
-                                                M_to[j].actions.begin(), M_to[j].actions.end());
+          solution.trajectories[j].actions.insert(solution.trajectories[j].actions.end(),
+                                                  M_to[j].actions.begin(), M_to[j].actions.end());
+        }
         // update the open set for each robot
         robot_nodes[j].push_back(std::make_shared<AStarNode>());
         auto __node = robot_nodes[j].back();
-        __node->state_eig = dbN_to[j]->state_eig;
-        __node->gScore = dbN_to[j]->gScore;
-        __node->hScore = dbN_to[j]->hScore;
-        __node->fScore = dbN_to[j]->gScore + dbN_to[j]->hScore;
+        __node->state_eig = dbNode_to[j]->state_eig;
+        __node->gScore = dbNode_to[j]->gScore;
+        __node->hScore = dbNode_to[j]->hScore;
+        __node->fScore = dbNode_to[j]->gScore + dbNode_to[j]->hScore;
         __node->is_in_open = true;
-        __node->reaches_goal = robots[j]->distance(dbN_to[j]->state_eig, problem.goals[j]) <=
+        __node->reaches_goal = robots[j]->distance(dbNode_to[j]->state_eig, problem.goals[j]) <=
                                planner_options.goal_delta;
         __node->handle = opens[j].push(__node);
       }

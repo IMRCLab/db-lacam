@@ -56,7 +56,7 @@ void get_applicable_trajs(Expander &expander,
       continue;
     }
     Eigen::VectorXd tmp_state = tmp_traj_wrapper.get_state(tmp_traj_wrapper.get_size() - 1);
-    // hScore = robots[robot_id]->distance(tmp_state, problem.goals[robot_id]); // for single integrator, if the env is small
+    // hScore = robots[robot_id]->distance(tmp_state, goal); // for single integrator, if the env is small
     hScore = h_funs[robot_id]->h(tmp_state); // for the last state of the motion
     double cost_motion = (tmp_traj_wrapper.get_size() - 1) * robots[robot_id]->ref_dt;
     gScore = db_node->gScore + cost_motion;
@@ -106,19 +106,26 @@ void get_applicable_trajs(Expander &expander,
     if (collision_data.result.isCollision())
       continue;
 
+    std::cout << "printing the rollout traj for robot " << robot_id << std::endl;
+    for (auto &s : traj.states)
+    {
+      std::cout << s.format(dynobench::FMT) << std::endl;
+    }
+    std::cout << "last state of the traj: " << traj.states.back().format(dynobench::FMT) << std::endl;
+    std::cout << "h value: " << traj_wrap.last_state_h << std::endl;
     robot_data.trajectories.push_back(traj);
     // need for the Node update
     robot_data.last_state_g.push_back(traj_wrap.last_state_g);
-    robot_data.last_state_h.push_back(traj_wrap.last_state_h);
+    robot_data.last_state_h.push_back(traj_wrap.last_state_h); // with discontinuity, comes from traj_wrap last state
   }
 }
 
-RobotData GetTopNPerClusterByH(const RobotData &input, double range, double min_h, double max_h, size_t N, bool shuffle = false)
+RobotData GetTopNPerClusterByH(const RobotData &input, RobotData &output, double range, double min_h, double max_h, size_t N = 4)
 {
   if (input.trajectories.empty())
     return {};
 
-  double threshold = range * (max_h - min_h);
+  double threshold = range * (max_h - min_h); // e.g. 5% threshold
   // Combine into a sortable struct
   struct IndexedData
   {
@@ -143,7 +150,7 @@ RobotData GetTopNPerClusterByH(const RobotData &input, double range, double min_
             });
 
   // Clustering
-  RobotData result;
+  // RobotData result;
   std::vector<IndexedData> current_cluster;
   double cluster_start_value = data[0].h;
 
@@ -155,9 +162,9 @@ RobotData GetTopNPerClusterByH(const RobotData &input, double range, double min_
       size_t take = std::min(N, current_cluster.size());
       for (size_t i = 0; i < take; ++i)
       {
-        result.trajectories.push_back(current_cluster[i].traj);
-        result.last_state_h.push_back(current_cluster[i].h);
-        result.last_state_g.push_back(current_cluster[i].g);
+        output.trajectories.push_back(current_cluster[i].traj);
+        output.last_state_h.push_back(current_cluster[i].h);
+        output.last_state_g.push_back(current_cluster[i].g);
       }
 
       current_cluster.clear();
@@ -173,35 +180,35 @@ RobotData GetTopNPerClusterByH(const RobotData &input, double range, double min_
     size_t take = std::min(N, current_cluster.size());
     for (size_t i = 0; i < take; ++i)
     {
-      result.trajectories.push_back(current_cluster[i].traj);
-      result.last_state_h.push_back(current_cluster[i].h);
-      result.last_state_g.push_back(current_cluster[i].g);
+      output.trajectories.push_back(current_cluster[i].traj);
+      output.last_state_h.push_back(current_cluster[i].h);
+      output.last_state_g.push_back(current_cluster[i].g);
     }
   }
-  if (shuffle)
-    result.shuffle();
-  return result;
+
+  return output;
 }
 
-void get_applicable_trajs_precise(Expander &expander,
-                                  std::vector<std::shared_ptr<dynoplan::Heu_fun>> h_funs,
-                                  std::vector<std::shared_ptr<dynobench::Model_robot>> robots,
-                                  dynobench::TrajWrapper tmp_traj_wrapper,
-                                  std::shared_ptr<AStarNode> db_node,
-                                  RobotData &robot_data, size_t robot_id)
+// find applicable motion, roll-out, compute f, sort
+void get_applicable_trajs2(Expander &expander,
+                           std::vector<std::shared_ptr<dynoplan::Heu_fun>> h_funs,
+                           std::vector<std::shared_ptr<dynobench::Model_robot>> robots,
+                           dynobench::TrajWrapper tmp_traj_wrapper,
+                           std::shared_ptr<AStarNode> db_node,
+                           RobotData &robot_data, size_t robot_id)
 {
-  // clear
+
   std::vector<dynoplan::LazyTraj> tmp_lazy_trajs;
   std::vector<dynobench::TrajWrapper> tmp_traj_wrappers;
   robot_data.clear();
+  RobotData tmp_robot_data;
+  double min_h = std::numeric_limits<double>::max();
+  double max_h = std::numeric_limits<double>::lowest();
   // i. expand applicable motions
   expander.expand_lazy(db_node->state_eig, tmp_lazy_trajs);
   auto ff = validity_checker(robots[robot_id]);
   int num_valid_states = -1;
   double gScore = 0;
-  double min_h = std::numeric_limits<double>::max();
-  double max_h = std::numeric_limits<double>::lowest();
-
   for (size_t j = 0; j < tmp_lazy_trajs.size(); j++)
   {
     auto &lazy_traj = tmp_lazy_trajs[j];
@@ -224,9 +231,8 @@ void get_applicable_trajs_precise(Expander &expander,
     tmp_traj_wrappers.push_back(tmp_traj_wrapper);
   }
   // ii. rollout trajs - env collision free
-  RobotData tmp_data;
-  double last_state_h = 0;
   Eigen::VectorXd x0 = db_node->state_eig;
+  double last_state_h = 0;
   for (size_t k = 0; k < tmp_traj_wrappers.size(); k++)
   {
     auto &traj_wrap = tmp_traj_wrappers[k];
@@ -258,14 +264,24 @@ void get_applicable_trajs_precise(Expander &expander,
                                       fcl::DefaultCollisionFunction<double>);
     if (collision_data.result.isCollision())
       continue;
-    tmp_data.trajectories.push_back(traj);
-    tmp_data.last_state_g.push_back(traj_wrap.last_state_g);
-    last_state_h = h_funs[robot_id]->h(traj.goal);
-    tmp_data.last_state_h.push_back(last_state_h);
+    // std::cout << "printing the rollout traj for robot " << robot_id << std::endl;
+    // for (auto &s : traj.states)
+    // {
+    //   std::cout << s.format(dynobench::FMT) << std::endl;
+    // }
+    // std::cout << "last state of the traj: " << traj.states.back().format(dynobench::FMT) << std::endl;
+    last_state_h = h_funs[robot_id]->h(traj.states.back());
+    // std::cout << "h value: " << last_state_h << std::endl;
+    tmp_robot_data.trajectories.push_back(traj);
+    tmp_robot_data.last_state_g.push_back(traj_wrap.last_state_g);
+    tmp_robot_data.last_state_h.push_back(last_state_h); // precise lowe_bound_time in heuristics
     if (last_state_h < min_h)
       min_h = last_state_h;
     if (last_state_h > max_h)
       max_h = last_state_h;
   }
-  robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ 0.1, min_h, max_h, 1, /*shuffle*/ false); // range 0.1-0.5 for sparseness
+  // sort them
+  // tmp_robot_data.sort_by_h();
+  // robot_data = tmp_robot_data;
+  GetTopNPerClusterByH(tmp_robot_data, robot_data, /*range*/ 0.02, min_h, max_h, /*N*/ 8);
 }

@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
   std::string motionsFile;
   if (problem.robotTypes[0] == "unicycle1_v0")
   {
-    motionsFile = "../new_format_motions/unicycle1_v0/unit_length/unicycle1_v0.bin.im.bin.sp.bin";
+    motionsFile = "../new_format_motions/unicycle1_v0/spread/unicycle1_v0.bin.im.bin.sp.bin";
   }
   else if (problem.robotTypes[0] == "integrator1_2d_v0")
   {
@@ -310,10 +310,10 @@ int main(int argc, char *argv[])
       dbNode_to.push_back(std::make_shared<AStarNode>());
       M_to[i].states.clear();
       M_to[i].actions.clear();
-      get_applicable_trajs(expander,
-                           robot_hfuns, robots,
-                           traj_wrapper,
-                           best_node, rolled_robot_data[i], /*id*/ i);
+      get_applicable_trajs_precise(expander,
+                                   robot_hfuns, robots,
+                                   traj_wrapper,
+                                   best_node, rolled_robot_data[i], /*id*/ i);
     }
     if (reached_goal == robots.size())
     {

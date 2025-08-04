@@ -115,11 +115,13 @@ int main(int argc, char *argv[])
   std::string motionsFile;
   if (problem.robotTypes[0] == "unicycle1_v0")
   {
-    motionsFile = "../new_format_motions/unicycle1_v0/unit_length/unicycle1_v0.bin.im.bin.sp.bin";
+    // motionsFile = "../new_format_motions/unicycle1_v0/unit_length/unicycle1_v0.bin.im.bin.sp.bin";
+    motionsFile = "../new_format_motions/unicycle1_v0/spread/unicycle1_v0.bin.im.bin.sp.bin";
   }
   else if (problem.robotTypes[0] == "integrator1_2d_v0")
   {
     motionsFile = "../new_format_motions/integrator1_2d_v0/unit_length2/integrator1_2d_v0.bin.im.bin.sp.bin";
+    // motionsFile = "../new_format_motions/integrator1_2d_v0/my_motions2.bin"; // handcrafted for debugging
   }
   else
   {
@@ -195,7 +197,7 @@ int main(int argc, char *argv[])
   {
     T_m->add(&motions.at(i));
   }
-  Expander expander(robots[0].get(), T_m, planner_options.alpha * planner_options.delta, /*add static motion*/ true);
+  Expander expander(robots[0].get(), T_m, planner_options.alpha * planner_options.delta, /*add static motion*/ true); // false for integrator1
   // for LaCam
   std::vector<std::shared_ptr<Heu_fun>> h_funs;
   std::vector<std::shared_ptr<AStarNode>> dbN_start;
@@ -215,7 +217,7 @@ int main(int argc, char *argv[])
     node->is_in_open = true;
     node->reaches_goal =
         (robots[i]->distance(problem.starts[i], problem.goals[i]) <=
-         planner_options.goal_delta);
+         planner_options.goal_delta); // don't change distance weights!
     DYNO_CHECK_GEQ(node->hScore, 0, "hScore should be positive");
     DYNO_CHECK_LEQ(node->hScore, 1e5, "hScore should be bounded");
   }
@@ -228,5 +230,7 @@ int main(int argc, char *argv[])
     return false;
   }
   solution.to_yaml_format(outputFile.c_str());
+  // DEBUG
+  lacam.export_node_expansion();
   return 0;
 }

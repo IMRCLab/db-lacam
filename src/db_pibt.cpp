@@ -81,8 +81,10 @@ bool db_PIBT::funcPIBT(size_t robot_id,
   RobotData robot_data = robot_data_rolled[robot_id];
   // std::cout << "rolled trajs size: " << robot_data.trajectories.size() << std::endl;
   bool success;
+  // DEBUG
   for (size_t i = 0; i < robot_data.trajectories.size(); i++)
   {
+    std::cout << "robot " << robot_id << " motion: " << i << std::endl;
     dynobench::Trajectory traj = robot_data.trajectories[i];
     Eigen::VectorXd next_state = traj.states.back();
     // check for collision with planned robots

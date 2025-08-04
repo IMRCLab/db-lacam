@@ -42,11 +42,12 @@ struct HNode
   HNode *parent;
   std::vector<dynobench::Trajectory> M_to;
   int depth;
+  int id;
 
   std::vector<int> order;
   std::queue<LNode *> search_tree;
 
-  HNode(std::vector<Eigen::VectorXd> _C, std::vector<std::shared_ptr<AStarNode>> _dbNodes, std::vector<int> _order, HNode *_parent = nullptr);
+  HNode(int _id, std::vector<Eigen::VectorXd> _C, std::vector<std::shared_ptr<AStarNode>> _dbNodes, std::vector<int> _order, HNode *_parent = nullptr);
   ~HNode();
 };
 using HNodes = std::vector<HNode *>;
@@ -73,6 +74,8 @@ struct LaCAM
   std::deque<HNode *> OPEN;
   int loop_cnt;
   std::vector<int> order;
+  // DEBUG
+  std::vector<dynobench::Trajectory> expanded_trajs;
 
   LaCAM(const dynobench::Problem _problem,
         std::vector<std::shared_ptr<AStarNode>> _dbNodes,
@@ -90,6 +93,10 @@ struct LaCAM
                       std::map<size_t, RobotData> valid_trajs);
 
   void get_applicable_trajs(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id);
+  void get_applicable_trajs_precise(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id);
+  RobotData GetTopNPerClusterByH(const RobotData &input, double range, double min_h, double max_h, size_t N, bool shuffle);
+  // DEBUG
+  void export_node_expansion();
 
   std::vector<int> get_sorted_order(
       std::vector<std::shared_ptr<dynobench::Model_robot>> &robots,

@@ -52,16 +52,35 @@ jobs:
           python3 -m pip install crocoddyl
         fi
         
-    - name: Install latest ompl
+    # - name: Install latest ompl
+    #   run: |
+    #     mkdir __local
+    #     git clone https://github.com/ompl/ompl
+    #     cd ompl 
+    #     git checkout e2994e5
+    #     mkdir build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/__local  && make install -j8
+    - name: Install OMPL from source
       run: |
-        mkdir __local
-        git clone https://github.com/ompl/ompl
-        cd ompl 
+        git clone https://github.com/ompl/ompl.git
+        cd ompl
         git checkout e2994e5
-        mkdir build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/__local  && make install -j8
-    - name: Debug OMPL install
-      run: |
+    
+        mkdir -p build
+        cd build
+    
+        cmake .. \
+          -DCMAKE_INSTALL_PREFIX=$HOME/__local \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DOMPL_BUILD_PYBIND11_BINDINGS=OFF \
+          -DOMPL_BUILD_EXAMPLES=OFF \
+          -DOMPL_BUILD_TESTS=OFF
+    
+        make -j$(nproc)
+        make install
+
+        # Check that omplConfig.cmake exists
         ls -l $HOME/__local/lib/cmake/ompl/omplConfig.cmake
+
     - name: Configure CMake
       run: |
         rm -rf ${{github.workspace}}/build

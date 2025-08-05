@@ -24,18 +24,18 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Install system dependencies
-      run: sudo apt update  && sudo apt install libboost-all-dev libfcl-dev cmake libeigen3-dev libyaml-cpp-dev liblz4-dev libmsgpack-dev -y
+    # - name: Install system dependencies
+    #   run: sudo apt update  && sudo apt install libboost-all-dev libfcl-dev cmake libeigen3-dev libyaml-cpp-dev liblz4-dev libmsgpack-dev -y
 
-    - name: install crocoddyl
-      run: |
-        sudo tee /etc/apt/sources.list.d/robotpkg.list << EOF
-        deb [arch=amd64] http://robotpkg.openrobots.org/packages/debian/pub $(lsb_release -sc) robotpkg
-        EOF
+    # - name: install crocoddyl
+    #   run: |
+    #     sudo tee /etc/apt/sources.list.d/robotpkg.list << EOF
+    #     deb [arch=amd64] http://robotpkg.openrobots.org/packages/debian/pub $(lsb_release -sc) robotpkg
+    #     EOF
 
-        curl http://robotpkg.openrobots.org/packages/debian/robotpkg.key | sudo apt-key add -
-        sudo apt update
-        sudo apt install robotpkg-py310-crocoddyl coinor-libipopt-dev -y
+    #     curl http://robotpkg.openrobots.org/packages/debian/robotpkg.key | sudo apt-key add -
+    #     sudo apt update
+    #     sudo apt install robotpkg-py310-crocoddyl coinor-libipopt-dev -y
         
     - name: Install latest ompl
       run: |

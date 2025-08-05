@@ -73,7 +73,8 @@ jobs:
           -DCMAKE_BUILD_TYPE=Release \
           -DOMPL_BUILD_PYBIND11_BINDINGS=OFF \
           -DOMPL_BUILD_EXAMPLES=OFF \
-          -DOMPL_BUILD_TESTS=OFF
+          -DOMPL_BUILD_TESTS=OFF \
+          -DOMPL_BUILD_CMAKE_CONFIG=ON
     
         make -j$(nproc)
         make install

@@ -81,7 +81,7 @@ MultiRobotTrajectory LaCAM::solve()
   while (!OPEN.empty() && !is_expired(timelimit))
   {
     ++loop_cnt;
-    if (loop_cnt > 500)
+    if (loop_cnt > 2000)
     {
       export_node_expansion();
       return solution;
@@ -377,8 +377,8 @@ void LaCAM::get_applicable_trajs_precise(std::shared_ptr<AStarNode> db_node, Rob
     if (last_state_h > max_h)
       max_h = last_state_h;
     // DEBUG
-    if (robot_id == 0 && k % 5 == 0)
-      expanded_trajs.push_back(traj);
+    // if (robot_id == 0 && k % 5 == 0)
+    // expanded_trajs.push_back(traj);
   }
   robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ 0.1, min_h, max_h, 1, /*shuffle*/ false); // range 0.1-0.5 for sparseness
 }

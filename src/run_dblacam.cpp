@@ -113,7 +113,7 @@ int main(int argc, char *argv[])
   }
   // read motions
   std::string motionsFile;
-  if (problem.robotTypes[0] == "unicycle1_v0")
+  if (problem.robotTypes[0] == "unicycle1_v0" || problem.robotTypes[0] == "unicycle1_sphere_v0")
   {
     // motionsFile = "../new_format_motions/unicycle1_v0/unit_length/unicycle1_v0.bin.im.bin.sp.bin";
     motionsFile = "../new_format_motions/unicycle1_v0/spread/unicycle1_v0.bin.im.bin.sp.bin";

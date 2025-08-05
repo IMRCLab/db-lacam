@@ -133,9 +133,9 @@ int main(int argc, char *argv[])
     std::shared_ptr<dynobench::Model_robot> robot = dynobench::robot_factory(
         (problem.models_base_path + robotType + ".yaml").c_str(), problem.p_lb, problem.p_ub);
     robots.push_back(robot);
-    if (robotType == "unicycle1_v0")
+    if (robotType == "unicycle1_v0" || robotType == "unicycle1_sphere_v0")
     {
-      motionsFile = "../new_format_motions/unicycle1_v0/unit_length/unicycle1_v0.bin.im.bin.sp.bin";
+      motionsFile = "../new_format_motions/unicycle1_v0/spread/unicycle1_v0.bin.im.bin.sp.bin";
     }
     else if (robotType == "integrator1_2d_v0")
     {
@@ -167,7 +167,7 @@ int main(int argc, char *argv[])
       options_tdbastar.motionsFile = all_motionsFile[i];
       load_motion_primitives_new(options_tdbastar.motionsFile, *robot, robot_motions[problem.robotTypes[i]],
                                  options_tdbastar.max_motions,
-                                 options_tdbastar.cut_actions, false, options_tdbastar.check_cols);
+                                 options_tdbastar.cut_actions, /*shuffle*/ true, options_tdbastar.check_cols);
     }
     if (robot->name == "car_with_trailers")
     {

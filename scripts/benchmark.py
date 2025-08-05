@@ -74,9 +74,9 @@ def execute_task(task: ExecutionTask):
     run_dblacam(str(env), str(result_folder), task.timelimit, mycfg)
     visualize_files = [p.name for p in result_folder.glob('result_*')]
     
-  # vis_script = scripts_path / "visualize.py"
-  # for file in visualize_files:
-  #   run_visualize(vis_script, env, result_folder / file)
+  vis_script = scripts_path / "visualize.py"
+  for file in visualize_files:
+    run_visualize(vis_script, env, result_folder / file)
       
 def main():
   parallel = True
@@ -84,27 +84,29 @@ def main():
     # "circle2_integrator",
     # "circle4_integrator",
     # "circle6_integrator",
-    # "circle8_integrator",
-    # "circle10_integrator",
+    "circle8_integrator",
+    "circle10_integrator",
     # "circle2_unicycle",
     # "circle4_unicycle",
     # "circle6_unicycle",
-    # "circle8_unicycle",
-    # "circle10_unicycle",
+    "circle8_unicycle",
+    "circle10_unicycle",
     # difficult cases
     "alcove_unicycle",
-    # "atgoal_unicycle",
-    # "swap2_unicycle",
-    # "swap3_unicycle",
-    # "swap4_unicycle",
+    "atgoal_unicycle",
   ]
+  for kind in ["unicycle","unicycle_sphere"]: 
+    for n in [8]:
+      for k in range(10):
+        instances.append("gen_p10_n{}_{}_{}".format(n,k, kind))
+
   algs = [
     "db-cbs",
     "db-pibt",
     "db-lacam",
   ]
-  trials = 5
-  timelimit = 2 * 60 
+  trials = 5 
+  timelimit = 1 * 60 
   
   tasks = []
   for instance in instances:

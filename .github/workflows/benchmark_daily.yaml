@@ -16,7 +16,7 @@ jobs:
   build:
     runs-on: self-hosted
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: recursive
 
@@ -40,7 +40,7 @@ jobs:
         cd ${{github.workspace}}/build
         python3 ../scripts/benchmark.py
 
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: results
         path: results/

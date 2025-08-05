@@ -27,16 +27,30 @@ jobs:
     - name: Install system dependencies
       run: sudo apt update  && sudo apt install libboost-all-dev libfcl-dev cmake libeigen3-dev libyaml-cpp-dev liblz4-dev libmsgpack-dev -y
 
-    - name: install crocoddyl
-      run: |
-        sudo tee /etc/apt/sources.list.d/robotpkg.list << EOF
-        # deb [arch=amd64] http://robotpkg.openrobots.org/packages/debian/pub $(lsb_release -sc) robotpkg
-        deb [arch=amd64] http://robotpkg.openrobots.org/wip/packages/debian/pub jammy robotpkg
-        EOF
+    # - name: install crocoddyl
+    #   run: |
+    #     sudo tee /etc/apt/sources.list.d/robotpkg.list << EOF
+    #     deb [arch=amd64] http://robotpkg.openrobots.org/packages/debian/pub $(lsb_release -sc) robotpkg
+    #     EOF
 
-        curl http://robotpkg.openrobots.org/packages/debian/robotpkg.key | sudo apt-key add -
-        sudo apt update
-        sudo apt install robotpkg-py310-crocoddyl coinor-libipopt-dev -y
+    #     curl http://robotpkg.openrobots.org/packages/debian/robotpkg.key | sudo apt-key add -
+    #     sudo apt update
+    #     sudo apt install robotpkg-py310-crocoddyl coinor-libipopt-dev -y
+    - name: Try installing from robotpkg, fallback to pip
+      run: |
+        set -e
+        sudo apt-get update
+        sudo apt-get install -y curl gnupg lsb-release || true
+    
+        curl -fsSL http://robotpkg.openrobots.org/packages/debian/robotpkg.key | gpg --dearmor | sudo tee /usr/share/keyrings/robotpkg-archive-keyring.gpg > /dev/null
+        echo "deb [arch=amd64 signed-by=/usr/share/keyrings/robotpkg-archive-keyring.gpg] http://robotpkg.openrobots.org/wip/packages/debian/pub $(lsb_release -sc) robotpkg" | sudo tee /etc/apt/sources.list.d/robotpkg.list
+    
+        sudo apt-get update
+        if ! sudo apt-get install -y robotpkg-py310-crocoddyl coinor-libipopt-dev; then
+          echo "robotpkg failed, installing via pip..."
+          python3 -m pip install --upgrade pip
+          python3 -m pip install crocoddyl
+        fi
         
     - name: Install latest ompl
       run: |

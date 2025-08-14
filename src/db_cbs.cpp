@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
     return 1;
   }
   YAML::Node cfg = YAML::LoadFile(cfgFile);
-  // cfg = cfg["db-cbs"]["default"];
+  cfg = cfg["db-cbs"]["default"];
   float alpha = cfg["alpha"].as<float>();
   bool filter_duplicates = cfg["filter_duplicates"].as<bool>();
   fs::path output_path(outputFile);
@@ -140,6 +140,10 @@ int main(int argc, char *argv[])
     else if (robotType == "integrator1_2d_v0")
     {
       motionsFile = "../new_format_motions/integrator1_2d_v0/unit_length2/integrator1_2d_v0.bin.im.bin.sp.bin";
+    }
+    else if (problem.robotType == "integrator2_3d_v0")
+    {
+      motionsFile = "../new_format_motions/integrator2_3d_v0/spread/integrator2_3d_v0.bin.im.bin.sp.bin";
     }
     else
     {

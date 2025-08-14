@@ -59,7 +59,7 @@ LaCAM::LaCAM(const dynobench::Problem _problem,
       order(robots.size(), 0),
       loop_cnt(0)
 {
-  tmp_traj_wrapper.allocate_size(/*max_traj_size*/ 40, robots.at(0)->nx, robots.at(0)->nu);
+  tmp_traj_wrapper.allocate_size(/*max_traj_size*/ 100, robots.at(0)->nx, robots.at(0)->nu);
 }
 
 LaCAM::~LaCAM() {}
@@ -75,13 +75,16 @@ MultiRobotTrajectory LaCAM::solve()
   order = get_sorted_order(robots, problem.starts, problem.goals);
   auto H_init = new HNode(h_id, problem.starts, dbNodes, order);
   OPEN.push_front(H_init);
+  // DEBUG
+  double best_distance_to_goal = 5000;
+  Eigen::VectorXd best_distance_state;
   EXPLORED[H_init->Q] = H_init;
   // search loop
   solver_info(2, "search iteration begins");
   while (!OPEN.empty() && !is_expired(timelimit))
   {
     ++loop_cnt;
-    if (loop_cnt > 2000)
+    if (loop_cnt > 50)
     {
       export_node_expansion();
       return solution;
@@ -89,13 +92,10 @@ MultiRobotTrajectory LaCAM::solve()
     // do not pop here!
     auto H = OPEN.front(); // high-level node
     std::cout << "Loop count: " << loop_cnt << std::endl;
-    // std::cout << "OPEN size: " << OPEN.size() << std::endl;
-    // std::cout << "HL Node taken! ID: " << H->id << ", Search tree size: " << H->search_tree.size() << std::endl;
     H->order = get_sorted_order(robots, H->Q, problem.goals);
     if (H->parent != nullptr)
-      // std::cout << "Parent HL ID: " << H->parent->id << std::endl;
       // check goal condition
-      if (H_goal == nullptr && is_close_config(H->Q, problem.goals, robots.at(0), /*threshold*/ 0.5))
+      if (H_goal == nullptr && is_close_config(H->Q, problem.goals, robots.at(0), /*threshold*/ 0.75))
       {
         H_goal = H;
         solver_info(2, "found solution!");
@@ -110,27 +110,29 @@ MultiRobotTrajectory LaCAM::solve()
     }
     auto L = H->search_tree.front();
     H->search_tree.pop();
-    // std::cout << "Search tree size (after pop): " << H->search_tree.size() << std::endl;
-    // get applicable motions once
     std::vector<std::shared_ptr<AStarNode>> dbN_to;
-    // std::cout << "Current states for applicable motions expansion!" << std::endl;
     for (size_t r = 0; r < robots.size(); r++)
     {
-      // std::cout << H->dbN[r]->state_eig.format(dynobench::FMT) << std::endl;
       get_applicable_trajs_precise(H->dbN[r], rolled_robot_data[r], r);
       dbN_to.push_back(std::make_shared<AStarNode>());
+      double distance_to_goal = robots[r]->distance(H->dbN[r]->state_eig, problem.goals[r]);
+      if (distance_to_goal < best_distance_to_goal)
+      {
+        best_distance_to_goal = distance_to_goal;
+        best_distance_state = H->dbN[r]->state_eig;
+        std::cout << " best distance to goal: " << best_distance_to_goal << std::endl;
+        std::cout << best_distance_state.format(dynobench::FMT) << std::endl;
+      }
     }
     // low level search
     if (L->depth < H->Q.size())
     {
       const auto i = H->order[L->depth];
       assert(!rolled_robot_data[i].trajectories.empty());
-      // std::cout << "robot " << i << " H->search_tree is being added with" << std::endl;
       for (size_t j = 0; j < rolled_robot_data[i].trajectories.size(); j++)
       {
         dynobench::Trajectory u_traj = rolled_robot_data[i].trajectories[j];
         Eigen::VectorXd u_state = rolled_robot_data[i].trajectories[j].goal; // last state of the motion
-        // std::cout << u_state.format(dynobench::FMT) << std::endl;
         if (!robots[i]->is_state_valid(u_state))
           continue;
         auto u_dbN = std::make_shared<AStarNode>();
@@ -174,6 +176,8 @@ MultiRobotTrajectory LaCAM::solve()
       EXPLORED[H_new->Q] = H_new;
     }
   }
+  // if OPEN is empty
+  export_node_expansion();
   // backtrack the solution
   {
     auto H = H_goal;
@@ -377,10 +381,77 @@ void LaCAM::get_applicable_trajs_precise(std::shared_ptr<AStarNode> db_node, Rob
     if (last_state_h > max_h)
       max_h = last_state_h;
     // DEBUG
-    // if (robot_id == 0 && k % 5 == 0)
+    // if (robot_id == 0)
     // expanded_trajs.push_back(traj);
   }
-  robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ 0.1, min_h, max_h, 1, /*shuffle*/ false); // range 0.1-0.5 for sparseness
+  // robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ 0.1, min_h, max_h, 8, /*shuffle*/ false); // range 0.1-0.5 for sparseness
+  std::cout << "robot data trajs size (before): " << tmp_data.trajectories.size() << std::endl;
+  robot_data = GetFilteredUniqueTopByH(tmp_data, /*min_distance*/ 0.5, robot_id);
+  if (robot_id == 0)
+  {
+    std::cout << "robot data trajs size: " << robot_data.trajectories.size() << std::endl;
+    size_t n = robot_data.trajectories.size();
+
+    for (size_t i = 0; i < n; ++i)
+    {
+      std::cout << "motion " << i << std::endl;
+      expanded_trajs.push_back(robot_data.trajectories[i]);
+      std::cout << "h: " << robot_data.last_state_h[i] << "\n";
+    }
+  }
+}
+RobotData LaCAM::GetFilteredUniqueTopByH(const RobotData &input, double min_distance, size_t robot_id)
+{
+  if (input.trajectories.empty())
+    return {};
+
+  struct IndexedData
+  {
+    size_t index;
+    double h;
+    double g;
+    dynobench::Trajectory traj;
+  };
+
+  std::vector<IndexedData> data;
+  for (size_t i = 0; i < input.trajectories.size(); ++i)
+  {
+    data.push_back({i, input.last_state_h[i], input.last_state_g[i], input.trajectories[i]});
+  }
+
+  // Sort by h (lowest first)
+  std::sort(data.begin(), data.end(), [](const IndexedData &a, const IndexedData &b)
+            {
+              if (a.h != b.h)
+                return a.h < b.h;
+              return a.g < b.g; });
+
+  RobotData result;
+
+  for (const auto &d : data)
+  {
+    const auto &new_final_state = d.traj.states.back();
+
+    bool too_close = false;
+    for (const auto &existing_traj : result.trajectories)
+    {
+      const auto &existing_final_state = existing_traj.states.back(); // (new_final_state - existing_final_state).norm() < min_distance
+      if (robots[robot_id]->distance(new_final_state, existing_final_state) < min_distance)
+      {
+        too_close = true;
+        break;
+      }
+    }
+
+    if (!too_close)
+    {
+      result.trajectories.push_back(d.traj);
+      result.last_state_h.push_back(d.h);
+      result.last_state_g.push_back(d.g);
+    }
+  }
+
+  return result;
 }
 
 RobotData LaCAM::GetTopNPerClusterByH(const RobotData &input, double range, double min_h, double max_h, size_t N = 4, bool shuffle = false)

@@ -123,6 +123,11 @@ int main(int argc, char *argv[])
   {
     motionsFile = "../new_format_motions/integrator1_2d_v0/unit_length2/integrator1_2d_v0.bin.im.bin.sp.bin";
   }
+  else if (problem.robotTypes[0] == "integrator2_3d_v0")
+  {
+    motionsFile = "../new_format_motions/integrator2_3d_v0/unit_length/integrator2_3d_v0.bin.im.bin.sp.bin";
+  }
+
   else
   {
     throw std::runtime_error("Unknown motion filename for this robottype!");

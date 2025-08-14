@@ -1,4 +1,3 @@
-// problem, dbNodes (start conf), expander, h_funs, robots, traj_wrapper
 #include <algorithm>
 #include <chrono>
 #include <filesystem>
@@ -27,6 +26,7 @@
 #include "dynoplan/nigh_custom_spaces.hpp"
 #include "dynoplan/ompl/robots.h"
 #include "dynoplan/tdbastar/tdbastar.hpp"
+#include "dynoplan/tdbastar/compute_heu.hpp"
 #include "dynoplan/tdbastar/options.hpp"
 #include "dynoplan/tdbastar/planresult.hpp"
 // DYNOBENCH
@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
   }
   auto start_time = std::chrono::steady_clock::now();
   YAML::Node cfg = YAML::LoadFile(cfgFile);
-  // cfg = cfg["db-lacam"]["default"];
+  cfg = cfg["db-lacam"]["default"];
   Options_tdbastar planner_options;
   planner_options.outFile = outputFile;
   planner_options.cost_delta_factor = 1;
@@ -99,7 +99,6 @@ int main(int argc, char *argv[])
   // define the problem
   dynobench::Problem problem(inputFile);
   problem.models_base_path = DYNOBENCH_BASE + std::string("models/");
-  Out_info_tdb out_dblacam;
   YAML::Node env = YAML::LoadFile(inputFile);
   // create robots
   std::vector<std::shared_ptr<dynobench::Model_robot>> robots;
@@ -115,13 +114,16 @@ int main(int argc, char *argv[])
   std::string motionsFile;
   if (problem.robotTypes[0] == "unicycle1_v0" || problem.robotTypes[0] == "unicycle1_sphere_v0")
   {
-    // motionsFile = "../new_format_motions/unicycle1_v0/unit_length/unicycle1_v0.bin.im.bin.sp.bin";
     motionsFile = "../new_format_motions/unicycle1_v0/spread/unicycle1_v0.bin.im.bin.sp.bin";
   }
   else if (problem.robotTypes[0] == "integrator1_2d_v0")
   {
     motionsFile = "../new_format_motions/integrator1_2d_v0/unit_length2/integrator1_2d_v0.bin.im.bin.sp.bin";
     // motionsFile = "../new_format_motions/integrator1_2d_v0/my_motions2.bin"; // handcrafted for debugging
+  }
+  else if (problem.robotTypes[0] == "integrator2_3d_v0")
+  {
+    motionsFile = "../new_format_motions/integrator2_3d_v0/spread/integrator2_3d_v0.bin.im.bin.sp.bin";
   }
   else
   {
@@ -158,9 +160,12 @@ int main(int argc, char *argv[])
       problem.starts[robot_id] = problem.goals[robot_id];
       problem.goals[robot_id] = tmp_state;
       LowLevelPlan<dynobench::Trajectory> tmp_solution;
-      tdbastar(problem, planner_options, tmp_solution.trajectory,
-               /*constraints*/ {}, out_dblacam, robot_id, /*reverse_search*/ true,
-               nullptr, &heuristics[robot_id]);
+      // tdbastar(problem, planner_options, tmp_solution.trajectory,
+      //          /*constraints*/ {}, out_dblacam, robot_id, /*reverse_search*/ true,
+      //          nullptr, &heuristics[robot_id]);
+
+      // dbA* with optimization
+      compute_heuristics(100, problem, planner_options, robot_id, &heuristics[robot_id]);
       std::cout << "computed heuristic with " << heuristics[robot_id]->size()
                 << " entries." << std::endl;
       robot_id++;

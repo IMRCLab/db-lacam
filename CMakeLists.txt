@@ -162,6 +162,7 @@ target_include_directories(
 
 target_link_libraries(run_dblacam PRIVATE
   fcl 
+  idbastar::compute_heu
   idbastar::tdbastar
   ${OMPL_LIBRARIES} 
   ${LZ4_LIBRARIES}

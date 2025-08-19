@@ -112,7 +112,7 @@ void get_applicable_trajs(Expander &expander,
     robot_data.last_state_h.push_back(traj_wrap.last_state_h);
   }
 }
-
+// h-based clustering
 RobotData GetTopNPerClusterByH(const RobotData &input, double range, double min_h, double max_h, size_t N, bool shuffle = false)
 {
   if (input.trajectories.empty())
@@ -180,6 +180,60 @@ RobotData GetTopNPerClusterByH(const RobotData &input, double range, double min_
   }
   if (shuffle)
     result.shuffle();
+  return result;
+}
+// distance based filtering
+RobotData GetFilteredUniqueTopByH(const RobotData &input, double min_distance, std::vector<std::shared_ptr<dynobench::Model_robot>> robots, size_t robot_id)
+{
+  if (input.trajectories.empty())
+    return {};
+
+  struct IndexedData
+  {
+    size_t index;
+    double h;
+    double g;
+    dynobench::Trajectory traj;
+  };
+
+  std::vector<IndexedData> data;
+  for (size_t i = 0; i < input.trajectories.size(); ++i)
+  {
+    data.push_back({i, input.last_state_h[i], input.last_state_g[i], input.trajectories[i]});
+  }
+
+  // Sort by h (lowest first)
+  std::sort(data.begin(), data.end(), [](const IndexedData &a, const IndexedData &b)
+            {
+              if (a.h != b.h)
+                return a.h < b.h;
+              return a.g < b.g; });
+
+  RobotData result;
+
+  for (const auto &d : data)
+  {
+    const auto &new_final_state = d.traj.states.back();
+
+    bool too_close = false;
+    for (const auto &existing_traj : result.trajectories)
+    {
+      const auto &existing_final_state = existing_traj.states.back(); // (new_final_state - existing_final_state).norm() < min_distance
+      if (robots[robot_id]->distance(new_final_state, existing_final_state) < min_distance)
+      {
+        too_close = true;
+        break;
+      }
+    }
+
+    if (!too_close)
+    {
+      result.trajectories.push_back(d.traj);
+      result.last_state_h.push_back(d.h);
+      result.last_state_g.push_back(d.g);
+    }
+  }
+
   return result;
 }
 
@@ -267,5 +321,8 @@ void get_applicable_trajs_precise(Expander &expander,
     if (last_state_h > max_h)
       max_h = last_state_h;
   }
-  robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ 0.1, min_h, max_h, 1, /*shuffle*/ false); // range 0.1-0.5 for sparseness
+  // h_value-based clustering, needs finetuning, that's why don't like it
+  robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ 0.1, min_h, max_h, 1, /*shuffle*/ false); // range 0.1-0.5 for sparseness, N=1 for alcove, atgoal, circle_uni
+  // based on distance between last states of rolled-out-trajs, min_distance is the threshould for filtering, distance is computed with robot->distance function
+  // robot_data = GetFilteredUniqueTopByH(tmp_data, /*min_distance*/ 0.5, robots, robot_id);
 }

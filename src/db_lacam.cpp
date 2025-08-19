@@ -84,7 +84,7 @@ MultiRobotTrajectory LaCAM::solve()
   while (!OPEN.empty() && !is_expired(timelimit))
   {
     ++loop_cnt;
-    if (loop_cnt > 50)
+    if (loop_cnt > 1000)
     {
       export_node_expansion();
       return solution;
@@ -380,25 +380,24 @@ void LaCAM::get_applicable_trajs_precise(std::shared_ptr<AStarNode> db_node, Rob
       min_h = last_state_h;
     if (last_state_h > max_h)
       max_h = last_state_h;
-    // DEBUG
-    // if (robot_id == 0)
-    // expanded_trajs.push_back(traj);
   }
-  // robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ 0.1, min_h, max_h, 8, /*shuffle*/ false); // range 0.1-0.5 for sparseness
-  std::cout << "robot data trajs size (before): " << tmp_data.trajectories.size() << std::endl;
+  // h_value-based clustering
+  // robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ 0.1, min_h, max_h, 1, /*shuffle*/ false); // range 0.1-0.5 for sparseness, a = 0.1, N=1 for alcove, atgoal, circle_uni
+  // distance based filtering
   robot_data = GetFilteredUniqueTopByH(tmp_data, /*min_distance*/ 0.5, robot_id);
-  if (robot_id == 0)
-  {
-    std::cout << "robot data trajs size: " << robot_data.trajectories.size() << std::endl;
-    size_t n = robot_data.trajectories.size();
+  // DEBUG
+  // if (robot_id == 0)
+  // {
+  //   std::cout << "robot data trajs size: " << robot_data.trajectories.size() << std::endl;
+  //   size_t n = robot_data.trajectories.size();
 
-    for (size_t i = 0; i < n; ++i)
-    {
-      std::cout << "motion " << i << std::endl;
-      expanded_trajs.push_back(robot_data.trajectories[i]);
-      std::cout << "h: " << robot_data.last_state_h[i] << "\n";
-    }
-  }
+  //   for (size_t i = 0; i < n; ++i)
+  //   {
+  //     std::cout << "motion " << i << std::endl;
+  //     expanded_trajs.push_back(robot_data.trajectories[i]);
+  //     std::cout << "h: " << robot_data.last_state_h[i] << "\n";
+  //   }
+  // }
 }
 RobotData LaCAM::GetFilteredUniqueTopByH(const RobotData &input, double min_distance, size_t robot_id)
 {

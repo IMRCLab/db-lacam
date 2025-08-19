@@ -160,12 +160,12 @@ int main(int argc, char *argv[])
       problem.starts[robot_id] = problem.goals[robot_id];
       problem.goals[robot_id] = tmp_state;
       LowLevelPlan<dynobench::Trajectory> tmp_solution;
-      // tdbastar(problem, planner_options, tmp_solution.trajectory,
-      //          /*constraints*/ {}, out_dblacam, robot_id, /*reverse_search*/ true,
-      //          nullptr, &heuristics[robot_id]);
+      tdbastar(problem, planner_options, tmp_solution.trajectory,
+               /*constraints*/ {}, out_dblacam, robot_id, /*reverse_search*/ true,
+               nullptr, &heuristics[robot_id]);
 
       // dbA* with optimization
-      compute_heuristics(100, problem, planner_options, robot_id, &heuristics[robot_id]);
+      // compute_heuristics(100, problem, planner_options, robot_id, &heuristics[robot_id]);
       std::cout << "computed heuristic with " << heuristics[robot_id]->size()
                 << " entries." << std::endl;
       robot_id++;

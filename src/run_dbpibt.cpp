@@ -115,14 +115,19 @@ int main(int argc, char *argv[])
   }
   // read motions
   std::string motionsFile;
-  if (problem.robotTypes[0] == "unicycle1_v0")
+  if (problem.robotTypes[0] == "unicycle1_v0" || problem.robotTypes[0] == "unicycle1_sphere_v0")
   {
-    motionsFile = "../new_format_motions/unicycle1_v0/unit_length/unicycle1_v0.bin.im.bin.sp.bin";
+    motionsFile = "../new_format_motions/unicycle1_v0/spread/unicycle1_v0.bin.im.bin.sp.bin";
   }
   else if (problem.robotTypes[0] == "integrator1_2d_v0")
   {
     motionsFile = "../new_format_motions/integrator1_2d_v0/unit_length2/integrator1_2d_v0.bin.im.bin.sp.bin";
   }
+  else if (problem.robotTypes[0] == "integrator2_3d_v0")
+  {
+    motionsFile = "../new_format_motions/integrator2_3d_v0/unit_length/integrator2_3d_v0.bin.im.bin.sp.bin";
+  }
+
   else
   {
     throw std::runtime_error("Unknown motion filename for this robottype!");
@@ -132,9 +137,9 @@ int main(int argc, char *argv[])
   // read and filter duplicates
   load_motion_primitives_new(planner_options.motionsFile, *(robots[0]), motions,
                              planner_options.max_motions, planner_options.cut_actions,
-                             /*shuffle*/ false, planner_options.check_cols);
+                             /*shuffle*/ true, planner_options.check_cols);
 
-  disable_motions(robots[0], problem.robotTypes[0], planner_options.delta, /*filter duplicates*/ true, /*alpha*/ 0.5,
+  disable_motions(robots[0], problem.robotTypes[0], planner_options.delta, /*filter duplicates*/ false, /*alpha*/ 0.5,
                   planner_options.max_motions, motions);
 
   planner_options.motions_ptr = &motions;
@@ -310,10 +315,10 @@ int main(int argc, char *argv[])
       dbNode_to.push_back(std::make_shared<AStarNode>());
       M_to[i].states.clear();
       M_to[i].actions.clear();
-      get_applicable_trajs(expander,
-                           robot_hfuns, robots,
-                           traj_wrapper,
-                           best_node, rolled_robot_data[i], /*id*/ i);
+      get_applicable_trajs_precise(expander,
+                                   robot_hfuns, robots,
+                                   traj_wrapper,
+                                   best_node, rolled_robot_data[i], /*id*/ i);
     }
     if (reached_goal == robots.size())
     {

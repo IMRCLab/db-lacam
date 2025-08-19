@@ -135,6 +135,41 @@ struct RobotData
     last_state_g.clear();
     last_state_h.clear();
   }
+  void shuffle()
+  {
+    size_t N = trajectories.size();
+    if (N != last_state_g.size() || N != last_state_h.size())
+    {
+      throw std::runtime_error("Inconsistent vector sizes in RobotData::shuffle");
+    }
+
+    // Create index vector
+    std::vector<size_t> indices(N);
+    for (size_t i = 0; i < N; ++i)
+      indices[i] = i;
+
+    // Shuffle indices
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::shuffle(indices.begin(), indices.end(), gen);
+
+    // Create shuffled copies
+    std::vector<dynobench::Trajectory> shuffled_traj(N);
+    std::vector<double> shuffled_g(N);
+    std::vector<double> shuffled_h(N);
+
+    for (size_t i = 0; i < N; ++i)
+    {
+      shuffled_traj[i] = trajectories[indices[i]];
+      shuffled_g[i] = last_state_g[indices[i]];
+      shuffled_h[i] = last_state_h[indices[i]];
+    }
+
+    // Assign back
+    trajectories = std::move(shuffled_traj);
+    last_state_g = std::move(shuffled_g);
+    last_state_h = std::move(shuffled_h);
+  }
 };
 
 struct ConfigHasher

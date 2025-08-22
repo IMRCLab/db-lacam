@@ -1,4 +1,4 @@
-name: Build
+name: Build (Self-Hosted)
 
 # Only trigger if manually requested
 on: [workflow_dispatch]

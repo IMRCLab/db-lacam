@@ -103,7 +103,7 @@ target_link_libraries(db_cbs PRIVATE
   idbastar::tdbastar
   ${Boost_LIBRARIES}
   ${YAML_LIBRARIES}
-  ompl
+  ${OMPL_LIBRARIES}
   ${FCL_LIBRARIES}
 )
 

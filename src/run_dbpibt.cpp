@@ -95,6 +95,7 @@ int main(int argc, char *argv[])
   planner_options.delta = cfg["delta_0"].as<float>();
   planner_options.goal_delta = cfg["goal_delta"].as<float>();
   planner_options.max_motions = cfg["num_primitives_0"].as<size_t>();
+  bool use_nn = false;
   std::cout << "*** options for dbpibt search ***" << std::endl;
   planner_options.print(std::cout);
   std::cout << "***" << std::endl;
@@ -125,7 +126,9 @@ int main(int argc, char *argv[])
   }
   else if (problem.robotTypes[0] == "integrator2_3d_v0")
   {
-    motionsFile = "../new_format_motions/integrator2_3d_v0/unit_length/integrator2_3d_v0.bin.im.bin.sp.bin";
+    // motionsFile = "../new_format_motions/integrator2_3d_v0/spread/integrator2_3d_v0.bin.im.bin.sp.bin";
+    motionsFile = "../new_format_motions/integrator2_3d_v0/short/integrator2_3d_v0.bin.im.bin.sp.bin";
+    use_nn = true;
   }
 
   else
@@ -137,9 +140,9 @@ int main(int argc, char *argv[])
   // read and filter duplicates
   load_motion_primitives_new(planner_options.motionsFile, *(robots[0]), motions,
                              planner_options.max_motions, planner_options.cut_actions,
-                             /*shuffle*/ true, planner_options.check_cols);
+                             /*shuffle*/ false, planner_options.check_cols);
 
-  disable_motions(robots[0], problem.robotTypes[0], planner_options.delta, /*filter duplicates*/ false, /*alpha*/ 0.5,
+  disable_motions(robots[0], problem.robotTypes[0], planner_options.delta, /*filter duplicates*/ true, /*alpha*/ 0.5,
                   planner_options.max_motions, motions);
 
   planner_options.motions_ptr = &motions;
@@ -151,6 +154,7 @@ int main(int argc, char *argv[])
     dynobench::Problem problem_original(inputFile);
     planner_options.delta = cfg["heuristic1_delta"].as<float>();
     planner_options.max_motions = cfg["heuristic1_num_primitives_0"].as<size_t>();
+    planner_options.search_timelimit = 1e5; // in ms
     Out_info_tdb out_pibt;
     size_t robot_id = 0;
     for (const auto &robot : robots)
@@ -228,7 +232,7 @@ int main(int argc, char *argv[])
     std::shared_ptr<Heu_fun> h_fun = nullptr;
     h_fun =
         std::make_shared<Heu_roadmap_bwd2<std::shared_ptr<AStarNode>, AStarNode>>(
-            robots[i], heuristics[i], problem.goals[i]);
+            robots[i], heuristics[i], problem.goals[i], use_nn);
     robot_hfuns.push_back(h_fun);
     robot_nodes[i].push_back(std::make_shared<AStarNode>());
     auto start_node = robot_nodes[i].at(0);
@@ -332,6 +336,11 @@ int main(int argc, char *argv[])
     std::sort(order.begin(), order.end(), [&](size_t i, size_t j)
               { return (robots[i]->distance(Q_from[i], problem.goals[i])) > (robots[j]->distance(Q_from[j], problem.goals[j])); });
     loop_cnt++;
+    if (loop_cnt > 20)
+    {
+      std::cout << "Loop count exceeds the limit: " << loop_cnt << std::endl;
+      return 0;
+    }
     // prepare _to
     Q_to.clear();
     // call pibt

@@ -79,23 +79,27 @@ MultiRobotTrajectory LaCAM::solve()
   double best_distance_to_goal = 5000;
   Eigen::VectorXd best_distance_state;
   EXPLORED[H_init->Q] = H_init;
+  bool invalid_node = false;
   // search loop
   solver_info(2, "search iteration begins");
   while (!OPEN.empty() && !is_expired(timelimit))
   {
     ++loop_cnt;
-    if (loop_cnt > 1000)
+    if (loop_cnt > 100)
     {
-      export_node_expansion();
+      // export_node_expansion();
       return solution;
     }
     // do not pop here!
     auto H = OPEN.front(); // high-level node
+    invalid_node = false;
     std::cout << "Loop count: " << loop_cnt << std::endl;
+    std::cout << "HL Node ID: " << OPEN.front()->id << std::endl;
+
     H->order = get_sorted_order(robots, H->Q, problem.goals);
     if (H->parent != nullptr)
       // check goal condition
-      if (H_goal == nullptr && is_close_config(H->Q, problem.goals, robots.at(0), /*threshold*/ 0.75))
+      if (H_goal == nullptr && is_close_config(H->Q, problem.goals, robots.at(0), /*threshold*/ 0.5))
       {
         H_goal = H;
         solver_info(2, "found solution!");
@@ -114,8 +118,17 @@ MultiRobotTrajectory LaCAM::solve()
     for (size_t r = 0; r < robots.size(); r++)
     {
       get_applicable_trajs_precise(H->dbN[r], rolled_robot_data[r], r);
+      // if no applicable motions for the current state, then remove the node
+      if (!rolled_robot_data[r].trajectories.size())
+      {
+        std::cout << "Invalid Node: " << OPEN.front()->id << std::endl;
+        OPEN.pop_front();
+        invalid_node = true;
+        break;
+      }
       dbN_to.push_back(std::make_shared<AStarNode>());
       double distance_to_goal = robots[r]->distance(H->dbN[r]->state_eig, problem.goals[r]);
+      std::cout << "robot " << r << " distance to goal: " << distance_to_goal << std::endl;
       if (distance_to_goal < best_distance_to_goal)
       {
         best_distance_to_goal = distance_to_goal;
@@ -124,6 +137,10 @@ MultiRobotTrajectory LaCAM::solve()
         std::cout << best_distance_state.format(dynobench::FMT) << std::endl;
       }
     }
+    if (invalid_node)
+      continue;
+    // set orders based on number of available motions
+    // H->order = get_sorted_order_by_motions();
     // low level search
     if (L->depth < H->Q.size())
     {
@@ -139,7 +156,6 @@ MultiRobotTrajectory LaCAM::solve()
         u_dbN->state_eig = u_state;
         u_dbN->gScore = rolled_robot_data[i].last_state_g[j];
         u_dbN->hScore = rolled_robot_data[i].last_state_h[j];
-        // std::cout << "hScore: " << rolled_robot_data[i].last_state_h[j] << std::endl;
         H->search_tree.push(new LNode(L, i, u_traj, u_state, u_dbN));
       }
     }
@@ -149,6 +165,7 @@ MultiRobotTrajectory LaCAM::solve()
     std::vector<dynobench::Trajectory> M_to;
     M_to.resize(robots.size());
     bool res = set_new_config(H, L, Q_to, dbN_to, M_to, rolled_robot_data);
+    std::cout << "set new config: " << res << std::endl;
     delete L;
     if (!res)
       continue;
@@ -177,7 +194,7 @@ MultiRobotTrajectory LaCAM::solve()
     }
   }
   // if OPEN is empty
-  export_node_expansion();
+  // export_node_expansion();
   // backtrack the solution
   {
     auto H = H_goal;
@@ -207,7 +224,7 @@ MultiRobotTrajectory LaCAM::solve()
   auto end_time = std::chrono::steady_clock::now();
   auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
   std::cout << "elapsed:" << std::setw(6) << elapsed_ms << "ms"
-            << "  loop_cnt:" << std::setw(8) << loop_cnt << "\t";
+            << "  loop_cnt:" << std::setw(8) << loop_cnt << std::endl;
   return solution;
 }
 // without rollout. h-vlaue is for the "expected state", but can diverge hugely with unicycle dynamics
@@ -296,8 +313,6 @@ void LaCAM::get_applicable_trajs(std::shared_ptr<AStarNode> db_node, RobotData &
     // need for the Node update
     robot_data.last_state_g.push_back(traj_wrap.last_state_g);
     robot_data.last_state_h.push_back(traj_wrap.last_state_h);
-    if (robot_id == 1)
-      expanded_trajs.push_back(traj);
   }
 }
 
@@ -352,7 +367,7 @@ void LaCAM::get_applicable_trajs_precise(std::shared_ptr<AStarNode> db_node, Rob
                               &num_valid_states);
     if (num_valid_states && num_valid_states < xs.size())
     {
-      std::cout << "rollout, state violations" << std::endl;
+      // std::cout << "rollout, state violations" << std::endl;
       continue;
     }
     dynobench::Trajectory traj;
@@ -382,23 +397,18 @@ void LaCAM::get_applicable_trajs_precise(std::shared_ptr<AStarNode> db_node, Rob
       max_h = last_state_h;
   }
   // h_value-based clustering
-  // robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ 0.1, min_h, max_h, 1, /*shuffle*/ false); // range 0.1-0.5 for sparseness, a = 0.1, N=1 for alcove, atgoal, circle_uni
-  // distance based filtering
-  robot_data = GetFilteredUniqueTopByH(tmp_data, /*min_distance*/ 0.5, robot_id);
-  // DEBUG
-  // if (robot_id == 0)
-  // {
-  //   std::cout << "robot data trajs size: " << robot_data.trajectories.size() << std::endl;
-  //   size_t n = robot_data.trajectories.size();
+  robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ 0.1, min_h, max_h, 1, /*shuffle*/ false); // range 0.1-0.5 for sparseness, a = 0.1, N=1 for alcove, atgoal, circle_uni. 0.05 for forest, wall
 
-  //   for (size_t i = 0; i < n; ++i)
-  //   {
-  //     std::cout << "motion " << i << std::endl;
-  //     expanded_trajs.push_back(robot_data.trajectories[i]);
-  //     std::cout << "h: " << robot_data.last_state_h[i] << "\n";
-  //   }
+  std::cout << "robot data for robot " << robot_id << " is " << robot_data.trajectories.size() << std::endl;
+  // distance based filtering
+  // robot_data = GetFilteredUniqueTopByH(tmp_data, /*min_distance*/ 0.5, robot_id);
+  // DEBUG
+  // for (size_t i = 0; i < robot_data.trajectories.size(); ++i)
+  // {
+  //   expanded_trajs[robot_id].push_back(robot_data.trajectories[i]);
   // }
 }
+
 RobotData LaCAM::GetFilteredUniqueTopByH(const RobotData &input, double min_distance, size_t robot_id)
 {
   if (input.trajectories.empty())
@@ -541,32 +551,78 @@ bool LaCAM::set_new_config(HNode *H, LNode *L, std::vector<Eigen::VectorXd> &Q_t
 
 std::vector<int> LaCAM::get_sorted_order(
     std::vector<std::shared_ptr<dynobench::Model_robot>> &robots,
-    const std::vector<Eigen::VectorXd> states,
-    const std::vector<Eigen::VectorXd> goal_states)
+    const std::vector<Eigen::VectorXd> &states,
+    const std::vector<Eigen::VectorXd> &goal_states)
 {
   std::vector<int> orders(robots.size());
   std::iota(orders.begin(), orders.end(), 0);
-  std::sort(orders.begin(), orders.end(), [&](size_t i, size_t j)
-            { return robots[i]->distance(states[i], goal_states[i]) >
-                     robots[j]->distance(states[j], goal_states[j]); });
+
+  std::stable_sort(orders.begin(), orders.end(),
+                   [&](size_t i, size_t j)
+                   {
+                     // First: sort by distance (larger first)
+                     double di = robots[i]->distance(states[i], goal_states[i]);
+                     double dj = robots[j]->distance(states[j], goal_states[j]);
+                     if (di != dj)
+                       return di > dj;
+
+                     // Second: prioritize if trajectories == 0
+                     bool ti = rolled_robot_data[i].trajectories.empty();
+                     bool tj = rolled_robot_data[j].trajectories.empty();
+                     if (ti != tj)
+                       return ti; // true (0 trajs) comes before false
+
+                     // Otherwise keep previous order (stable_sort guarantees this)
+                     return false;
+                   });
+
   return orders;
 }
 
 // DEBUG
+// void LaCAM::export_node_expansion()
+// {
+//   const std::string filename = "node_expansion_output.yaml";
+//   std::ofstream out(filename);
+
+//   if (!out.is_open())
+//   {
+//     std::cerr << "Failed to open file: " << filename << std::endl;
+//     return;
+//   }
+//   out << "trajs:" << std::endl;
+//   for (auto traj : expanded_trajs)
+//   {
+//     out << "  - " << std::endl;
+//     traj.to_yaml_format(out, "    ");
+//   }
+// }
+
 void LaCAM::export_node_expansion()
 {
-  const std::string filename = "node_expansion_output.yaml";
-  std::ofstream out(filename);
+  for (const auto &kv : expanded_trajs)
+  {
+    size_t key = kv.first;
+    const auto &traj_list = kv.second;
 
-  if (!out.is_open())
-  {
-    std::cerr << "Failed to open file: " << filename << std::endl;
-    return;
-  }
-  out << "trajs:" << std::endl;
-  for (auto traj : expanded_trajs)
-  {
-    out << "  - " << std::endl;
-    traj.to_yaml_format(out, "    ");
+    // build filename: e.g. node_expansion_key_0.yaml
+    std::string filename = "node_expansion_key_" + std::to_string(key) + ".yaml";
+    std::ofstream out(filename);
+
+    if (!out.is_open())
+    {
+      std::cerr << "Failed to open file: " << filename << std::endl;
+      continue;
+    }
+
+    out << "trajs:" << std::endl;
+    for (const auto &traj : traj_list)
+    {
+      out << "  - " << std::endl;
+      traj.to_yaml_format(out, "    ");
+    }
+
+    std::cout << "Wrote " << traj_list.size()
+              << " trajectories to " << filename << std::endl;
   }
 }

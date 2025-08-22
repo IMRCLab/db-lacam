@@ -70,7 +70,10 @@ bool is_close_config(std::vector<Eigen::VectorXd> Q1, std::vector<Eigen::VectorX
   for (size_t i = 0; i < Q1.size(); i++)
   {
     if (robot->distance(Q1.at(i), Q2.at(i)) <= threshold)
+    {
+      std::cout << "close to final: " << robot->distance(Q1.at(i), Q2.at(i)) << std::endl;
       cnt++;
+    }
   }
   return (cnt == Q1.size()) ? true : false;
 }

@@ -292,7 +292,7 @@ void get_applicable_trajs_precise(Expander &expander,
                               &num_valid_states);
     if (num_valid_states && num_valid_states < xs.size())
     {
-      std::cout << "rollout, state violations" << std::endl;
+      // std::cout << "rollout, state violations" << std::endl;
       continue;
     }
     dynobench::Trajectory traj;
@@ -322,7 +322,7 @@ void get_applicable_trajs_precise(Expander &expander,
       max_h = last_state_h;
   }
   // h_value-based clustering, needs finetuning, that's why don't like it
-  robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ 0.1, min_h, max_h, 1, /*shuffle*/ false); // range 0.1-0.5 for sparseness, N=1 for alcove, atgoal, circle_uni
+  robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ 0.1, min_h, max_h, 1, /*shuffle*/ false); // range 0.1-0.5 for sparseness, N=1 for alcove, atgoal, circle_uni. 0.05 for forest, wall
   // based on distance between last states of rolled-out-trajs, min_distance is the threshould for filtering, distance is computed with robot->distance function
   // robot_data = GetFilteredUniqueTopByH(tmp_data, /*min_distance*/ 0.5, robots, robot_id);
 }

@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
   }
   auto start_time = std::chrono::steady_clock::now();
   YAML::Node cfg = YAML::LoadFile(cfgFile);
-  cfg = cfg["db-lacam"]["default"];
+  // cfg = cfg["db-lacam"]["default"];
   Options_tdbastar planner_options;
   planner_options.outFile = outputFile;
   planner_options.cost_delta_factor = 1;
@@ -93,6 +93,7 @@ int main(int argc, char *argv[])
   planner_options.delta = cfg["delta_0"].as<float>();
   planner_options.goal_delta = cfg["goal_delta"].as<float>();
   planner_options.max_motions = cfg["num_primitives_0"].as<size_t>();
+  bool use_nn = false;
   std::cout << "*** options for dblacam search ***" << std::endl;
   planner_options.print(std::cout);
   std::cout << "***" << std::endl;
@@ -123,7 +124,9 @@ int main(int argc, char *argv[])
   }
   else if (problem.robotTypes[0] == "integrator2_3d_v0")
   {
-    motionsFile = "../new_format_motions/integrator2_3d_v0/spread/integrator2_3d_v0.bin.im.bin.sp.bin";
+    // motionsFile = "../new_format_motions/integrator2_3d_v0/spread/integrator2_3d_v0.bin.im.bin.sp.bin";
+    motionsFile = "../new_format_motions/integrator2_3d_v0/short/integrator2_3d_v0.bin.im.bin.sp.bin";
+    use_nn = true;
   }
   else
   {
@@ -148,6 +151,7 @@ int main(int argc, char *argv[])
     dynobench::Problem problem_original(inputFile);
     planner_options.delta = cfg["heuristic1_delta"].as<float>();
     planner_options.max_motions = cfg["heuristic1_num_primitives_0"].as<size_t>();
+    planner_options.search_timelimit = 1e5; // in ms
     Out_info_tdb out_dblacam;
     size_t robot_id = 0;
     for (const auto &robot : robots)
@@ -211,7 +215,7 @@ int main(int argc, char *argv[])
     std::shared_ptr<Heu_fun> h_fun = nullptr;
     h_fun =
         std::make_shared<Heu_roadmap_bwd2<std::shared_ptr<AStarNode>, AStarNode>>(
-            robots[i], heuristics[i], problem.goals[i]);
+            robots[i], heuristics[i], problem.goals[i], use_nn);
     h_funs.push_back(h_fun);
     dbN_start.push_back(std::make_shared<AStarNode>());
     auto node = dbN_start.back();
@@ -234,8 +238,9 @@ int main(int argc, char *argv[])
     std::cout << "LaCAM failed!" << std::endl;
     return false;
   }
+  auto end_time = std::chrono::steady_clock::now();
+  duration duration = end_time - start_time;
+  std::cout << "Time taken (total): " << duration.count() << " seconds" << std::endl;
   solution.to_yaml_format(outputFile.c_str());
-  // DEBUG
-  lacam.export_node_expansion();
   return 0;
 }

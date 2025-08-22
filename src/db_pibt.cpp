@@ -77,14 +77,14 @@ bool db_PIBT::funcPIBT(size_t robot_id,
 {
   std::cout << "Calling dbPIBT for robot " << robot_id << ", PI: " << pi << std::endl;
   Eigen::VectorXd now_state = Q_from[robot_id];
-  std::cout << "robot " << robot_id << " start state: " << now_state.format(dynobench::FMT) << std::endl;
+  // std::cout << "robot " << robot_id << " start state: " << now_state.format(dynobench::FMT) << std::endl;
   RobotData robot_data = robot_data_rolled[robot_id];
   // std::cout << "rolled trajs size: " << robot_data.trajectories.size() << std::endl;
   bool success;
   // DEBUG
   for (size_t i = 0; i < robot_data.trajectories.size(); i++)
   {
-    std::cout << "robot " << robot_id << " motion: " << i << std::endl;
+    // std::cout << "robot " << robot_id << " motion: " << i << std::endl;
     dynobench::Trajectory traj = robot_data.trajectories[i];
     Eigen::VectorXd next_state = traj.states.back();
     // check for collision with planned robots
@@ -117,7 +117,7 @@ bool db_PIBT::funcPIBT(size_t robot_id,
     }
     if (!success)
       continue;
-    std::cout << "robot " << robot_id << " end state: " << next_state.format(dynobench::FMT) << std::endl;
+    // std::cout << "robot " << robot_id << " end state: " << next_state.format(dynobench::FMT) << std::endl;
     return true;
   }
   // if no motion was applicable, then the robot does not move

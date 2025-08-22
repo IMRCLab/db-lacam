@@ -75,7 +75,8 @@ struct LaCAM
   int loop_cnt;
   std::vector<int> order;
   // DEBUG
-  std::vector<dynobench::Trajectory> expanded_trajs;
+  // std::vector<dynobench::Trajectory> expanded_trajs;
+  std::map<size_t, std::vector<dynobench::Trajectory>> expanded_trajs; // MRS case
 
   LaCAM(const dynobench::Problem _problem,
         std::vector<std::shared_ptr<AStarNode>> _dbNodes,
@@ -101,11 +102,10 @@ struct LaCAM
 
   std::vector<int> get_sorted_order(
       std::vector<std::shared_ptr<dynobench::Model_robot>> &robots,
-      const std::vector<Eigen::VectorXd> states,
-      const std::vector<Eigen::VectorXd> goal_states);
+      const std::vector<Eigen::VectorXd> &states,
+      const std::vector<Eigen::VectorXd> &goal_states);
 
-  std::function<bool(Eigen::Ref<Eigen::VectorXd>)>
-  validity_checker(std::shared_ptr<dynobench::Model_robot> robot)
+  std::function<bool(Eigen::Ref<Eigen::VectorXd>)> validity_checker(std::shared_ptr<dynobench::Model_robot> robot)
   {
     return [robot](Eigen::Ref<Eigen::VectorXd> state)
     {

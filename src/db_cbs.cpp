@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
     return 1;
   }
   YAML::Node cfg = YAML::LoadFile(cfgFile);
-  cfg = cfg["db-cbs"]["default"];
+  // cfg = cfg["db-cbs"]["default"];
   float alpha = cfg["alpha"].as<float>();
   bool filter_duplicates = cfg["filter_duplicates"].as<bool>();
   fs::path output_path(outputFile);
@@ -143,7 +143,8 @@ int main(int argc, char *argv[])
     }
     else if (problem.robotType == "integrator2_3d_v0")
     {
-      motionsFile = "../new_format_motions/integrator2_3d_v0/spread/integrator2_3d_v0.bin.im.bin.sp.bin";
+      // motionsFile = "../new_format_motions/integrator2_3d_v0/spread/integrator2_3d_v0.bin.im.bin.sp.bin";
+      motionsFile = "../new_format_motions/integrator2_3d_v0/short/integrator2_3d_v0.bin.im.bin.sp.bin";
     }
     else
     {
@@ -196,6 +197,7 @@ int main(int argc, char *argv[])
     options_tdbastar.max_motions = cfg["heuristic1_num_primitives_0"].as<size_t>();
     std::cout << "Running the reverse search" << std::endl;
     options_tdbastar.delta = cfg["heuristic1_delta"].as<float>();
+    options_tdbastar.search_timelimit = 1e5; // in ms
     for (const auto &robot : robots)
     {
       if (robot_motions_reverse.find(problem.robotTypes[robot_id]) == robot_motions_reverse.end())
@@ -226,6 +228,9 @@ int main(int argc, char *argv[])
   problem.starts = problem_original.starts;
   problem.goals = problem_original.goals;
   options_tdbastar.delta = cfg["delta_0"].as<float>();
+  options_tdbastar.max_motions = cfg["num_primitives_0"].as<size_t>();
+  options_tdbastar.search_timelimit = 1e4; // by default value
+
   for (size_t iteration = 0;; ++iteration)
   {
     if (iteration > 0)
@@ -348,6 +353,5 @@ int main(int argc, char *argv[])
       }
     }
   }
-
   return 0;
 }

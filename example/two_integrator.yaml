@@ -1,0 +1,11 @@
+environment:
+  min: [0, 0]
+  max: [6, 6]
+  obstacles: []
+robots:
+  - type: integrator1_2d_v0
+    start: [1, 1.] 
+    goal: [3, 4.]
+  - type: integrator1_2d_v0
+    start: [5., 4.] 
+    goal: [4., 2.]

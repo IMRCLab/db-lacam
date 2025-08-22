@@ -27,29 +27,69 @@ jobs:
     - name: Install system dependencies
       run: sudo apt update  && sudo apt install libboost-all-dev libfcl-dev cmake libeigen3-dev libyaml-cpp-dev liblz4-dev libmsgpack-dev -y
 
-    - name: install crocoddyl
-      run: |
-        sudo tee /etc/apt/sources.list.d/robotpkg.list << EOF
-        deb [arch=amd64] http://robotpkg.openrobots.org/packages/debian/pub $(lsb_release -sc) robotpkg
-        EOF
+    # - name: install crocoddyl
+    #   run: |
+    #     sudo tee /etc/apt/sources.list.d/robotpkg.list << EOF
+    #     deb [arch=amd64] http://robotpkg.openrobots.org/packages/debian/pub $(lsb_release -sc) robotpkg
+    #     EOF
 
-        curl http://robotpkg.openrobots.org/packages/debian/robotpkg.key | sudo apt-key add -
-        sudo apt update
-        sudo apt install robotpkg-py310-crocoddyl coinor-libipopt-dev -y
-
-    - name: Install latest ompl
+    #     curl http://robotpkg.openrobots.org/packages/debian/robotpkg.key | sudo apt-key add -
+    #     sudo apt update
+    #     sudo apt install robotpkg-py310-crocoddyl coinor-libipopt-dev -y
+    - name: Try installing from robotpkg, fallback to pip
       run: |
-        mkdir __local
-        git clone https://github.com/ompl/ompl
-        cd ompl 
+        set -e
+        sudo apt-get update
+        sudo apt-get install -y curl gnupg lsb-release || true
+    
+        curl -fsSL http://robotpkg.openrobots.org/packages/debian/robotpkg.key | gpg --dearmor | sudo tee /usr/share/keyrings/robotpkg-archive-keyring.gpg > /dev/null
+        echo "deb [arch=amd64 signed-by=/usr/share/keyrings/robotpkg-archive-keyring.gpg] http://robotpkg.openrobots.org/wip/packages/debian/pub $(lsb_release -sc) robotpkg" | sudo tee /etc/apt/sources.list.d/robotpkg.list
+    
+        sudo apt-get update
+        if ! sudo apt-get install -y robotpkg-py310-crocoddyl coinor-libipopt-dev; then
+          echo "robotpkg failed, installing via pip..."
+          python3 -m pip install --upgrade pip
+          python3 -m pip install crocoddyl
+        fi
+        
+    # - name: Install latest ompl
+    #   run: |
+    #     mkdir __local
+    #     git clone https://github.com/ompl/ompl
+    #     cd ompl 
+    #     git checkout e2994e5
+    #     mkdir build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/__local  && make install -j8
+    - name: Install OMPL from source
+      run: |
+        git clone https://github.com/ompl/ompl.git
+        cd ompl
         git checkout e2994e5
-        mkdir build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX=~/__local  && make install -j8
+    
+        mkdir -p build
+        cd build
+    
+        cmake .. \
+          -DCMAKE_INSTALL_PREFIX=$HOME/__local \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DOMPL_BUILD_PYBIND11_BINDINGS=OFF \
+          -DOMPL_BUILD_EXAMPLES=OFF \
+          -DOMPL_BUILD_TESTS=OFF \
+          -DOMPL_BUILD_CMAKE_CONFIG=ON
+    
+        make -j$(nproc)
+        make install
+
+        # Check that omplConfig.cmake exists
+        ls -l $HOME/__local/lib/cmake/ompl/omplConfig.cmake
 
     - name: Configure CMake
-      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
-      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_PREFIX_PATH="~/__local;/opt/openrobots/"
-      
+
+      run: |
+        rm -rf ${{github.workspace}}/build
+        cmake -B "${{github.workspace}}/build" \
+              -DCMAKE_BUILD_TYPE="${{env.BUILD_TYPE}}" \
+              -DCMAKE_PREFIX_PATH="$HOME/__local;/opt/openrobots"
+
     - name: Build
       # Build your program with the given configuration
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}

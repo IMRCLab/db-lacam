@@ -1,0 +1,124 @@
+db-cbs:
+  default:
+    delta_0: 0.5
+    delta_rate: 0.9
+    num_primitives_0: 200
+    num_primitives_rate: 1.5
+    alpha: 0.5
+    filter_duplicates: True
+    heuristic1: "reverse-search"
+    heuristic1_delta: 0.9
+    heuristic1_num_primitives_0: 200
+    goal_delta: 0.5
+  '*_integrator':
+    delta_0: 0.5
+    num_primitives_0: 200 
+    heuristic1_delta: 0.5
+    heuristic1_num_primitives_0: 100
+  '*_unicycle_sphere':
+    delta_0: 0.9
+  '*alcove_unicycle':
+    delta_0: 0.5
+    num_primitives_0: 200
+    heuristic1_delta: 0.9
+    heuristic1_num_primitives_0: 200
+    goal_delta: 0.5 
+  '*alcove3_unicycle':
+    delta_0: 0.5
+    num_primitives_0: 200
+    heuristic1_delta: 0.9
+    heuristic1_num_primitives_0: 200
+    goal_delta: 0.5 
+  '*atgoal_unicycle':
+    delta_0: 0.5
+    num_primitives_0: 200
+    heuristic1_delta: 0.9
+    heuristic1_num_primitives_0: 200 
+    goal_delta: 0.5
+db-pibt:
+  default:
+    delta_0: 0.5 # 0.01 for grid
+    num_primitives_0: 200
+    alpha: 0.5 # 0.01 for grid
+    filter_duplicates: True
+    heuristic1: "reverse-search" # none for grid
+    heuristic1_delta: 0.9 # 0.01 for grid
+    heuristic1_num_primitives_0: 200 
+    goal_delta: 0.5 # 1.0
+  '*_integrator':
+    delta_0: 0.5
+    num_primitives_0: 200 
+    heuristic1_delta: 0.5
+    heuristic1_num_primitives_0: 100
+  '*_unicycle_sphere':
+    delta_0: 0.9
+  '*alcove_unicycle':
+    delta_0: 0.5
+    alpha: 0.5
+    num_primitives_0: 200
+    heuristic1_delta: 0.9 
+    heuristic1_num_primitives_0: 200 
+    goal_delta: 0.5 
+  '*alcove3_unicycle':
+    delta_0: 0.5
+    num_primitives_0: 200
+    heuristic1_delta: 0.9
+    heuristic1_num_primitives_0: 200
+    goal_delta: 0.5 
+  '*atgoal_unicycle':
+    delta_0: 0.5
+    num_primitives_0: 200 
+    heuristic1_delta: 0.9
+    heuristic1_num_primitives_0: 200 
+    goal_delta: 0.5
+db-lacam:
+  default:
+    delta_0: 0.5 # 0.01 for grid
+    num_primitives_0: 200
+    alpha: 0.5 # 0.01 for grid
+    filter_duplicates: True
+    heuristic1: "reverse-search" 
+    heuristic1_delta: 0.9
+    heuristic1_num_primitives_0: 200 
+    goal_delta: 0.5 # 
+  '*_integrator':
+    delta_0: 0.5
+    num_primitives_0: 200 
+    heuristic1_delta: 0.5
+    heuristic1_num_primitives_0: 100
+  '*_unicycle_sphere':
+    delta_0: 0.9
+  '*alcove_unicycle':
+    delta_0: 0.5
+    num_primitives_0: 200 
+    heuristic1_delta: 0.9 
+    heuristic1_num_primitives_0: 200 
+    goal_delta: 0.5 
+  '*alcove3_unicycle':
+    delta_0: 0.5
+    num_primitives_0: 200
+    heuristic1_delta: 0.9
+    heuristic1_num_primitives_0: 200
+    goal_delta: 0.5 
+  '*atgoal_unicycle':
+    delta_0: 0.5
+    num_primitives_0: 200 
+    heuristic1_delta: 0.9
+    heuristic1_num_primitives_0: 200 
+    goal_delta: 0.5
+  '*forest3':
+    delta_0: 0.3
+    num_primitives_0: 200
+    heuristic1_delta: 0.5
+    heuristic1_num_primitives_0: 100 
+  '*forest4':
+    delta_0: 0.3
+    num_primitives_0: 300 
+    heuristic1_delta: 0.5
+    heuristic1_num_primitives_0: 100 
+  '*wall4':
+    delta_0: 0.3
+    num_primitives_0: 300 
+    heuristic1_delta: 0.9
+    heuristic1_num_primitives_0: 200 
+  

@@ -1,0 +1,20 @@
+environment:
+  min: [0, 0]
+  max: [5, 5]
+  obstacles:
+    - type: box
+      center: [1.5, 4.5]
+      size: [3, 1]
+    - type: box
+      center: [2, 2.5]
+      size: [4, 3]
+robots:
+  - type: integrator1_2d_v0
+    start: [3.5, 4.5] 
+    goal: [4.5, 3.5]
+  - type: integrator1_2d_v0
+    start: [4.5, 4.5] 
+    goal: [4.5, 0.5]
+  - type: integrator1_2d_v0
+    start: [4.5, 2.5] 
+    goal: [1.5, 0.5]

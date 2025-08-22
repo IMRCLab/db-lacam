@@ -83,6 +83,7 @@ jobs:
         ls -l $HOME/__local/lib/cmake/ompl/omplConfig.cmake
 
     - name: Configure CMake
+
       run: |
         rm -rf ${{github.workspace}}/build
         cmake -B "${{github.workspace}}/build" \

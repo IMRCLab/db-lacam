@@ -12,6 +12,7 @@
 // custom
 #include "db_pibt.hpp"
 #include "utils.hpp"
+#include "dbpibt_options.hpp"
 
 using namespace dynoplan;
 
@@ -61,6 +62,7 @@ struct LaCAM
   // search utils
   Expander &expander;
   std::vector<std::shared_ptr<dynoplan::Heu_fun>> h_funs;
+  Planner_options planner_options;
   std::vector<std::shared_ptr<dynobench::Model_robot>> robots;
   std::map<size_t, RobotData> rolled_robot_data; // sorted, rolled robot trajs
   // tmp params
@@ -82,6 +84,7 @@ struct LaCAM
         std::vector<std::shared_ptr<AStarNode>> _dbNodes,
         Expander &_expander,
         std::vector<std::shared_ptr<dynoplan::Heu_fun>> _h_funs,
+        Planner_options _planner_options,
         std::vector<std::shared_ptr<dynobench::Model_robot>> _robots,
         int _verbose = 0,
         const Deadline *_timelimit = nullptr);

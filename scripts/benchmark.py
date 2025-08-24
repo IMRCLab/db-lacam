@@ -74,9 +74,9 @@ def execute_task(task: ExecutionTask):
     run_dblacam(str(env), str(result_folder), task.timelimit, mycfg)
     visualize_files = [p.name for p in result_folder.glob('result_*')]
     
-  vis_script = scripts_path / "visualize.py"
-  for file in visualize_files:
-    run_visualize(vis_script, env, result_folder / file)
+  # vis_script = scripts_path / "visualize.py"
+  # for file in visualize_files:
+  #   run_visualize(vis_script, env, result_folder / file)
       
 def main():
   parallel = True
@@ -91,25 +91,34 @@ def main():
     "circle6_unicycle",
     "circle8_unicycle",
     "circle10_unicycle",
-    # difficult cases
     "alcove_unicycle",
     "atgoal_unicycle",
+    # 3D case
+    # "forest4",
+    # "wall4",
   ]
   for kind in ["unicycle","unicycle_sphere"]: 
     for n in [8]:
       for k in range(10):
         instances.append("gen_p10_n{}_{}_{}".format(n,k, kind))
 
+  instances_3d = ["forest4", "wall4"]
+
   algs = [
     "db-cbs",
     "db-pibt",
     "db-lacam",
   ]
-  trials = 1 * 5
-  timelimit = 1 * 60 
+  trials = 5 
+  timelimit_2d = 1 * 60 
+  timelimit_3d = 5 * 60 
   
   tasks = []
   for instance in instances:
+    if instance in instances_3d:
+        timelimit = timelimit_3d
+    else:
+        timelimit = timelimit_2d
     for alg in algs:
       for trial in range(trials):
         tasks.append(ExecutionTask(instance, alg, trial, timelimit))

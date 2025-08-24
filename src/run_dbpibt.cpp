@@ -39,6 +39,7 @@
 #include "db_lacam.hpp"
 #include "utils.hpp"
 #include "dbpibt_utils.hpp"
+#include "dbpibt_options.hpp"
 
 namespace fs = std::filesystem;
 #define DYNOBENCH_BASE "../dynoplan/dynobench/"
@@ -87,18 +88,22 @@ int main(int argc, char *argv[])
   auto start_time = std::chrono::steady_clock::now();
   YAML::Node cfg = YAML::LoadFile(cfgFile);
   // cfg = cfg["db-pibt"]["default"];
-  Options_tdbastar planner_options; // fine to use tdbastar options
-  planner_options.outFile = outputFile;
-  planner_options.search_timelimit = timeLimit;
-  planner_options.cost_delta_factor = 1;
-  planner_options.fix_seed = 1;
+  // setup dblacam options
+  Planner_options planner_options;
   planner_options.delta = cfg["delta_0"].as<float>();
-  planner_options.goal_delta = cfg["goal_delta"].as<float>();
   planner_options.max_motions = cfg["num_primitives_0"].as<size_t>();
+  planner_options.alpha = cfg["alpha"].as<float>();
+  planner_options.goal_delta = cfg["goal_delta"].as<float>();
+  planner_options.cluster_range = cfg["cluster_range"].as<double>();
+  planner_options.cluster_n = cfg["cluster_n"].as<size_t>();
+  planner_options.print();
   bool use_nn = false;
-  std::cout << "*** options for dbpibt search ***" << std::endl;
-  planner_options.print(std::cout);
-  std::cout << "***" << std::endl;
+  // tdbastar for the reverse search
+  Options_tdbastar tdb_options;
+  tdb_options.cost_delta_factor = 1;
+  tdb_options.fix_seed = 1;
+  tdb_options.max_motions = cfg["num_primitives_0"].as<size_t>();
+  // load the problem
   dynobench::Problem problem(inputFile);
   std::string models_base_path = DYNOBENCH_BASE + std::string("models/");
   problem.models_base_path = models_base_path;
@@ -136,25 +141,25 @@ int main(int argc, char *argv[])
     throw std::runtime_error("Unknown motion filename for this robottype!");
   }
   std::vector<Motion> motions;
-  planner_options.motionsFile = motionsFile;
+  tdb_options.motionsFile = motionsFile;
   // read and filter duplicates
-  load_motion_primitives_new(planner_options.motionsFile, *(robots[0]), motions,
-                             planner_options.max_motions, planner_options.cut_actions,
-                             /*shuffle*/ false, planner_options.check_cols);
+  load_motion_primitives_new(tdb_options.motionsFile, *(robots[0]), motions,
+                             tdb_options.max_motions, tdb_options.cut_actions,
+                             /*shuffle*/ false, tdb_options.check_cols);
 
-  disable_motions(robots[0], problem.robotTypes[0], planner_options.delta, /*filter duplicates*/ true, /*alpha*/ 0.5,
-                  planner_options.max_motions, motions);
+  disable_motions(robots[0], problem.robotTypes[0], tdb_options.delta, /*filter duplicates*/ true, /*alpha*/ 0.5,
+                  tdb_options.max_motions, motions);
 
-  planner_options.motions_ptr = &motions;
+  tdb_options.motions_ptr = &motions;
   std::vector<ompl::NearestNeighbors<std::shared_ptr<AStarNode>> *> heuristics(
       robots.size(), nullptr);
   if (cfg["heuristic1"].as<std::string>() == "reverse-search")
   {
     auto start_rev = std::chrono::steady_clock::now();
     dynobench::Problem problem_original(inputFile);
-    planner_options.delta = cfg["heuristic1_delta"].as<float>();
-    planner_options.max_motions = cfg["heuristic1_num_primitives_0"].as<size_t>();
-    planner_options.search_timelimit = 1e5; // in ms
+    tdb_options.delta = cfg["heuristic1_delta"].as<float>();
+    tdb_options.max_motions = cfg["heuristic1_num_primitives_0"].as<size_t>();
+    tdb_options.search_timelimit = 1e5; // in ms
     Out_info_tdb out_pibt;
     size_t robot_id = 0;
     for (const auto &robot : robots)
@@ -166,7 +171,7 @@ int main(int argc, char *argv[])
       problem.starts[robot_id] = problem.goals[robot_id];
       problem.goals[robot_id] = tmp_state;
       LowLevelPlan<dynobench::Trajectory> tmp_solution;
-      tdbastar(problem, planner_options, tmp_solution.trajectory,
+      tdbastar(problem, tdb_options, tmp_solution.trajectory,
                /*constraints*/ {}, out_pibt, robot_id, /*reverse_search*/ true,
                nullptr, &heuristics[robot_id]);
       std::cout << "computed heuristic with " << heuristics[robot_id]->size()
@@ -176,12 +181,9 @@ int main(int argc, char *argv[])
     auto end_rev = std::chrono::steady_clock::now();
     duration duration_rev = end_rev - start_rev;
     std::cout << "Time taken reverse search: " << duration_rev.count() << " seconds" << std::endl;
-
     // put back settings
     problem.starts = problem_original.starts;
     problem.goals = problem_original.goals;
-    planner_options.delta = cfg["delta_0"].as<float>();
-    planner_options.max_motions = cfg["num_primitives_0"].as<size_t>();
   }
   std::vector<std::shared_ptr<Heu_fun>> robot_hfuns;
   // check motions
@@ -243,7 +245,7 @@ int main(int argc, char *argv[])
     start_node->is_in_open = true;
     start_node->reaches_goal =
         (robots[i]->distance(problem.starts[i], problem.goals[i]) <=
-         planner_options.delta);
+         planner_options.goal_delta);
     DYNO_CHECK_GEQ(start_node->hScore, 0, "hScore should be positive");
     DYNO_CHECK_LEQ(start_node->hScore, 1e5, "hScore should be bounded");
     start_node->handle = opens[i].push(start_node);
@@ -322,7 +324,8 @@ int main(int argc, char *argv[])
       get_applicable_trajs_precise(expander,
                                    robot_hfuns, robots,
                                    traj_wrapper,
-                                   best_node, rolled_robot_data[i], /*id*/ i);
+                                   best_node, rolled_robot_data[i], /*id*/ i,
+                                   planner_options.cluster_range, planner_options.cluster_n);
     }
     if (reached_goal == robots.size())
     {
@@ -336,11 +339,6 @@ int main(int argc, char *argv[])
     std::sort(order.begin(), order.end(), [&](size_t i, size_t j)
               { return (robots[i]->distance(Q_from[i], problem.goals[i])) > (robots[j]->distance(Q_from[j], problem.goals[j])); });
     loop_cnt++;
-    if (loop_cnt > 20)
-    {
-      std::cout << "Loop count exceeds the limit: " << loop_cnt << std::endl;
-      return 0;
-    }
     // prepare _to
     Q_to.clear();
     // call pibt

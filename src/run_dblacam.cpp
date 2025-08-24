@@ -38,6 +38,7 @@
 // custom
 #include "utils.hpp"
 #include "db_lacam.hpp"
+#include "dbpibt_options.hpp"
 
 namespace fs = std::filesystem;
 #define DYNOBENCH_BASE "../dynoplan/dynobench/"
@@ -86,17 +87,22 @@ int main(int argc, char *argv[])
   auto start_time = std::chrono::steady_clock::now();
   YAML::Node cfg = YAML::LoadFile(cfgFile);
   // cfg = cfg["db-lacam"]["default"];
-  Options_tdbastar planner_options;
-  planner_options.outFile = outputFile;
-  planner_options.cost_delta_factor = 1;
-  planner_options.fix_seed = 1;
+  // setup dblacam options
+  Planner_options planner_options;
   planner_options.delta = cfg["delta_0"].as<float>();
-  planner_options.goal_delta = cfg["goal_delta"].as<float>();
   planner_options.max_motions = cfg["num_primitives_0"].as<size_t>();
+  planner_options.alpha = cfg["alpha"].as<float>();
+  planner_options.goal_delta = cfg["goal_delta"].as<float>();
+  planner_options.cluster_range = cfg["cluster_range"].as<double>();
+  planner_options.cluster_n = cfg["cluster_n"].as<size_t>();
+  planner_options.print();
   bool use_nn = false;
-  std::cout << "*** options for dblacam search ***" << std::endl;
-  planner_options.print(std::cout);
-  std::cout << "***" << std::endl;
+  // tdbastar for the reverse search
+  Options_tdbastar tdb_options;
+  tdb_options.cost_delta_factor = 1;
+  tdb_options.fix_seed = 1;
+  tdb_options.max_motions = cfg["num_primitives_0"].as<size_t>();
+
   // define the problem
   dynobench::Problem problem(inputFile);
   problem.models_base_path = DYNOBENCH_BASE + std::string("models/");
@@ -133,25 +139,25 @@ int main(int argc, char *argv[])
     throw std::runtime_error("Unknown motion filename for this robottype!");
   }
   std::vector<Motion> motions;
-  planner_options.motionsFile = motionsFile;
+  tdb_options.motionsFile = motionsFile;
   // read and filter duplicates
-  load_motion_primitives_new(planner_options.motionsFile, *(robots[0]), motions,
-                             planner_options.max_motions, planner_options.cut_actions,
-                             /*shuffle*/ false, planner_options.check_cols);
+  load_motion_primitives_new(tdb_options.motionsFile, *(robots[0]), motions,
+                             tdb_options.max_motions, tdb_options.cut_actions,
+                             /*shuffle*/ false, tdb_options.check_cols);
 
-  disable_motions(robots[0], problem.robotTypes[0], planner_options.delta, /*filter duplicates*/ true, /*alpha*/ 0.5,
-                  planner_options.max_motions, motions);
+  disable_motions(robots[0], problem.robotTypes[0], tdb_options.delta, /*filter duplicates*/ true, /*alpha*/ 0.5,
+                  tdb_options.max_motions, motions);
 
-  planner_options.motions_ptr = &motions;
+  tdb_options.motions_ptr = &motions;
   std::vector<ompl::NearestNeighbors<std::shared_ptr<AStarNode>> *> heuristics(
       robots.size(), nullptr);
   if (cfg["heuristic1"].as<std::string>() == "reverse-search")
   {
     auto start_rev = std::chrono::steady_clock::now();
     dynobench::Problem problem_original(inputFile);
-    planner_options.delta = cfg["heuristic1_delta"].as<float>();
-    planner_options.max_motions = cfg["heuristic1_num_primitives_0"].as<size_t>();
-    planner_options.search_timelimit = 1e5; // in ms
+    tdb_options.delta = cfg["heuristic1_delta"].as<float>();
+    tdb_options.max_motions = cfg["heuristic1_num_primitives_0"].as<size_t>();
+    tdb_options.search_timelimit = 1e5; // in ms
     Out_info_tdb out_dblacam;
     size_t robot_id = 0;
     for (const auto &robot : robots)
@@ -164,12 +170,12 @@ int main(int argc, char *argv[])
       problem.starts[robot_id] = problem.goals[robot_id];
       problem.goals[robot_id] = tmp_state;
       LowLevelPlan<dynobench::Trajectory> tmp_solution;
-      tdbastar(problem, planner_options, tmp_solution.trajectory,
+      tdbastar(problem, tdb_options, tmp_solution.trajectory,
                /*constraints*/ {}, out_dblacam, robot_id, /*reverse_search*/ true,
                nullptr, &heuristics[robot_id]);
 
       // dbA* with optimization
-      // compute_heuristics(100, problem, planner_options, robot_id, &heuristics[robot_id]);
+      // compute_heuristics(100, problem, tdb_options, robot_id, &heuristics[robot_id]);
       std::cout << "computed heuristic with " << heuristics[robot_id]->size()
                 << " entries." << std::endl;
       robot_id++;
@@ -181,8 +187,6 @@ int main(int argc, char *argv[])
     // put back settings
     problem.starts = problem_original.starts;
     problem.goals = problem_original.goals;
-    planner_options.delta = cfg["delta_0"].as<float>();
-    planner_options.max_motions = cfg["num_primitives_0"].as<size_t>();
   }
   // check motions
   auto check_motions = [&]
@@ -231,7 +235,7 @@ int main(int argc, char *argv[])
     DYNO_CHECK_LEQ(node->hScore, 1e5, "hScore should be bounded");
   }
   const auto deadline = Deadline(timelimit);
-  LaCAM lacam(problem, dbN_start, expander, h_funs, robots, /*verbose*/ 1, &deadline);
+  LaCAM lacam(problem, dbN_start, expander, h_funs, planner_options, robots, /*verbose*/ 1, &deadline);
   MultiRobotTrajectory solution = lacam.solve();
   if (solution.is_empty())
   {

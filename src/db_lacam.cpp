@@ -43,6 +43,7 @@ LaCAM::LaCAM(const dynobench::Problem _problem,
              std::vector<std::shared_ptr<AStarNode>> _dbNodes,
              Expander &_expander,
              std::vector<std::shared_ptr<dynoplan::Heu_fun>> _h_funs,
+             Planner_options _planner_options,
              std::vector<std::shared_ptr<dynobench::Model_robot>> _robots,
              int _verbose,
              const Deadline *_timelimit)
@@ -50,6 +51,7 @@ LaCAM::LaCAM(const dynobench::Problem _problem,
       dbNodes(_dbNodes),
       expander(_expander),
       h_funs(_h_funs),
+      planner_options(_planner_options),
       robots(_robots),
       timelimit(_timelimit),
       verbose(_verbose),
@@ -85,7 +87,7 @@ MultiRobotTrajectory LaCAM::solve()
   while (!OPEN.empty() && !is_expired(timelimit))
   {
     ++loop_cnt;
-    if (loop_cnt > 100)
+    if (loop_cnt > 400)
     {
       // export_node_expansion();
       return solution;
@@ -99,7 +101,7 @@ MultiRobotTrajectory LaCAM::solve()
     H->order = get_sorted_order(robots, H->Q, problem.goals);
     if (H->parent != nullptr)
       // check goal condition
-      if (H_goal == nullptr && is_close_config(H->Q, problem.goals, robots.at(0), /*threshold*/ 0.5))
+      if (H_goal == nullptr && is_close_config(H->Q, problem.goals, robots.at(0), /*threshold*/ planner_options.goal_delta))
       {
         H_goal = H;
         solver_info(2, "found solution!");
@@ -397,9 +399,9 @@ void LaCAM::get_applicable_trajs_precise(std::shared_ptr<AStarNode> db_node, Rob
       max_h = last_state_h;
   }
   // h_value-based clustering
-  robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ 0.1, min_h, max_h, 1, /*shuffle*/ false); // range 0.1-0.5 for sparseness, a = 0.1, N=1 for alcove, atgoal, circle_uni. 0.05 for forest, wall
+  robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ planner_options.cluster_range, min_h, max_h, planner_options.cluster_n, /*shuffle*/ false); // range 0.1-0.5 for sparseness, a = 0.1, N=1 for alcove, atgoal, circle_uni. 0.05 for forest, wall
 
-  std::cout << "robot data for robot " << robot_id << " is " << robot_data.trajectories.size() << std::endl;
+  // std::cout << "robot data for robot " << robot_id << " is " << robot_data.trajectories.size() << std::endl;
   // distance based filtering
   // robot_data = GetFilteredUniqueTopByH(tmp_data, /*min_distance*/ 0.5, robot_id);
   // DEBUG
@@ -463,7 +465,7 @@ RobotData LaCAM::GetFilteredUniqueTopByH(const RobotData &input, double min_dist
   return result;
 }
 
-RobotData LaCAM::GetTopNPerClusterByH(const RobotData &input, double range, double min_h, double max_h, size_t N = 4, bool shuffle = false)
+RobotData LaCAM::GetTopNPerClusterByH(const RobotData &input, double range, double min_h, double max_h, size_t N, bool shuffle = false)
 {
   if (input.trajectories.empty())
     return {};

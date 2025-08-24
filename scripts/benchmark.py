@@ -8,6 +8,7 @@ import tqdm
 import multiprocessing as mp
 from main_dbpibt import run_dbpibt
 from main_dbcbs import run_dbcbs
+from main_dbecbs import run_dbecbs
 from main_dblacam import run_dblacam
 from benchmark_table import write_table
 
@@ -70,6 +71,9 @@ def execute_task(task: ExecutionTask):
   elif task.alg == "db-cbs":
     run_dbcbs(str(env), str(result_folder), task.timelimit, mycfg)
     visualize_files = [p.name for p in result_folder.glob('result_*')]
+  elif task.alg == "db-ecbs":
+    run_dbecbs(str(env), str(result_folder), task.timelimit, mycfg)
+    visualize_files = [p.name for p in result_folder.glob('result_*')]
   elif task.alg == "db-lacam":
     run_dblacam(str(env), str(result_folder), task.timelimit, mycfg)
     visualize_files = [p.name for p in result_folder.glob('result_*')]
@@ -94,8 +98,8 @@ def main():
     "alcove_unicycle",
     "atgoal_unicycle",
     # 3D case
-    # "forest4",
-    # "wall4",
+    "forest4",
+    "wall4",
   ]
   for kind in ["unicycle","unicycle_sphere"]: 
     for n in [8]:
@@ -105,11 +109,12 @@ def main():
   instances_3d = ["forest4", "wall4"]
 
   algs = [
-    "db-cbs",
+    # "db-cbs",
+    "db-ecbs",
     "db-pibt",
     "db-lacam",
   ]
-  trials = 5 
+  trials = 1 
   timelimit_2d = 1 * 60 
   timelimit_3d = 5 * 60 
   

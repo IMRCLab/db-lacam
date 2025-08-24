@@ -126,6 +126,7 @@ def get_alg_name(alg_key):
   # all algorithms we consider so far
   mapping = {
     "db-cbs": "db-CBS",
+    "db-ecbs": "db-ECBS",
     "db-pibt": "db-PIBT",
     "db-lacam": "db-LaCAM",
   }

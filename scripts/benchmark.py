@@ -114,16 +114,17 @@ def main():
     "db-pibt",
     "db-lacam",
   ]
-  trials = 1 
+  trials = 1 * 5 
   timelimit_2d = 1 * 60 
   timelimit_3d = 5 * 60 
-  
+  timelimit_max = 0 # plot needs higher timelimit
   tasks = []
   for instance in instances:
     if instance in instances_3d:
         timelimit = timelimit_3d
     else:
         timelimit = timelimit_2d
+    timelimit_max = max(timelimit_max, timelimit)
     for alg in algs:
       for trial in range(trials):
         tasks.append(ExecutionTask(instance, alg, trial, timelimit))
@@ -138,6 +139,6 @@ def main():
     for task in tasks:
       execute_task(task)
 
-  write_table(instances, algs, Path("../results"), "table.pdf", trials, timelimit)
+  write_table(instances, algs, Path("../results"), "table.pdf", trials, timelimit_max)
 if __name__ == '__main__':
   main()

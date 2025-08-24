@@ -200,7 +200,6 @@ int main(int argc, char *argv[])
   std::vector<double> upper_bounds(num_robots, std::numeric_limits<double>::max());
   std::vector<double> hs(num_robots, -1.0); // start->hScore
 
-  double cost_tmp = 0;
   double lowest_cost = std::numeric_limits<double>::max();
   YAML::Node itr_cost_data;
   std::string itr_cost_file = output_folder + "/iteration_cost.yaml";
@@ -462,8 +461,9 @@ int main(int argc, char *argv[])
             duration t = now - dbecbs_start;
             optimization_sol.to_yaml_format(optimizationFile.c_str());
             std::cout << "Optimization better solution is saved!" << std::endl;
+            double cost = optimization_sol.get_cost();
             stats << "  - t: " << t.count() << "\n";
-            stats << "    cost: " << cost_tmp << "\n";
+            stats << "    cost: " << cost << "\n";
             stats << "    duration_discrete: " << duration_discrete.count() << "\n";
             stats << "    duration_opt: " << duration_opt.count() << "\n";
             stats << "    discrete cost: " << P.cost << "\n";

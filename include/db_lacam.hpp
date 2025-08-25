@@ -9,6 +9,7 @@
 #include "dynobench/dyno_macros.hpp"
 #include "dynobench/motions.hpp"
 #include "dynobench/multirobot_trajectory.hpp"
+#include "dynobench/general_utils.hpp"
 // custom
 #include "db_pibt.hpp"
 #include "utils.hpp"
@@ -63,6 +64,7 @@ struct LaCAM
   Expander &expander;
   std::vector<std::shared_ptr<dynoplan::Heu_fun>> h_funs;
   Planner_options planner_options;
+  Time_planner &m_time_planner;
   std::vector<std::shared_ptr<dynobench::Model_robot>> robots;
   std::map<size_t, RobotData> rolled_robot_data; // sorted, rolled robot trajs
   // tmp params
@@ -86,6 +88,7 @@ struct LaCAM
         std::vector<std::shared_ptr<dynoplan::Heu_fun>> _h_funs,
         Planner_options _planner_options,
         std::vector<std::shared_ptr<dynobench::Model_robot>> _robots,
+        Time_planner &time_planner,
         int _verbose = 0,
         const Deadline *_timelimit = nullptr);
   ~LaCAM();

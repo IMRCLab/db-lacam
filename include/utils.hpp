@@ -182,3 +182,63 @@ struct ConfigEqual
   bool operator()(const std::vector<Eigen::VectorXd> &a,
                   const std::vector<Eigen::VectorXd> &b) const;
 };
+
+struct Time_planner
+{
+
+  double extra_time = 0.;
+  double reverse_search = 0.;        // reverse search
+  double time_nearestMotion = 0.0;   // Tm-related operations
+  double time_sort_order = 0.;       // sort robot orders
+  double time_get_trajs = 0.;        // get applicable motions (rollout)
+  double time_grow_search_tree = 0.; // constraint robots
+  double time_lazy_expand = 0.0;     // motions expansion from the current state
+  double time_lazy_sort = 0.;        // sort, leave only applicable ones
+  double time_rollout = 0.;
+  double time_collisions = 0.0;              // collision checking w.r.t env, other robots
+  double time_clustering = 0.0;              // clustering of motions based on h-value
+  double time_hfun = 0.0;                    // get h-value from the reverse search
+  double time_collision_with_unplanned = 0.; // collision with motions of others (potentail)
+  double time_collision_with_planned = 0;    // with motions of already-reserved-robots
+  int expands = 0;                           // node expansion
+  double time_traj_to_motion = 0.;           // convert traj to motion
+  double time_get_actions = 0.;              // get actions from traj_wrap
+
+  double check_bounds = 0.0;
+  double build_heuristic = 0.0;
+  double time_transform_primitive = 0.0;
+  double time_queue = 0.0;
+  double time_nearestNode = 0.0;
+  double time_nearestNode_add = 0.0;
+  double time_nearestNode_search = 0.0;
+  double prepare_time = 0.0;
+  double total_time = 0.;
+  int num_nn_motions = 0;
+  int num_nn_states = 0;
+  int num_col_motions = 0;
+  int motions_tree_size = 0;
+  int states_tree_size = 0;
+  double time_search = 0;
+
+  void print() const
+  {
+    std::cout << "*** Time stats for the planner ***" << std::endl;
+    std::cout << " reverse_search: " << reverse_search << "\n";
+    std::cout << " time_nearestMotion: " << time_nearestMotion << "\n";
+    std::cout << " time_sort_order: " << time_sort_order << "\n";
+    std::cout << " time_grow_search_tree: " << time_grow_search_tree << "\n";
+    std::cout << " time_get_trajs: " << time_get_trajs << "\n";
+    std::cout << " time_lazy_expand: " << time_lazy_expand << "\n";
+    std::cout << " time_lazy_sort: " << time_lazy_sort << "\n";
+    std::cout << " time_get_actions: " << time_get_actions << "\n";
+    std::cout << " time_traj_to_motion: " << time_traj_to_motion << "\n";
+    std::cout << " time_rollout: " << time_rollout << "\n";
+    std::cout << " time_collisions (mixed): " << time_collisions << "\n";
+    std::cout << " time_clustering: " << time_clustering << "\n";
+    std::cout << " time_hfun: " << time_hfun << "\n";
+    std::cout << " time_collision_with_unplanned: " << time_collision_with_unplanned << "\n";
+    std::cout << " time_collision_with_planned: " << time_collision_with_planned << "\n";
+    // std::cout << " expands: " << expands << "\n";
+    std::cout << "***" << std::endl;
+  }
+};

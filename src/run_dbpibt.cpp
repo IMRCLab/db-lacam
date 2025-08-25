@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
   }
   auto start_time = std::chrono::steady_clock::now();
   YAML::Node cfg = YAML::LoadFile(cfgFile);
-  // cfg = cfg["db-pibt"]["default"];
+  cfg = cfg["db-pibt"]["default"];
   // setup dblacam options
   Planner_options planner_options;
   planner_options.delta = cfg["delta_0"].as<float>();
@@ -98,6 +98,7 @@ int main(int argc, char *argv[])
   planner_options.cluster_n = cfg["cluster_n"].as<size_t>();
   planner_options.print();
   bool use_nn = false;
+  Time_planner time_planner;
   // tdbastar for the reverse search
   Options_tdbastar tdb_options;
   tdb_options.cost_delta_factor = 1;
@@ -155,8 +156,10 @@ int main(int argc, char *argv[])
       robots.size(), nullptr);
   if (cfg["heuristic1"].as<std::string>() == "reverse-search")
   {
-    auto start_rev = std::chrono::steady_clock::now();
     dynobench::Problem problem_original(inputFile);
+    time_planner.reverse_search += timed_fun_void([&]
+                                                  {
+    auto start_rev = std::chrono::steady_clock::now();
     tdb_options.delta = cfg["heuristic1_delta"].as<float>();
     tdb_options.max_motions = cfg["heuristic1_num_primitives_0"].as<size_t>();
     tdb_options.search_timelimit = 1e5; // in ms
@@ -180,7 +183,7 @@ int main(int argc, char *argv[])
     }
     auto end_rev = std::chrono::steady_clock::now();
     duration duration_rev = end_rev - start_rev;
-    std::cout << "Time taken reverse search: " << duration_rev.count() << " seconds" << std::endl;
+    std::cout << "Time taken reverse search: " << duration_rev.count() << " seconds" << std::endl; });
     // put back settings
     problem.starts = problem_original.starts;
     problem.goals = problem_original.goals;
@@ -203,11 +206,13 @@ int main(int argc, char *argv[])
   T_m = nigh_factory_t<Motion *>(problem.robotTypes[0], robots[0], // homogeneous case
                                  /*reverse_search*/ false);
   // add all motions to Tm
+  time_planner.time_nearestMotion += timed_fun_void([&]
+                                                    {
   for (size_t i = 0; i < std::min(motions.size(), planner_options.max_motions);
        ++i)
   {
     T_m->add(&motions[i]);
-  }
+  } });
   // add the expander, homogeneous case
   Expander expander(robots[0].get(), T_m, planner_options.alpha * planner_options.delta, /*add static motion*/ true);
   dynobench::TrajWrapper traj_wrapper;
@@ -252,11 +257,10 @@ int main(int argc, char *argv[])
     dynobench::Trajectory traj;
     M_to.push_back(traj);
   }
-  Time_benchmark time_bench;
   Stopwatch watch;
   auto stop_search = [&]
   {
-    if (static_cast<size_t>(time_bench.expands) >= planner_options.max_expands)
+    if (static_cast<size_t>(time_planner.expands) >= planner_options.max_expands)
     {
       status = Terminate_status::MAX_EXPANDS;
       std::cout << "BREAK search:"
@@ -280,7 +284,7 @@ int main(int argc, char *argv[])
     }
     return false;
   };
-  db_PIBT dbpibt(robots);
+  db_PIBT dbpibt(robots, time_planner);
   std::shared_ptr<AStarNode> best_node;
   // store the output
   MultiRobotTrajectory solution;
@@ -300,6 +304,7 @@ int main(int argc, char *argv[])
   bool success = false;
   while (!stop_search())
   {
+    time_planner.expands++;
     success = false;
     Q_from.clear();
     dbNode_from.clear();
@@ -321,11 +326,12 @@ int main(int argc, char *argv[])
       dbNode_to.push_back(std::make_shared<AStarNode>());
       M_to[i].states.clear();
       M_to[i].actions.clear();
-      get_applicable_trajs_precise(expander,
-                                   robot_hfuns, robots,
-                                   traj_wrapper,
-                                   best_node, rolled_robot_data[i], /*id*/ i,
-                                   planner_options.cluster_range, planner_options.cluster_n);
+      time_planner.time_get_trajs += timed_fun_void([&]
+                                                    { get_applicable_trajs_precise(expander,
+                                                                                   robot_hfuns, robots,
+                                                                                   traj_wrapper,
+                                                                                   best_node, rolled_robot_data[i], /*id*/ i,
+                                                                                   planner_options.cluster_range, planner_options.cluster_n, time_planner); });
     }
     if (reached_goal == robots.size())
     {
@@ -336,8 +342,9 @@ int main(int argc, char *argv[])
       solution.to_yaml_format(outputFile.c_str());
       return 0;
     }
-    std::sort(order.begin(), order.end(), [&](size_t i, size_t j)
-              { return (robots[i]->distance(Q_from[i], problem.goals[i])) > (robots[j]->distance(Q_from[j], problem.goals[j])); });
+    time_planner.time_sort_order += timed_fun_void([&]
+                                                   { std::sort(order.begin(), order.end(), [&](size_t i, size_t j)
+                                                               { return (robots[i]->distance(Q_from[i], problem.goals[i])) > (robots[j]->distance(Q_from[j], problem.goals[j])); }); });
     loop_cnt++;
     // prepare _to
     Q_to.clear();
@@ -374,5 +381,6 @@ int main(int argc, char *argv[])
       }
     }
   }
+  time_planner.print();
   return 0;
 }

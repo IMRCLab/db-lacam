@@ -45,6 +45,7 @@ LaCAM::LaCAM(const dynobench::Problem _problem,
              std::vector<std::shared_ptr<dynoplan::Heu_fun>> _h_funs,
              Planner_options _planner_options,
              std::vector<std::shared_ptr<dynobench::Model_robot>> _robots,
+             Time_planner &_time_planner,
              int _verbose,
              const Deadline *_timelimit)
     : problem(_problem),
@@ -55,11 +56,13 @@ LaCAM::LaCAM(const dynobench::Problem _problem,
       robots(_robots),
       timelimit(_timelimit),
       verbose(_verbose),
-      db_pibt(robots),
+      m_time_planner(_time_planner),
+      db_pibt(robots, _time_planner),
       H_goal(nullptr),
       OPEN(),
       order(robots.size(), 0),
       loop_cnt(0)
+
 {
   tmp_traj_wrapper.allocate_size(/*max_traj_size*/ 100, robots.at(0)->nx, robots.at(0)->nu);
 }
@@ -74,7 +77,8 @@ MultiRobotTrajectory LaCAM::solve()
   int h_id = 1;
   std::unordered_map<std::vector<Eigen::VectorXd>, HNode *, ConfigHasher, ConfigEqual> EXPLORED;
   // insert initial node
-  order = get_sorted_order(robots, problem.starts, problem.goals);
+  m_time_planner.time_sort_order += timed_fun_void([&]
+                                                   { order = get_sorted_order(robots, problem.starts, problem.goals); });
   auto H_init = new HNode(h_id, problem.starts, dbNodes, order);
   OPEN.push_front(H_init);
   // DEBUG
@@ -97,8 +101,8 @@ MultiRobotTrajectory LaCAM::solve()
     invalid_node = false;
     std::cout << "Loop count: " << loop_cnt << std::endl;
     std::cout << "HL Node ID: " << OPEN.front()->id << std::endl;
-
-    H->order = get_sorted_order(robots, H->Q, problem.goals);
+    m_time_planner.time_sort_order += timed_fun_void([&]
+                                                     { H->order = get_sorted_order(robots, H->Q, problem.goals); });
     if (H->parent != nullptr)
       // check goal condition
       if (H_goal == nullptr && is_close_config(H->Q, problem.goals, robots.at(0), /*threshold*/ planner_options.goal_delta))
@@ -119,7 +123,8 @@ MultiRobotTrajectory LaCAM::solve()
     std::vector<std::shared_ptr<AStarNode>> dbN_to;
     for (size_t r = 0; r < robots.size(); r++)
     {
-      get_applicable_trajs_precise(H->dbN[r], rolled_robot_data[r], r);
+      m_time_planner.time_get_trajs += timed_fun_void([&]
+                                                      { get_applicable_trajs_precise(H->dbN[r], rolled_robot_data[r], r); });
       // if no applicable motions for the current state, then remove the node
       if (!rolled_robot_data[r].trajectories.size())
       {
@@ -131,23 +136,16 @@ MultiRobotTrajectory LaCAM::solve()
       dbN_to.push_back(std::make_shared<AStarNode>());
       double distance_to_goal = robots[r]->distance(H->dbN[r]->state_eig, problem.goals[r]);
       std::cout << "robot " << r << " distance to goal: " << distance_to_goal << std::endl;
-      if (distance_to_goal < best_distance_to_goal)
-      {
-        best_distance_to_goal = distance_to_goal;
-        best_distance_state = H->dbN[r]->state_eig;
-        std::cout << " best distance to goal: " << best_distance_to_goal << std::endl;
-        std::cout << best_distance_state.format(dynobench::FMT) << std::endl;
-      }
     }
     if (invalid_node)
       continue;
-    // set orders based on number of available motions
-    // H->order = get_sorted_order_by_motions();
     // low level search
     if (L->depth < H->Q.size())
     {
       const auto i = H->order[L->depth];
       assert(!rolled_robot_data[i].trajectories.empty());
+      m_time_planner.time_grow_search_tree += timed_fun_void([&]
+                                                             { 
       for (size_t j = 0; j < rolled_robot_data[i].trajectories.size(); j++)
       {
         dynobench::Trajectory u_traj = rolled_robot_data[i].trajectories[j];
@@ -159,7 +157,7 @@ MultiRobotTrajectory LaCAM::solve()
         u_dbN->gScore = rolled_robot_data[i].last_state_g[j];
         u_dbN->hScore = rolled_robot_data[i].last_state_h[j];
         H->search_tree.push(new LNode(L, i, u_traj, u_state, u_dbN));
-      }
+      } });
     }
     // create successors at the high-level search
     std::vector<Eigen::VectorXd> Q_to;
@@ -326,13 +324,16 @@ void LaCAM::get_applicable_trajs_precise(std::shared_ptr<AStarNode> db_node, Rob
   tmp_traj_wrappers.clear();
   robot_data.clear();
   // i. expand applicable motions
-  expander.expand_lazy(db_node->state_eig, tmp_lazy_trajs);
+  m_time_planner.time_lazy_expand += timed_fun_void(
+      [&]
+      { expander.expand_lazy(db_node->state_eig, tmp_lazy_trajs); });
   auto ff = validity_checker(robots[robot_id]);
   int num_valid_states = -1;
   double gScore = 0;
   double min_h = std::numeric_limits<double>::max();
   double max_h = std::numeric_limits<double>::lowest();
-
+  m_time_planner.time_lazy_sort += timed_fun_void([&]
+                                                  {
   for (size_t j = 0; j < tmp_lazy_trajs.size(); j++)
   {
     auto &lazy_traj = tmp_lazy_trajs[j];
@@ -353,7 +354,7 @@ void LaCAM::get_applicable_trajs_precise(std::shared_ptr<AStarNode> db_node, Rob
     gScore = db_node->gScore + cost_motion;
     tmp_traj_wrapper.last_state_g = gScore;
     tmp_traj_wrappers.push_back(tmp_traj_wrapper);
-  }
+  } });
   // ii. rollout trajs - env collision free
   RobotData tmp_data;
   double last_state_h = 0;
@@ -361,12 +362,15 @@ void LaCAM::get_applicable_trajs_precise(std::shared_ptr<AStarNode> db_node, Rob
   for (size_t k = 0; k < tmp_traj_wrappers.size(); k++)
   {
     auto &traj_wrap = tmp_traj_wrappers[k];
-    std::vector<Eigen::VectorXd> us = traj_wrap.get_actions();
+    std::vector<Eigen::VectorXd> us;
+    m_time_planner.time_get_actions += timed_fun_void([&]
+                                                      { us = traj_wrap.get_actions(); });
     std::vector<Eigen::VectorXd> xs(us.size() + 1,
                                     Eigen::VectorXd::Zero(robots[robot_id]->nx));
     int num_valid_states = -1;
-    robots[robot_id]->rollout(x0, us, xs, &ff,
-                              &num_valid_states);
+    m_time_planner.time_rollout += timed_fun_void([&]
+                                                  { robots[robot_id]->rollout(x0, us, xs, &ff,
+                                                                              &num_valid_states); });
     if (num_valid_states && num_valid_states < xs.size())
     {
       // std::cout << "rollout, state violations" << std::endl;
@@ -381,17 +385,21 @@ void LaCAM::get_applicable_trajs_precise(std::shared_ptr<AStarNode> db_node, Rob
     traj.goal = traj.states.back();
     // check for collision with the env
     Motion motion;
-    traj_to_motion(traj, *(robots[robot_id]), motion, /*compute collision*/ true);
+    m_time_planner.time_traj_to_motion += timed_fun_void([&]
+                                                         { traj_to_motion(traj, *(robots[robot_id]), motion, /*compute collision*/ true); });
+    fcl::DefaultCollisionData<double> collision_data;
+    m_time_planner.time_collisions += timed_fun_void([&]
+                                                     {
     assert(motion.collision_manager);
     assert(robots[robot_id]->env.get());
-    fcl::DefaultCollisionData<double> collision_data;
     motion.collision_manager->collide(robots[robot_id]->env.get(), &collision_data,
-                                      fcl::DefaultCollisionFunction<double>);
+                                      fcl::DefaultCollisionFunction<double>); });
     if (collision_data.result.isCollision())
       continue;
     tmp_data.trajectories.push_back(traj);
     tmp_data.last_state_g.push_back(traj_wrap.last_state_g);
-    last_state_h = h_funs[robot_id]->h(traj.goal);
+    m_time_planner.time_hfun += timed_fun_void([&]
+                                               { last_state_h = h_funs[robot_id]->h(traj.goal); });
     tmp_data.last_state_h.push_back(last_state_h);
     if (last_state_h < min_h)
       min_h = last_state_h;
@@ -399,7 +407,8 @@ void LaCAM::get_applicable_trajs_precise(std::shared_ptr<AStarNode> db_node, Rob
       max_h = last_state_h;
   }
   // h_value-based clustering
-  robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ planner_options.cluster_range, min_h, max_h, planner_options.cluster_n, /*shuffle*/ false); // range 0.1-0.5 for sparseness, a = 0.1, N=1 for alcove, atgoal, circle_uni. 0.05 for forest, wall
+  m_time_planner.time_clustering += timed_fun_void([&]
+                                                   { robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ planner_options.cluster_range, min_h, max_h, planner_options.cluster_n, /*shuffle*/ false); });
 
   // std::cout << "robot data for robot " << robot_id << " is " << robot_data.trajectories.size() << std::endl;
   // distance based filtering

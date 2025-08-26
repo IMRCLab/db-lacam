@@ -203,6 +203,7 @@ struct Time_planner
   int expands = 0;                           // node expansion
   double time_traj_to_motion = 0.;           // convert traj to motion
   double time_get_actions = 0.;              // get actions from traj_wrap
+  double time_collision_with_env = 0.;       // collision with the env
 
   double check_bounds = 0.0;
   double build_heuristic = 0.0;
@@ -234,6 +235,8 @@ struct Time_planner
     std::cout << " time_traj_to_motion: " << time_traj_to_motion << "\n";
     std::cout << " time_rollout: " << time_rollout << "\n";
     std::cout << " time_collisions (mixed): " << time_collisions << "\n";
+    std::cout << " time_collision_with_env: " << time_collision_with_env << "\n";
+
     std::cout << " time_clustering: " << time_clustering << "\n";
     std::cout << " time_hfun: " << time_hfun << "\n";
     std::cout << " time_collision_with_unplanned: " << time_collision_with_unplanned << "\n";

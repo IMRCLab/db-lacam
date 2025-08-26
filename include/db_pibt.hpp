@@ -75,4 +75,7 @@ struct db_PIBT
   bool is_motion_valid(size_t robot_id,
                        const dynobench::Trajectory &traj,
                        const std::vector<dynobench::Trajectory> &M_to);
+
+  bool is_motion_valid_env_collision(size_t robot_id,
+                                     dynobench::Trajectory &traj);
 };

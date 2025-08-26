@@ -384,22 +384,22 @@ void LaCAM::get_applicable_trajs_precise(std::shared_ptr<AStarNode> db_node, Rob
     traj.actions = us;
     traj.goal = traj.states.back();
     // check for collision with the env
-    Motion motion;
-    m_time_planner.time_traj_to_motion += timed_fun_void([&]
-                                                         { traj_to_motion(traj, *(robots[robot_id]), motion, /*compute collision*/ true); });
-    fcl::DefaultCollisionData<double> collision_data;
-    m_time_planner.time_collisions += timed_fun_void([&]
-                                                     {
-    assert(motion.collision_manager);
-    assert(robots[robot_id]->env.get());
-    motion.collision_manager->collide(robots[robot_id]->env.get(), &collision_data,
-                                      fcl::DefaultCollisionFunction<double>); });
-    if (collision_data.result.isCollision())
-      continue;
-    tmp_data.trajectories.push_back(traj);
-    tmp_data.last_state_g.push_back(traj_wrap.last_state_g);
-    m_time_planner.time_hfun += timed_fun_void([&]
-                                               { last_state_h = h_funs[robot_id]->h(traj.goal); });
+    // Motion motion;
+    // m_time_planner.time_traj_to_motion += timed_fun_void([&]
+    //                                                      { traj_to_motion(traj, *(robots[robot_id]), motion, /*compute collision*/ true); });
+    // fcl::DefaultCollisionData<double> collision_data;
+    // m_time_planner.time_collisions += timed_fun_void([&]
+    //                                                  {
+    // assert(motion.collision_manager);
+    // assert(robots[robot_id]->env.get());
+    // motion.collision_manager->collide(robots[robot_id]->env.get(), &collision_data,
+    //                                   fcl::DefaultCollisionFunction<double>); });
+    // if (collision_data.result.isCollision())
+    //   continue;
+    // tmp_data.trajectories.push_back(traj);
+    // tmp_data.last_state_g.push_back(traj_wrap.last_state_g);
+    // m_time_planner.time_hfun += timed_fun_void([&]
+    //                                            { last_state_h = h_funs[robot_id]->h(traj.goal); });
     tmp_data.last_state_h.push_back(last_state_h);
     if (last_state_h < min_h)
       min_h = last_state_h;
@@ -554,8 +554,8 @@ bool LaCAM::set_new_config(HNode *H, LNode *L, std::vector<Eigen::VectorXd> &Q_t
     Q_to[L->who[d]] = L->where_state[d];
     dbN_to[L->who[d]] = L->where_dbN[d];
     M_to[L->who[d]] = L->where[d];
-    // std::cout << "constraining the robot " << L->who[d] << std::endl;
-    // std::cout << Q_to[L->who[d]].format(dynobench::FMT) << std::endl;
+    std::cout << "constraining the robot " << L->who[d] << std::endl;
+    std::cout << Q_to[L->who[d]].format(dynobench::FMT) << std::endl;
   }
   return db_pibt.set_new_config(H->Q, Q_to, H->dbN, dbN_to, M_to, H->order, robot_data_rolled);
 }

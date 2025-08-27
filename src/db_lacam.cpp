@@ -91,7 +91,7 @@ MultiRobotTrajectory LaCAM::solve()
   while (!OPEN.empty() && !is_expired(timelimit))
   {
     ++loop_cnt;
-    if (loop_cnt > 200)
+    if (loop_cnt > 1000)
     {
       export_node_expansion();
       return solution;
@@ -327,28 +327,32 @@ void LaCAM::get_applicable_trajs_precise(std::shared_ptr<AStarNode> db_node, Rob
       [&]
       { expander.expand_lazy(db_node->state_eig, tmp_lazy_trajs); });
   // OPTION 1: get only actions
-  std::vector<std::vector<Eigen::VectorXd>> all_actions;
-  all_actions.resize(tmp_lazy_trajs.size());
+  // std::vector<std::vector<Eigen::VectorXd>> all_actions;
+  // all_actions.resize(tmp_lazy_trajs.size());
 
-  std::transform(tmp_lazy_trajs.begin(), tmp_lazy_trajs.end(), all_actions.begin(),
-                 [](const LazyTraj &traj)
-                 {
-                   return traj.motion->traj.actions;
-                 });
-  double eps = 0.5;
-  auto diverse_actions = filter_diverse(all_actions, eps);
+  // std::transform(tmp_lazy_trajs.begin(), tmp_lazy_trajs.end(), all_actions.begin(),
+  //                [](const LazyTraj &traj)
+  //                {
+  //                  return traj.motion->traj.actions;
+  //                });
+  // double eps = 0.5;
+  // auto diverse_actions = filter_diverse(all_actions, eps);
 
   auto ff = validity_checker(robots[robot_id]);
   double gScore = 0;
   double hScore = 0;
   Eigen::VectorXd x0 = db_node->state_eig;
   h_values.clear();
-  for (size_t j = 0; j < all_actions.size(); j++)
+  // for (size_t j = 0; j < all_actions.size(); j++)
+  for (size_t j = 0; j < tmp_lazy_trajs.size(); j++)
   {
     // i. rollout and keep the valid
-    std::vector<Eigen::VectorXd> us = all_actions[j];
-    std::vector<Eigen::VectorXd> xs(us.size() + 1,
-                                    Eigen::VectorXd::Zero(robots[robot_id]->nx));
+    // std::vector<Eigen::VectorXd> us = all_actions[j];
+    auto &lazy_traj = tmp_lazy_trajs[j];
+    std::vector<Eigen::VectorXd> us = lazy_traj.motion->traj.actions;
+    std::vector<Eigen::VectorXd>
+        xs(us.size() + 1,
+           Eigen::VectorXd::Zero(robots[robot_id]->nx));
     int num_valid_states = -1;
     m_time_planner.time_rollout += timed_fun_void([&]
                                                   { robots[robot_id]->rollout(x0, us, xs, &ff,
@@ -362,8 +366,8 @@ void LaCAM::get_applicable_trajs_precise(std::shared_ptr<AStarNode> db_node, Rob
     hScore = h_funs[robot_id]->h(xs.back());
     double cost_motion = us.size() * robots[robot_id]->ref_dt;
     gScore = db_node->gScore + cost_motion;
-    // if (!check_and_add(hScore))
-    // continue;
+    if (!check_and_add(hScore))
+      continue;
     // iii. check for collision with the env.
     dynobench::Trajectory traj;
     traj.states.clear();

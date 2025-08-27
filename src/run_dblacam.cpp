@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
   }
   auto start_time = std::chrono::steady_clock::now();
   YAML::Node cfg = YAML::LoadFile(cfgFile);
-  // cfg = cfg["db-lacam"]["default"];
+  cfg = cfg["db-lacam"]["default"];
   // setup dblacam options
   Planner_options planner_options;
   planner_options.delta = cfg["delta_0"].as<float>();

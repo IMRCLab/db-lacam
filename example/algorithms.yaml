@@ -136,10 +136,10 @@ db-lacam:
     alpha: 0.5 # 0.01 for grid
     filter_duplicates: True
     heuristic1: "reverse-search" 
-    heuristic1_delta: 0.5
+    heuristic1_delta: 0.9
     heuristic1_num_primitives_0: 200 
     goal_delta: 0.5 
-    cluster_range: 0.05
+    cluster_range: 0.1
     cluster_n: 1
   '*_integrator':
     delta_0: 0.5

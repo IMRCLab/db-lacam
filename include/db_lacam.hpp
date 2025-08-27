@@ -103,7 +103,10 @@ struct LaCAM
                       std::map<size_t, RobotData> valid_trajs);
 
   void get_applicable_trajs(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id);
-  void get_applicable_trajs_precise(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id);
+  void get_applicable_trajs_precise_no_clustering(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id);
+  void get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id);
+  void get_applicable_trajs_precise_sort_actions(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id);
+
   RobotData GetTopNPerClusterByH(const RobotData &input, double range, double min_h, double max_h, size_t N, bool shuffle);
   RobotData GetFilteredUniqueTopByH(const RobotData &input, double min_distance, size_t robot_id);
   bool check_and_add(const double h_value);

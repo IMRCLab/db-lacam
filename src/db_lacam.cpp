@@ -124,7 +124,7 @@ MultiRobotTrajectory LaCAM::solve()
     for (size_t r = 0; r < robots.size(); r++)
     {
       m_time_planner.time_get_trajs += timed_fun_void([&]
-                                                      { get_applicable_trajs_precise(H->dbN[r], rolled_robot_data[r], r); });
+                                                      { get_applicable_trajs_precise_no_clustering(H->dbN[r], rolled_robot_data[r], r); });
       // if no applicable motions for the current state, then remove the node
       if (!rolled_robot_data[r].trajectories.size())
       {
@@ -225,6 +225,10 @@ MultiRobotTrajectory LaCAM::solve()
   auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
   std::cout << "elapsed:" << std::setw(6) << elapsed_ms << "ms"
             << "  loop_cnt:" << std::setw(8) << loop_cnt << std::endl;
+  double avg_ms = static_cast<double>(elapsed_ms) / loop_cnt;
+
+  std::cout << "per iteration: " << std::fixed << std::setprecision(3)
+            << avg_ms << " ms\n";
   return solution;
 }
 // without rollout. h-vlaue is for the "expected state", but can diverge hugely with unicycle dynamics
@@ -315,9 +319,8 @@ void LaCAM::get_applicable_trajs(std::shared_ptr<AStarNode> db_node, RobotData &
     robot_data.last_state_h.push_back(traj_wrap.last_state_h);
   }
 }
-
-// compute h-value after rollout
-void LaCAM::get_applicable_trajs_precise(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id)
+// OPTION 1: no clustering, sort based on h-value
+void LaCAM::get_applicable_trajs_precise_no_clustering(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id)
 {
   // clear
   tmp_lazy_trajs.clear();
@@ -326,28 +329,15 @@ void LaCAM::get_applicable_trajs_precise(std::shared_ptr<AStarNode> db_node, Rob
   m_time_planner.time_lazy_expand += timed_fun_void(
       [&]
       { expander.expand_lazy(db_node->state_eig, tmp_lazy_trajs); });
-  // OPTION 1: get only actions
-  // std::vector<std::vector<Eigen::VectorXd>> all_actions;
-  // all_actions.resize(tmp_lazy_trajs.size());
-
-  // std::transform(tmp_lazy_trajs.begin(), tmp_lazy_trajs.end(), all_actions.begin(),
-  //                [](const LazyTraj &traj)
-  //                {
-  //                  return traj.motion->traj.actions;
-  //                });
-  // double eps = 0.5;
-  // auto diverse_actions = filter_diverse(all_actions, eps);
 
   auto ff = validity_checker(robots[robot_id]);
   double gScore = 0;
   double hScore = 0;
   Eigen::VectorXd x0 = db_node->state_eig;
   h_values.clear();
-  // for (size_t j = 0; j < all_actions.size(); j++)
   for (size_t j = 0; j < tmp_lazy_trajs.size(); j++)
   {
     // i. rollout and keep the valid
-    // std::vector<Eigen::VectorXd> us = all_actions[j];
     auto &lazy_traj = tmp_lazy_trajs[j];
     std::vector<Eigen::VectorXd> us = lazy_traj.motion->traj.actions;
     std::vector<Eigen::VectorXd>
@@ -366,6 +356,7 @@ void LaCAM::get_applicable_trajs_precise(std::shared_ptr<AStarNode> db_node, Rob
     hScore = h_funs[robot_id]->h(xs.back());
     double cost_motion = us.size() * robots[robot_id]->ref_dt;
     gScore = db_node->gScore + cost_motion;
+
     if (!check_and_add(hScore))
       continue;
     // iii. check for collision with the env.
@@ -395,11 +386,164 @@ void LaCAM::get_applicable_trajs_precise(std::shared_ptr<AStarNode> db_node, Rob
     robot_data.last_state_h.push_back(hScore);
   }
   robot_data.sort_by_h();
-  // std::cout << "robot " << robot_id << " robot data size: " << robot_data.trajectories.size() << std::endl;
-  // for (size_t i = 0; i < robot_data.trajectories.size(); ++i)
-  // {
-  // expanded_trajs[robot_id].push_back(robot_data.trajectories[i]);
-  // }
+}
+
+// exhaustive, does check all motions for collision, clustering
+void LaCAM::get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id)
+{
+  // clear
+  tmp_lazy_trajs.clear();
+  tmp_traj_wrappers.clear();
+  robot_data.clear();
+  // i. expand applicable motions
+  expander.expand_lazy(db_node->state_eig, tmp_lazy_trajs);
+  auto ff = validity_checker(robots[robot_id]);
+  int num_valid_states = -1;
+  double gScore = 0;
+  double min_h = std::numeric_limits<double>::max();
+  double max_h = std::numeric_limits<double>::lowest();
+
+  for (size_t j = 0; j < tmp_lazy_trajs.size(); j++)
+  {
+    auto &lazy_traj = tmp_lazy_trajs[j];
+    tmp_traj_wrapper.set_size(lazy_traj.motion->traj.states.size());
+    num_valid_states = -1;
+    lazy_traj.compute(tmp_traj_wrapper, /*forward*/ true, /*check_state*/ &ff,
+                      &num_valid_states);
+    if (num_valid_states && num_valid_states < 1)
+    {
+      std::cout << "num_valid_states failed" << std::endl;
+      continue;
+    }
+    if (num_valid_states < lazy_traj.motion->traj.states.size())
+    {
+      continue;
+    }
+    double cost_motion = (tmp_traj_wrapper.get_size() - 1) * robots[robot_id]->ref_dt;
+    gScore = db_node->gScore + cost_motion;
+    tmp_traj_wrapper.last_state_g = gScore;
+    tmp_traj_wrappers.push_back(tmp_traj_wrapper);
+  }
+  // ii. rollout trajs - env collision free
+  RobotData tmp_data;
+  double last_state_h = 0;
+  Eigen::VectorXd x0 = db_node->state_eig;
+  for (size_t k = 0; k < tmp_traj_wrappers.size(); k++)
+  {
+    auto &traj_wrap = tmp_traj_wrappers[k];
+    std::vector<Eigen::VectorXd> us = traj_wrap.get_actions();
+    std::vector<Eigen::VectorXd> xs(us.size() + 1,
+                                    Eigen::VectorXd::Zero(robots[robot_id]->nx));
+    int num_valid_states = -1;
+    robots[robot_id]->rollout(x0, us, xs, &ff,
+                              &num_valid_states);
+    if (num_valid_states && num_valid_states < xs.size())
+    {
+      std::cout << "rollout, state violations" << std::endl;
+      continue;
+    }
+    dynobench::Trajectory traj;
+    traj.states.clear();
+    traj.actions.clear();
+    traj.start = x0;
+    traj.states = xs;
+    traj.actions = us;
+    traj.goal = traj.states.back();
+    // check for collision with the env
+    Motion motion;
+    traj_to_motion(traj, *(robots[robot_id]), motion, /*compute collision*/ true);
+    assert(motion.collision_manager);
+    assert(robots[robot_id]->env.get());
+    fcl::DefaultCollisionData<double> collision_data;
+    motion.collision_manager->collide(robots[robot_id]->env.get(), &collision_data,
+                                      fcl::DefaultCollisionFunction<double>);
+    if (collision_data.result.isCollision())
+      continue;
+    tmp_data.trajectories.push_back(traj);
+    tmp_data.last_state_g.push_back(traj_wrap.last_state_g);
+    last_state_h = h_funs[robot_id]->h(traj.goal);
+    tmp_data.last_state_h.push_back(last_state_h);
+    if (last_state_h < min_h)
+      min_h = last_state_h;
+    if (last_state_h > max_h)
+      max_h = last_state_h;
+  }
+  robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ planner_options.cluster_range, min_h, max_h, planner_options.cluster_n, /*shuffle*/ false);
+}
+// OPTION 3: sort actions based on epsilon
+void LaCAM::get_applicable_trajs_precise_sort_actions(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id)
+{
+  // clear
+  tmp_lazy_trajs.clear();
+  robot_data.clear();
+  // i. expand applicable motions
+  m_time_planner.time_lazy_expand += timed_fun_void(
+      [&]
+      { expander.expand_lazy(db_node->state_eig, tmp_lazy_trajs); });
+
+  std::vector<std::vector<Eigen::VectorXd>> all_actions;
+  all_actions.resize(tmp_lazy_trajs.size());
+
+  std::transform(tmp_lazy_trajs.begin(), tmp_lazy_trajs.end(), all_actions.begin(),
+                 [](const LazyTraj &traj)
+                 {
+                   return traj.motion->traj.actions;
+                 });
+  double eps = 0.5; // FINE-TUNE
+  auto diverse_actions = filter_diverse(all_actions, eps);
+
+  auto ff = validity_checker(robots[robot_id]);
+  double gScore = 0;
+  double hScore = 0;
+  Eigen::VectorXd x0 = db_node->state_eig;
+  h_values.clear();
+  for (size_t j = 0; j < all_actions.size(); j++)
+  {
+    // i. rollout and keep the valid
+    std::vector<Eigen::VectorXd> us = all_actions[j];
+    std::vector<Eigen::VectorXd>
+        xs(us.size() + 1,
+           Eigen::VectorXd::Zero(robots[robot_id]->nx));
+    int num_valid_states = -1;
+    m_time_planner.time_rollout += timed_fun_void([&]
+                                                  { robots[robot_id]->rollout(x0, us, xs, &ff,
+                                                                              &num_valid_states); });
+    if (num_valid_states && num_valid_states < xs.size())
+    {
+      std::cout << "rollout, state violations" << std::endl;
+      continue;
+    }
+    // ii. check for similarity
+    hScore = h_funs[robot_id]->h(xs.back());
+    double cost_motion = us.size() * robots[robot_id]->ref_dt;
+    gScore = db_node->gScore + cost_motion;
+    // iii. check for collision with the env.
+    dynobench::Trajectory traj;
+    traj.states.clear();
+    traj.actions.clear();
+    traj.start = x0;
+    traj.states = xs;
+    traj.actions = us;
+    traj.goal = traj.states.back();
+
+    Motion motion;
+    m_time_planner.time_traj_to_motion += timed_fun_void([&]
+                                                         { traj_to_motion(traj, *(robots[robot_id]), motion, /*compute collision*/ true); });
+    fcl::DefaultCollisionData<double> collision_data;
+    m_time_planner.time_collisions += timed_fun_void([&]
+                                                     {
+    assert(motion.collision_manager);
+    assert(robots[robot_id]->env.get());
+    motion.collision_manager->collide(robots[robot_id]->env.get(), &collision_data,
+                                      fcl::DefaultCollisionFunction<double>); });
+    if (collision_data.result.isCollision())
+      continue;
+    // iv. save it into robot_data
+    robot_data.trajectories.push_back(traj);
+    robot_data.last_state_g.push_back(gScore);
+    robot_data.last_state_h.push_back(hScore);
+  }
+  robot_data.sort_by_h();
 }
 
 // simply check it some motion with similar h-value has been explored

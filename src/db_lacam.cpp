@@ -91,9 +91,9 @@ MultiRobotTrajectory LaCAM::solve()
   while (!OPEN.empty() && !is_expired(timelimit))
   {
     ++loop_cnt;
-    if (loop_cnt > 1000)
+    if (loop_cnt > 200)
     {
-      // export_node_expansion();
+      export_node_expansion();
       return solution;
     }
     // do not pop here!
@@ -321,50 +321,32 @@ void LaCAM::get_applicable_trajs_precise(std::shared_ptr<AStarNode> db_node, Rob
 {
   // clear
   tmp_lazy_trajs.clear();
-  tmp_traj_wrappers.clear();
   robot_data.clear();
   // i. expand applicable motions
   m_time_planner.time_lazy_expand += timed_fun_void(
       [&]
       { expander.expand_lazy(db_node->state_eig, tmp_lazy_trajs); });
+  // OPTION 1: get only actions
+  std::vector<std::vector<Eigen::VectorXd>> all_actions;
+  all_actions.resize(tmp_lazy_trajs.size());
+
+  std::transform(tmp_lazy_trajs.begin(), tmp_lazy_trajs.end(), all_actions.begin(),
+                 [](const LazyTraj &traj)
+                 {
+                   return traj.motion->traj.actions;
+                 });
+  double eps = 0.5;
+  auto diverse_actions = filter_diverse(all_actions, eps);
+
   auto ff = validity_checker(robots[robot_id]);
-  int num_valid_states = -1;
   double gScore = 0;
-  double min_h = std::numeric_limits<double>::max();
-  double max_h = std::numeric_limits<double>::lowest();
-  m_time_planner.time_lazy_sort += timed_fun_void([&]
-                                                  {
-  for (size_t j = 0; j < tmp_lazy_trajs.size(); j++)
-  {
-    auto &lazy_traj = tmp_lazy_trajs[j];
-    tmp_traj_wrapper.set_size(lazy_traj.motion->traj.states.size());
-    num_valid_states = -1;
-    lazy_traj.compute(tmp_traj_wrapper, /*forward*/ true, /*check_state*/ &ff,
-                      &num_valid_states);
-    if (num_valid_states && num_valid_states < 1)
-    {
-      std::cout << "num_valid_states failed" << std::endl;
-      continue;
-    }
-    if (num_valid_states < lazy_traj.motion->traj.states.size())
-    {
-      continue;
-    }
-    double cost_motion = (tmp_traj_wrapper.get_size() - 1) * robots[robot_id]->ref_dt;
-    gScore = db_node->gScore + cost_motion;
-    tmp_traj_wrapper.last_state_g = gScore;
-    tmp_traj_wrappers.push_back(tmp_traj_wrapper);
-  } });
-  // ii. rollout trajs - env collision free
-  RobotData tmp_data;
-  double last_state_h = 0;
+  double hScore = 0;
   Eigen::VectorXd x0 = db_node->state_eig;
-  for (size_t k = 0; k < tmp_traj_wrappers.size(); k++)
+  h_values.clear();
+  for (size_t j = 0; j < all_actions.size(); j++)
   {
-    auto &traj_wrap = tmp_traj_wrappers[k];
-    std::vector<Eigen::VectorXd> us;
-    m_time_planner.time_get_actions += timed_fun_void([&]
-                                                      { us = traj_wrap.get_actions(); });
+    // i. rollout and keep the valid
+    std::vector<Eigen::VectorXd> us = all_actions[j];
     std::vector<Eigen::VectorXd> xs(us.size() + 1,
                                     Eigen::VectorXd::Zero(robots[robot_id]->nx));
     int num_valid_states = -1;
@@ -373,9 +355,16 @@ void LaCAM::get_applicable_trajs_precise(std::shared_ptr<AStarNode> db_node, Rob
                                                                               &num_valid_states); });
     if (num_valid_states && num_valid_states < xs.size())
     {
-      // std::cout << "rollout, state violations" << std::endl;
+      std::cout << "rollout, state violations" << std::endl;
       continue;
     }
+    // ii. check for similarity
+    hScore = h_funs[robot_id]->h(xs.back());
+    double cost_motion = us.size() * robots[robot_id]->ref_dt;
+    gScore = db_node->gScore + cost_motion;
+    // if (!check_and_add(hScore))
+    // continue;
+    // iii. check for collision with the env.
     dynobench::Trajectory traj;
     traj.states.clear();
     traj.actions.clear();
@@ -383,43 +372,45 @@ void LaCAM::get_applicable_trajs_precise(std::shared_ptr<AStarNode> db_node, Rob
     traj.states = xs;
     traj.actions = us;
     traj.goal = traj.states.back();
-    // check for collision with the env
-    // Motion motion;
-    // m_time_planner.time_traj_to_motion += timed_fun_void([&]
-    //                                                      { traj_to_motion(traj, *(robots[robot_id]), motion, /*compute collision*/ true); });
-    // fcl::DefaultCollisionData<double> collision_data;
-    // m_time_planner.time_collisions += timed_fun_void([&]
-    //                                                  {
-    // assert(motion.collision_manager);
-    // assert(robots[robot_id]->env.get());
-    // motion.collision_manager->collide(robots[robot_id]->env.get(), &collision_data,
-    //                                   fcl::DefaultCollisionFunction<double>); });
-    // if (collision_data.result.isCollision())
-    //   continue;
-    tmp_data.trajectories.push_back(traj);
-    tmp_data.last_state_g.push_back(traj_wrap.last_state_g);
-    m_time_planner.time_hfun += timed_fun_void([&]
-                                               { last_state_h = h_funs[robot_id]->h(traj.goal); });
-    tmp_data.last_state_h.push_back(last_state_h);
-    if (last_state_h < min_h)
-      min_h = last_state_h;
-    if (last_state_h > max_h)
-      max_h = last_state_h;
-  }
-  // h_value-based clustering
-  m_time_planner.time_clustering += timed_fun_void([&]
-                                                   { robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ planner_options.cluster_range, min_h, max_h, planner_options.cluster_n, /*shuffle*/ false); });
 
-  // std::cout << "robot data for robot " << robot_id << " is " << robot_data.trajectories.size() << std::endl;
-  // distance based filtering
-  // robot_data = GetFilteredUniqueTopByH(tmp_data, /*min_distance*/ 0.5, robot_id);
-  // DEBUG
+    Motion motion;
+    m_time_planner.time_traj_to_motion += timed_fun_void([&]
+                                                         { traj_to_motion(traj, *(robots[robot_id]), motion, /*compute collision*/ true); });
+    fcl::DefaultCollisionData<double> collision_data;
+    m_time_planner.time_collisions += timed_fun_void([&]
+                                                     {
+    assert(motion.collision_manager);
+    assert(robots[robot_id]->env.get());
+    motion.collision_manager->collide(robots[robot_id]->env.get(), &collision_data,
+                                      fcl::DefaultCollisionFunction<double>); });
+    if (collision_data.result.isCollision())
+      continue;
+    // iv. save it into robot_data
+    robot_data.trajectories.push_back(traj);
+    robot_data.last_state_g.push_back(gScore);
+    robot_data.last_state_h.push_back(hScore);
+  }
+  robot_data.sort_by_h();
+  // std::cout << "robot " << robot_id << " robot data size: " << robot_data.trajectories.size() << std::endl;
   // for (size_t i = 0; i < robot_data.trajectories.size(); ++i)
   // {
-  //   expanded_trajs[robot_id].push_back(robot_data.trajectories[i]);
+  // expanded_trajs[robot_id].push_back(robot_data.trajectories[i]);
   // }
 }
 
+// simply check it some motion with similar h-value has been explored
+bool LaCAM::check_and_add(const double h_value)
+{
+  for (double h : h_values)
+  {
+    if (std::fabs(h - h_value) < /*eps*/ 0.5)
+    {
+      return false; // too similar, skip
+    }
+  }
+  h_values.push_back(h_value);
+  return true;
+}
 RobotData LaCAM::GetFilteredUniqueTopByH(const RobotData &input, double min_distance, size_t robot_id)
 {
   if (input.trajectories.empty())

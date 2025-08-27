@@ -23,6 +23,9 @@
 #include <unordered_map>
 #include <vector>
 #include "Eigen/Core"
+#include <vector>
+#include <Eigen/Dense>
+#include <limits>
 // dynobench
 // dynobench
 #include "dynobench/robot_models_base.hpp"
@@ -170,6 +173,39 @@ struct RobotData
     last_state_g = std::move(shuffled_g);
     last_state_h = std::move(shuffled_h);
   }
+  void sort_by_h()
+  {
+    size_t N = last_state_h.size();
+    if (N != trajectories.size() || N != last_state_g.size())
+    {
+      throw std::runtime_error("Inconsistent vector sizes in RobotData::sort_by_h");
+    }
+    // Create index vector
+    std::vector<size_t> indices(N);
+    for (size_t i = 0; i < N; ++i)
+      indices[i] = i;
+
+    // Sort indices based on h values
+    std::sort(indices.begin(), indices.end(), [&](size_t a, size_t b)
+              { return last_state_h[a] < last_state_h[b]; });
+
+    // Create sorted copies
+    std::vector<dynobench::Trajectory> sorted_traj(N);
+    std::vector<double> sorted_g(N);
+    std::vector<double> sorted_h(N);
+
+    for (size_t i = 0; i < N; ++i)
+    {
+      sorted_traj[i] = trajectories[indices[i]];
+      sorted_g[i] = last_state_g[indices[i]];
+      sorted_h[i] = last_state_h[indices[i]];
+    }
+
+    // Assign back
+    trajectories = std::move(sorted_traj);
+    last_state_g = std::move(sorted_g);
+    last_state_h = std::move(sorted_h);
+  }
 };
 
 struct ConfigHasher
@@ -245,3 +281,7 @@ struct Time_planner
     std::cout << "***" << std::endl;
   }
 };
+
+double action_seq_distance(const std::vector<Eigen::VectorXd> &A, const std::vector<Eigen::VectorXd> &B);
+std::vector<std::vector<Eigen::VectorXd>> filter_diverse(const std::vector<std::vector<Eigen::VectorXd>> &candidates,
+                                                         double eps);

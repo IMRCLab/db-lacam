@@ -45,13 +45,15 @@ bool db_PIBT::set_new_config(std::vector<Eigen::VectorXd> Q_from,
     if (!M_to[i].is_empty())
     {
       bool valid = false;
-      time_planner.time_collision_with_env += timed_fun_void([&]
-                                                             { valid = is_motion_valid_env_collision(i, M_to[i]); });
-      if (valid)
-      {
-        time_planner.time_collision_with_planned += timed_fun_void([&]
-                                                                   { valid = is_motion_valid(i, M_to[i], M_to); });
-      }
+      // time_planner.time_collision_with_env += timed_fun_void([&]
+      //  { valid = is_motion_valid_env_collision(i, M_to[i]); });
+      // if (valid)
+      // {
+      // time_planner.time_collision_with_planned += timed_fun_void([&]
+      //  { valid = is_motion_valid(i, M_to[i], M_to); });
+      // }
+      time_planner.time_collision_with_planned += timed_fun_void([&]
+                                                                 { valid = is_motion_valid(i, M_to[i], M_to); });
       if (!valid)
       {
         success = false;
@@ -91,19 +93,21 @@ bool db_PIBT::funcPIBT(size_t robot_id,
   bool success;
   for (size_t i = 0; i < robot_data.trajectories.size(); i++)
   {
-    // std::cout << "robot " << robot_id << " motion: " << i << std::endl;
+    std::cout << "robot " << robot_id << " motion: " << i << std::endl;
     dynobench::Trajectory traj = robot_data.trajectories[i];
 
     // check for collision with env and planned robots
     Eigen::VectorXd next_state = traj.states.back();
     bool valid = false;
-    time_planner.time_collision_with_env += timed_fun_void([&]
-                                                           { valid = is_motion_valid_env_collision(robot_id, traj); });
-    if (valid)
-    {
-      time_planner.time_collision_with_planned += timed_fun_void([&]
-                                                                 { valid = is_motion_valid(robot_id, traj, M_to); });
-    }
+    // time_planner.time_collision_with_env += timed_fun_void([&]
+    //  { valid = is_motion_valid_env_collision(robot_id, traj); });
+    // if (valid)
+    // {
+    // time_planner.time_collision_with_planned += timed_fun_void([&]
+    //  { valid = is_motion_valid(robot_id, traj, M_to); });
+    // }
+    time_planner.time_collision_with_planned += timed_fun_void([&]
+                                                               { valid = is_motion_valid(robot_id, traj, M_to); });
     if (!valid)
       continue;
     // reserve the motion

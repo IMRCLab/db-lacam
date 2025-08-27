@@ -67,6 +67,9 @@ struct LaCAM
   Time_planner &m_time_planner;
   std::vector<std::shared_ptr<dynobench::Model_robot>> robots;
   std::map<size_t, RobotData> rolled_robot_data; // sorted, rolled robot trajs
+  std::vector<double> h_values;                  // keep track of h-values for sorting motions
+  double min_h = std::numeric_limits<double>::max();
+  double max_h = std::numeric_limits<double>::lowest();
   // tmp params
   std::vector<dynoplan::LazyTraj> tmp_lazy_trajs;
   dynobench::TrajWrapper tmp_traj_wrapper;
@@ -103,6 +106,7 @@ struct LaCAM
   void get_applicable_trajs_precise(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id);
   RobotData GetTopNPerClusterByH(const RobotData &input, double range, double min_h, double max_h, size_t N, bool shuffle);
   RobotData GetFilteredUniqueTopByH(const RobotData &input, double min_distance, size_t robot_id);
+  bool check_and_add(const double h_value);
   // DEBUG
   void export_node_expansion();
 

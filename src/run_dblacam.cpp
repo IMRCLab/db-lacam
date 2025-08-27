@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
   }
   auto start_time = std::chrono::steady_clock::now();
   YAML::Node cfg = YAML::LoadFile(cfgFile);
-  // cfg = cfg["db-lacam"]["default"];
+  cfg = cfg["db-lacam"]["default"];
   // setup dblacam options
   Planner_options planner_options;
   planner_options.delta = cfg["delta_0"].as<float>();
@@ -123,6 +123,7 @@ int main(int argc, char *argv[])
   if (problem.robotTypes[0] == "unicycle1_v0" || problem.robotTypes[0] == "unicycle1_sphere_v0")
   {
     motionsFile = "../new_format_motions/unicycle1_v0/spread/unicycle1_v0.bin.im.bin.sp.bin";
+    // motionsFile = "../new_format_motions/unicycle1_v0/short/unicycle1_v0.bin.im.bin.sp.bin";
   }
   else if (problem.robotTypes[0] == "integrator1_2d_v0")
   {

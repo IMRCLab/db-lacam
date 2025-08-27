@@ -101,10 +101,10 @@ def main():
     "forest4",
     "wall4",
   ]
-  # for kind in ["unicycle","unicycle_sphere"]: 
-  #   for n in [8]:
-  #     for k in range(10):
-  #       instances.append("gen_p10_n{}_{}_{}".format(n,k, kind))
+  for kind in ["unicycle","unicycle_sphere"]: 
+    for n in [8]:
+      for k in range(10):
+        instances.append("gen_p10_n{}_{}_{}".format(n,k, kind))
 
   instances_3d = ["forest4", "wall4"]
 

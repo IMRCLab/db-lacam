@@ -124,7 +124,7 @@ MultiRobotTrajectory LaCAM::solve()
     for (size_t r = 0; r < robots.size(); r++)
     {
       m_time_planner.time_get_trajs += timed_fun_void([&]
-                                                      { get_applicable_trajs_precise_no_clustering(H->dbN[r], rolled_robot_data[r], r); });
+                                                      { get_applicable_trajs_precise_exhaustive(H->dbN[r], rolled_robot_data[r], r); });
       // if no applicable motions for the current state, then remove the node
       if (!rolled_robot_data[r].trajectories.size())
       {
@@ -435,8 +435,9 @@ void LaCAM::get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> d
     std::vector<Eigen::VectorXd> xs(us.size() + 1,
                                     Eigen::VectorXd::Zero(robots[robot_id]->nx));
     int num_valid_states = -1;
-    robots[robot_id]->rollout(x0, us, xs, &ff,
-                              &num_valid_states);
+    m_time_planner.time_rollout += timed_fun_void([&]
+                                                  { robots[robot_id]->rollout(x0, us, xs, &ff,
+                                                                              &num_valid_states); });
     if (num_valid_states && num_valid_states < xs.size())
     {
       std::cout << "rollout, state violations" << std::endl;
@@ -451,23 +452,28 @@ void LaCAM::get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> d
     traj.goal = traj.states.back();
     // check for collision with the env
     Motion motion;
-    traj_to_motion(traj, *(robots[robot_id]), motion, /*compute collision*/ true);
+    m_time_planner.time_traj_to_motion += timed_fun_void([&]
+                                                         { traj_to_motion(traj, *(robots[robot_id]), motion, /*compute collision*/ true, planner_options.merged_aabb); });
+    fcl::DefaultCollisionData<double> collision_data;
+    m_time_planner.time_collisions += timed_fun_void([&]
+                                                     {
     assert(motion.collision_manager);
     assert(robots[robot_id]->env.get());
-    fcl::DefaultCollisionData<double> collision_data;
     motion.collision_manager->collide(robots[robot_id]->env.get(), &collision_data,
-                                      fcl::DefaultCollisionFunction<double>);
+                                      fcl::DefaultCollisionFunction<double>); });
     if (collision_data.result.isCollision())
       continue;
     tmp_data.trajectories.push_back(traj);
     tmp_data.last_state_g.push_back(traj_wrap.last_state_g);
-    last_state_h = h_funs[robot_id]->h(traj.goal);
+    m_time_planner.time_hfun += timed_fun_void([&]
+                                               { last_state_h = h_funs[robot_id]->h(traj.goal); });
     tmp_data.last_state_h.push_back(last_state_h);
     if (last_state_h < min_h)
       min_h = last_state_h;
     if (last_state_h > max_h)
       max_h = last_state_h;
   }
+  std::cout << "tmp data traj size: " << tmp_data.trajectories.size() << std::endl;
   robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ planner_options.cluster_range, min_h, max_h, planner_options.cluster_n, /*shuffle*/ false);
 }
 // OPTION 3: sort actions based on epsilon

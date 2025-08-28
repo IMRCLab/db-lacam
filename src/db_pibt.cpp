@@ -128,7 +128,7 @@ bool db_PIBT::funcPIBT(size_t robot_id,
         {
           bool collides = false;
           time_planner.time_collision_with_unplanned += timed_fun_void([&]
-                                                                       { collides = has_inter_robot_collision(traj, robot_id, other_robot_trajs, key); });
+                                                                       { collides = has_inter_robot_collision(traj, robot_id, other_robot_trajs, key, /*lazy coll check*/ true); });
           if (collides)
           {
             int j = key;
@@ -169,28 +169,49 @@ void db_PIBT::update_obj(size_t id, const Eigen::VectorXd state)
 };
 
 // pair-wise collision checking for traj-to-traj, assumes equal length motions
-bool db_PIBT::has_inter_robot_collision(dynobench::Trajectory robot_traj, size_t robot_id, dynobench::Trajectory other_robot_traj, size_t other_robot_id)
+bool db_PIBT::has_inter_robot_collision(dynobench::Trajectory robot_traj, size_t robot_id, dynobench::Trajectory other_robot_traj, size_t other_robot_id, bool other_fixed)
 {
   const auto &ego_traj = robot_traj.states;
   const auto &other_traj = other_robot_traj.states;
-
-  for (size_t s = 0; s < ego_traj.size(); ++s)
+  fcl::CollisionRequestd request;
+  fcl::CollisionResultd result;
+  if (other_fixed)
   {
-    fcl::CollisionRequestd request;
-    fcl::CollisionResultd result;
-    time_planner.time_collisions += timed_fun_void([&]
-                                                   {
-    const Eigen::VectorXd &state1 = ego_traj[s];
-    const Eigen::VectorXd &state2 = other_traj[s];
-    update_obj(robot_id, state1);
-    update_obj(other_robot_id, state2);
-
-    fcl::collide(robot_objs[robot_id], robot_objs[other_robot_id], request, result); });
-
-    if (result.isCollision())
+    update_obj(other_robot_id, other_traj.front());
+    for (size_t s = 0; s < ego_traj.size(); ++s)
     {
-      std::cout << "collision between robots, skip the motion!" << std::endl;
-      return true; // collision detected
+      result.clear();
+      time_planner.time_collisions += timed_fun_void([&]
+                                                     {
+      update_obj(robot_id, ego_traj[s]);                                            
+      fcl::collide(robot_objs[robot_id], robot_objs[other_robot_id], request, result); });
+
+      if (result.isCollision())
+      {
+        std::cout << "collision between robots, skip the motion!" << std::endl;
+        return true; // collision detected
+      }
+    }
+  }
+  else
+  {
+    // state-by-state check
+    size_t N = std::min(ego_traj.size(), other_traj.size());
+
+    for (size_t s = 0; s < N; ++s)
+    {
+      result.clear();
+
+      update_obj(robot_id, ego_traj[s]);
+      update_obj(other_robot_id, other_traj[s]);
+
+      fcl::collide(robot_objs[robot_id], robot_objs[other_robot_id], request, result);
+
+      if (result.isCollision())
+      {
+        std::cout << "collision between robots (synchronized mode), skip!" << std::endl;
+        return true;
+      }
     }
   }
   return false;

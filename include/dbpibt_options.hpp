@@ -24,6 +24,7 @@ struct Planner_options
   bool rewire = true;            // to allow rewiring during the search
   double cluster_range = 0.05;   // range to compute the threshold for motion clustering based on h-value
   size_t cluster_n = 8;          // number of elements per cluster to return
+  bool merged_aabb = false;      // some problems don't work with merged aabb
 
   void print() const
   {
@@ -34,6 +35,7 @@ struct Planner_options
     std::cout << "  max_motions: " << max_motions << "\n";
     std::cout << "  cluster_range: " << cluster_range << "\n";
     std::cout << "  cluster_n: " << cluster_n << "\n";
+    std::cout << "  merged aabb: " << merged_aabb << "\n";
     std::cout << "***" << std::endl;
   }
 };

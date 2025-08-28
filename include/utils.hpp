@@ -265,15 +265,15 @@ struct Time_planner
     std::cout << " time_sort_order: " << time_sort_order << "\n";
     std::cout << " time_grow_search_tree: " << time_grow_search_tree << "\n";
     std::cout << " time_get_trajs: " << time_get_trajs << "\n";
-    std::cout << " time_lazy_expand: " << time_lazy_expand << "\n";
-    std::cout << " time_lazy_sort: " << time_lazy_sort << "\n";
-    std::cout << " time_get_actions: " << time_get_actions << "\n";
+    // std::cout << " time_lazy_expand: " << time_lazy_expand << "\n";
+    // std::cout << " time_lazy_sort: " << time_lazy_sort << "\n";
+    // std::cout << " time_get_actions: " << time_get_actions << "\n";
     std::cout << " time_traj_to_motion: " << time_traj_to_motion << "\n";
     std::cout << " time_rollout: " << time_rollout << "\n";
     std::cout << " time_collisions (mixed): " << time_collisions << "\n";
-    std::cout << " time_collision_with_env: " << time_collision_with_env << "\n";
+    // std::cout << " time_collision_with_env: " << time_collision_with_env << "\n";
 
-    std::cout << " time_clustering: " << time_clustering << "\n";
+    // std::cout << " time_clustering: " << time_clustering << "\n";
     std::cout << " time_hfun: " << time_hfun << "\n";
     std::cout << " time_collision_with_unplanned: " << time_collision_with_unplanned << "\n";
     std::cout << " time_collision_with_planned: " << time_collision_with_planned << "\n";

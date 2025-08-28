@@ -68,7 +68,8 @@ struct db_PIBT
                 bool pi = false);
 
   bool has_inter_robot_collision(dynobench::Trajectory robot_traj, size_t robot_id,
-                                 dynobench::Trajectory other_robot_traj, size_t other_robot_id);
+                                 dynobench::Trajectory other_robot_traj, size_t other_robot_id,
+                                 bool other_fixed = false);
 
   void update_obj(size_t id, const Eigen::VectorXd state);
 

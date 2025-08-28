@@ -141,7 +141,7 @@ db-lacam:
     goal_delta: 0.5 
     cluster_range: 0.1
     cluster_n: 1
-    merged_aabb: true
+    merged_aabb: false
   '*_integrator':
     delta_0: 0.5
     num_primitives_0: 200 

@@ -128,7 +128,7 @@ bool db_PIBT::funcPIBT(size_t robot_id,
         {
           bool collides = false;
           time_planner.time_collision_with_unplanned += timed_fun_void([&]
-                                                                       { collides = has_inter_robot_collision(traj, robot_id, other_robot_trajs, key, /*lazy coll check*/ true); });
+                                                                       { collides = has_inter_robot_collision(traj, robot_id, other_robot_trajs, key, /*lazy coll check*/ false); });
           if (collides)
           {
             int j = key;

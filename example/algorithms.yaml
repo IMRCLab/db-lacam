@@ -157,10 +157,10 @@ db-lacam:
   '*alcove_unicycle':
     delta_0: 0.5
     num_primitives_0: 200 
-    heuristic1_delta: 0.5  # 0.9
-    heuristic1_num_primitives_0: 160 # 200
+    heuristic1_delta: 0.9
+    heuristic1_num_primitives_0: 200
     goal_delta: 0.5
-    cluster_range: 0.05 # 0.1
+    cluster_range: 0.1
     cluster_n: 1
     merged_aabb: false
   '*alcove3_unicycle':
@@ -172,10 +172,10 @@ db-lacam:
   '*atgoal_unicycle':
     delta_0: 0.5
     num_primitives_0: 200 
-    heuristic1_delta: 0.5 # 0.9
+    heuristic1_delta: 0.9
     heuristic1_num_primitives_0: 200 
     goal_delta: 0.5
-    cluster_range: 0.05 # 0.1
+    cluster_range: 0.1
     cluster_n: 1
     merged_aabb: false
   '*forest4':

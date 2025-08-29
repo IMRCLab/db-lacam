@@ -237,14 +237,15 @@ RobotData GetFilteredUniqueTopByH(const RobotData &input, double min_distance, s
   return result;
 }
 
-void get_applicable_trajs_precise(Expander &expander,
-                                  std::vector<std::shared_ptr<dynoplan::Heu_fun>> h_funs,
-                                  std::vector<std::shared_ptr<dynobench::Model_robot>> robots,
-                                  dynobench::TrajWrapper tmp_traj_wrapper,
-                                  std::shared_ptr<AStarNode> db_node,
-                                  RobotData &robot_data, size_t robot_id,
-                                  double cluster_range, size_t cluster_n,
-                                  Time_planner &time_planner)
+void get_applicable_trajs_precise_exhaustive(Expander &expander,
+                                             std::vector<std::shared_ptr<dynoplan::Heu_fun>> h_funs,
+                                             std::vector<std::shared_ptr<dynobench::Model_robot>> robots,
+                                             dynobench::TrajWrapper tmp_traj_wrapper,
+                                             std::shared_ptr<AStarNode> db_node,
+                                             RobotData &robot_data, size_t robot_id,
+                                             double cluster_range, size_t cluster_n,
+                                             Time_planner &time_planner,
+                                             Planner_options &planner_options)
 {
   // clear
   std::vector<dynoplan::LazyTraj> tmp_lazy_trajs;
@@ -309,7 +310,7 @@ void get_applicable_trajs_precise(Expander &expander,
     traj.goal = traj.states.back();
     // check for collision with the env
     Motion motion;
-    traj_to_motion(traj, *(robots[robot_id]), motion, /*compute collision*/ true);
+    traj_to_motion(traj, *(robots[robot_id]), motion, /*compute collision*/ true, planner_options.merged_aabb);
     fcl::DefaultCollisionData<double> collision_data;
     time_planner.time_collisions += timed_fun_void([&]
                                                    { 

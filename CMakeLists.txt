@@ -68,6 +68,7 @@ add_executable(
   src/db_pibt.cpp
   src/db_lacam.cpp
   src/utils.cpp
+  src/est_guided.cpp
 )
 
 target_include_directories(

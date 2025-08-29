@@ -40,6 +40,7 @@
 #include "utils.hpp"
 #include "dbpibt_utils.hpp"
 #include "dbpibt_options.hpp"
+#include "est_guided.hpp"
 
 namespace fs = std::filesystem;
 #define DYNOBENCH_BASE "../dynoplan/dynobench/"
@@ -87,7 +88,7 @@ int main(int argc, char *argv[])
   }
   auto start_time = std::chrono::steady_clock::now();
   YAML::Node cfg = YAML::LoadFile(cfgFile);
-  cfg = cfg["db-pibt"]["default"];
+  // cfg = cfg["db-pibt"]["default"];
   // setup dblacam options
   Planner_options planner_options;
   planner_options.delta = cfg["delta_0"].as<float>();
@@ -152,11 +153,15 @@ int main(int argc, char *argv[])
                   tdb_options.max_motions, motions);
 
   tdb_options.motions_ptr = &motions;
+  planner_options.motions_ptr = &motions;
   std::vector<ompl::NearestNeighbors<std::shared_ptr<AStarNode>> *> heuristics(
       robots.size(), nullptr);
   if (cfg["heuristic1"].as<std::string>() == "reverse-search")
   {
     dynobench::Problem problem_original(inputFile);
+    Planner_options planner_options_rev = planner_options;
+    planner_options_rev.delta = cfg["heuristic1_delta"].as<float>();
+    planner_options_rev.max_motions = cfg["heuristic1_num_primitives_0"].as<size_t>();
     time_planner.reverse_search += timed_fun_void([&]
                                                   {
     auto start_rev = std::chrono::steady_clock::now();
@@ -167,16 +172,17 @@ int main(int argc, char *argv[])
     size_t robot_id = 0;
     for (const auto &robot : robots)
     {
-      problem.starts[robot_id]
-          .head(robot->translation_invariance)
-          .setConstant(std::sqrt(std::numeric_limits<double>::max()));
+      // problem.starts[robot_id]
+      //     .head(robot->translation_invariance)
+      //     .setConstant(std::sqrt(std::numeric_limits<double>::max()));
       Eigen::VectorXd tmp_state = problem.starts[robot_id];
       problem.starts[robot_id] = problem.goals[robot_id];
       problem.goals[robot_id] = tmp_state;
       LowLevelPlan<dynobench::Trajectory> tmp_solution;
-      tdbastar(problem, tdb_options, tmp_solution.trajectory,
-               /*constraints*/ {}, out_pibt, robot_id, /*reverse_search*/ true,
-               nullptr, &heuristics[robot_id]);
+      // tdbastar(problem, tdb_options, tmp_solution.trajectory,
+      //          /*constraints*/ {}, out_pibt, robot_id, /*reverse_search*/ true,
+      //          nullptr, &heuristics[robot_id]);
+      est_guided(problem, planner_options_rev, robot_id, &heuristics[robot_id]);
       std::cout << "computed heuristic with " << heuristics[robot_id]->size()
                 << " entries." << std::endl;
       robot_id++;
@@ -327,11 +333,11 @@ int main(int argc, char *argv[])
       M_to[i].states.clear();
       M_to[i].actions.clear();
       time_planner.time_get_trajs += timed_fun_void([&]
-                                                    { get_applicable_trajs_precise(expander,
-                                                                                   robot_hfuns, robots,
-                                                                                   traj_wrapper,
-                                                                                   best_node, rolled_robot_data[i], /*id*/ i,
-                                                                                   planner_options.cluster_range, planner_options.cluster_n, time_planner); });
+                                                    { get_applicable_trajs_precise_exhaustive(expander,
+                                                                                              robot_hfuns, robots,
+                                                                                              traj_wrapper,
+                                                                                              best_node, rolled_robot_data[i], /*id*/ i,
+                                                                                              planner_options.cluster_range, planner_options.cluster_n, time_planner, planner_options); });
     }
     if (reached_goal == robots.size())
     {

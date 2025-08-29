@@ -79,6 +79,7 @@ db-pibt:
     goal_delta: 0.5 # 1.0
     cluster_range: 0.1
     cluster_n: 1
+    merged_aabb: true
   '*_integrator':
     delta_0: 0.5
     num_primitives_0: 200 
@@ -101,6 +102,7 @@ db-pibt:
     goal_delta: 0.5 
     cluster_range: 0.1
     cluster_n: 1
+    merged_aabb: false
   '*alcove3_unicycle':
     delta_0: 0.5
     num_primitives_0: 200
@@ -115,6 +117,7 @@ db-pibt:
     goal_delta: 0.5
     cluster_range: 0.1
     cluster_n: 1
+    merged_aabb: false
   '*forest4':
     delta_0: 0.3
     num_primitives_0: 300 

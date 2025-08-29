@@ -159,9 +159,9 @@ int main(int argc, char *argv[])
   if (cfg["heuristic1"].as<std::string>() == "reverse-search")
   {
     dynobench::Problem problem_original(inputFile);
-    Planner_options planner_options_rev = planner_options;
-    planner_options_rev.delta = cfg["heuristic1_delta"].as<float>();
-    planner_options_rev.max_motions = cfg["heuristic1_num_primitives_0"].as<size_t>();
+    // Planner_options planner_options_rev = planner_options;
+    // planner_options_rev.delta = cfg["heuristic1_delta"].as<float>();
+    // planner_options_rev.max_motions = cfg["heuristic1_num_primitives_0"].as<size_t>();
     time_planner.reverse_search += timed_fun_void([&]
                                                   {
     auto start_rev = std::chrono::steady_clock::now();
@@ -172,17 +172,17 @@ int main(int argc, char *argv[])
     size_t robot_id = 0;
     for (const auto &robot : robots)
     {
-      // problem.starts[robot_id]
-      //     .head(robot->translation_invariance)
-      //     .setConstant(std::sqrt(std::numeric_limits<double>::max()));
+      problem.starts[robot_id]
+          .head(robot->translation_invariance)
+          .setConstant(std::sqrt(std::numeric_limits<double>::max()));
       Eigen::VectorXd tmp_state = problem.starts[robot_id];
       problem.starts[robot_id] = problem.goals[robot_id];
       problem.goals[robot_id] = tmp_state;
       LowLevelPlan<dynobench::Trajectory> tmp_solution;
-      // tdbastar(problem, tdb_options, tmp_solution.trajectory,
-      //          /*constraints*/ {}, out_pibt, robot_id, /*reverse_search*/ true,
-      //          nullptr, &heuristics[robot_id]);
-      est_guided(problem, planner_options_rev, robot_id, &heuristics[robot_id]);
+      tdbastar(problem, tdb_options, tmp_solution.trajectory,
+               /*constraints*/ {}, out_pibt, robot_id, /*reverse_search*/ true,
+               nullptr, &heuristics[robot_id]);
+      // est_guided(problem, planner_options_rev, robot_id, &heuristics[robot_id]);
       std::cout << "computed heuristic with " << heuristics[robot_id]->size()
                 << " entries." << std::endl;
       robot_id++;
@@ -323,6 +323,8 @@ int main(int argc, char *argv[])
       best_node->is_in_open = false;
       double distance_to_goal =
           robots[i]->distance(best_node->state_eig, problem.goals[i]);
+      std::cout << "robot " << i << " distance to goal: " << distance_to_goal << std::endl;
+
       if (distance_to_goal <= planner_options.goal_delta)
       {
         reached_goal++;
@@ -337,7 +339,7 @@ int main(int argc, char *argv[])
                                                                                               robot_hfuns, robots,
                                                                                               traj_wrapper,
                                                                                               best_node, rolled_robot_data[i], /*id*/ i,
-                                                                                              planner_options.cluster_range, planner_options.cluster_n, time_planner, planner_options); });
+                                                                                              time_planner, planner_options); });
     }
     if (reached_goal == robots.size())
     {
@@ -356,6 +358,7 @@ int main(int argc, char *argv[])
     Q_to.clear();
     // call pibt
     success = dbpibt.set_new_config(Q_from, Q_to, dbNode_from, dbNode_to, M_to, order, rolled_robot_data);
+    std::cout << "set new config: " << success << std::endl;
     if (!success)
     {
       std::cout << "dbPIBT failed!" << std::endl;

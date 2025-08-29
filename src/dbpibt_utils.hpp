@@ -243,7 +243,6 @@ void get_applicable_trajs_precise_exhaustive(Expander &expander,
                                              dynobench::TrajWrapper tmp_traj_wrapper,
                                              std::shared_ptr<AStarNode> db_node,
                                              RobotData &robot_data, size_t robot_id,
-                                             double cluster_range, size_t cluster_n,
                                              Time_planner &time_planner,
                                              Planner_options &planner_options)
 {
@@ -331,7 +330,7 @@ void get_applicable_trajs_precise_exhaustive(Expander &expander,
   }
   // h_value-based clustering, needs finetuning, that's why don't like it
   time_planner.time_clustering += timed_fun_void([&]
-                                                 { robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ cluster_range, min_h, max_h, cluster_n, /*shuffle*/ false); });
+                                                 { robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ planner_options.cluster_range, min_h, max_h, planner_options.cluster_n, /*shuffle*/ false); });
   // based on distance between last states of rolled-out-trajs, min_distance is the threshould for filtering, distance is computed with robot->distance function
   // robot_data = GetFilteredUniqueTopByH(tmp_data, /*min_distance*/ 0.5, robots, robot_id);
 }

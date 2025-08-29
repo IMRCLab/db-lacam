@@ -164,6 +164,7 @@ add_executable(
   src/db_pibt.cpp
   src/utils.cpp
   src/map.cpp
+  src/est_guided.cpp
 )
 
 target_include_directories(
@@ -185,3 +186,33 @@ target_link_libraries(run_dblacam PRIVATE
   ${OMPL_LIBRARIES} 
   ${LZ4_LIBRARIES}
   PUBLIC Eigen3::Eigen)
+
+# est_guided
+add_library(est_guided
+  src/est_guided.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/src/dbastar/heuristics.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/src/tdbastar/tdbastar.cpp
+
+)
+
+target_include_directories(est_guided
+  PUBLIC
+    $<INSTALL_INTERFACE:include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    ${OMPL_INCLUDE_DIRS}
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/deps/nigh/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/dynobench/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+target_link_libraries(est_guided PRIVATE 
+  Eigen3::Eigen
+  idbastar::tdbastar 
+  ${Boost_LIBRARIES}
+  ${YAML_LIBRARIES}
+  ${FCL_LIBRARIES}
+  ${OMPL_LIBRARIES}
+  ${LZ4_LIBRARIES}
+)

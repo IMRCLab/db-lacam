@@ -39,6 +39,7 @@
 #include "utils.hpp"
 #include "db_lacam.hpp"
 #include "dbpibt_options.hpp"
+#include "est_guided.hpp"
 
 namespace fs = std::filesystem;
 #define DYNOBENCH_BASE "../dynoplan/dynobench/"
@@ -152,34 +153,40 @@ int main(int argc, char *argv[])
                   tdb_options.max_motions, motions);
 
   tdb_options.motions_ptr = &motions;
+  planner_options.motions_ptr = &motions;
   std::vector<ompl::NearestNeighbors<std::shared_ptr<AStarNode>> *> heuristics(
       robots.size(), nullptr);
   if (cfg["heuristic1"].as<std::string>() == "reverse-search")
   {
     dynobench::Problem problem_original(inputFile);
+    Planner_options planner_options_rev = planner_options;
+    planner_options_rev.delta = cfg["heuristic1_delta"].as<float>();
+    planner_options_rev.max_motions = cfg["heuristic1_num_primitives_0"].as<size_t>();
     time_planner.reverse_search += timed_fun_void([&]
                                                   {
       auto start_rev = std::chrono::steady_clock::now();
       tdb_options.delta = cfg["heuristic1_delta"].as<float>();
       tdb_options.max_motions = cfg["heuristic1_num_primitives_0"].as<size_t>();
-      tdb_options.search_timelimit = 1e5; // in ms
+      tdb_options.search_timelimit = 1e5; // in ms 
       Out_info_tdb out_dblacam;
       size_t robot_id = 0;
       for (const auto &robot : robots)
       {
         // start to inf for the reverse search
-        problem.starts[robot_id]
-            .head(robot->translation_invariance)
-            .setConstant(std::sqrt(std::numeric_limits<double>::max()));
+        // problem.starts[robot_id]
+        //     .head(robot->translation_invariance)
+        //     .setConstant(std::sqrt(std::numeric_limits<double>::max()));
         Eigen::VectorXd tmp_state = problem.starts[robot_id];
         problem.starts[robot_id] = problem.goals[robot_id];
         problem.goals[robot_id] = tmp_state;
         LowLevelPlan<dynobench::Trajectory> tmp_solution;
-        tdbastar(problem, tdb_options, tmp_solution.trajectory,
-                /*constraints*/ {}, out_dblacam, robot_id, /*reverse_search*/ true,
-                nullptr, &heuristics[robot_id]);
+        // tdbastar(problem, tdb_options, tmp_solution.trajectory,
+        //         /*constraints*/ {}, out_dblacam, robot_id, /*reverse_search*/ true,
+        //         nullptr, &heuristics[robot_id]);
         // dbA* with optimization
         // compute_heuristics(100, problem, tdb_options, robot_id, &heuristics[robot_id]);
+        // guidede est
+        est_guided(problem, planner_options_rev, robot_id, &heuristics[robot_id]);
         std::cout << "computed heuristic with " << heuristics[robot_id]->size()
                   << " entries." << std::endl;
         robot_id++;
@@ -191,6 +198,7 @@ int main(int argc, char *argv[])
     problem.starts = problem_original.starts;
     problem.goals = problem_original.goals;
   }
+  // return 0;
   // check motions
   auto check_motions = [&]
   {

@@ -41,10 +41,20 @@ bool db_PIBT::set_new_config(std::vector<Eigen::VectorXd> Q_from,
   bool success = true;
   for (auto i = 0; i < N; i++)
   {
-    // ONLY with planned robots!
+    // ONLY with planned robots and env!
     if (!M_to[i].is_empty())
     {
-      if (!is_motion_valid(i, M_to[i], M_to))
+      bool valid = false;
+      // time_planner.time_collision_with_env += timed_fun_void([&]
+      //  { valid = is_motion_valid_env_collision(i, M_to[i]); });
+      // if (valid)
+      // {
+      // time_planner.time_collision_with_planned += timed_fun_void([&]
+      //  { valid = is_motion_valid(i, M_to[i], M_to); });
+      // }
+      time_planner.time_collision_with_planned += timed_fun_void([&]
+                                                                 { valid = is_motion_valid(i, M_to[i], M_to); });
+      if (!valid)
       {
         success = false;
         break;
@@ -81,14 +91,24 @@ bool db_PIBT::funcPIBT(size_t robot_id,
   RobotData robot_data = robot_data_rolled[robot_id];
   // std::cout << "rolled trajs size: " << robot_data.trajectories.size() << std::endl;
   bool success;
-  // DEBUG
   for (size_t i = 0; i < robot_data.trajectories.size(); i++)
   {
-    // std::cout << "robot " << robot_id << " motion: " << i << std::endl;
+    std::cout << "robot " << robot_id << " motion: " << i << std::endl;
     dynobench::Trajectory traj = robot_data.trajectories[i];
+
+    // check for collision with env and planned robots
     Eigen::VectorXd next_state = traj.states.back();
-    // check for collision with planned robots
-    if (!is_motion_valid(robot_id, traj, M_to))
+    bool valid = false;
+    // time_planner.time_collision_with_env += timed_fun_void([&]
+    //  { valid = is_motion_valid_env_collision(robot_id, traj); });
+    // if (valid)
+    // {
+    // time_planner.time_collision_with_planned += timed_fun_void([&]
+    //  { valid = is_motion_valid(robot_id, traj, M_to); });
+    // }
+    time_planner.time_collision_with_planned += timed_fun_void([&]
+                                                               { valid = is_motion_valid(robot_id, traj, M_to); });
+    if (!valid)
       continue;
     // reserve the motion
     Q_to[robot_id] = next_state;
@@ -104,12 +124,18 @@ bool db_PIBT::funcPIBT(size_t robot_id,
         continue;
       for (const auto &other_robot_trajs : rolled_trajs.trajectories) // potential motion for the neighbor
       {
-        if (M_to[key].is_empty() && has_inter_robot_collision(traj, robot_id, other_robot_trajs, key))
+        if (M_to[key].is_empty())
         {
-          int j = key;
-          std::cout << "robot " << j << " hasn't planned, getting PI" << std::endl;
-          success = funcPIBT(j, Q_from, Q_to, dbN_from, dbN_to, M_to, robot_data_rolled, /*pi*/ true);
-          break;
+          bool collides = false;
+          time_planner.time_collision_with_unplanned += timed_fun_void([&]
+                                                                       { collides = has_inter_robot_collision(traj, robot_id, other_robot_trajs, key); });
+          if (collides)
+          {
+            int j = key;
+            std::cout << "robot " << j << " hasn't planned, getting PI" << std::endl;
+            success = funcPIBT(j, Q_from, Q_to, dbN_from, dbN_to, M_to, robot_data_rolled, /*pi*/ true);
+            break;
+          }
         }
       }
       if (!success)
@@ -150,14 +176,16 @@ bool db_PIBT::has_inter_robot_collision(dynobench::Trajectory robot_traj, size_t
 
   for (size_t s = 0; s < ego_traj.size(); ++s)
   {
+    fcl::CollisionRequestd request;
+    fcl::CollisionResultd result;
+    time_planner.time_collisions += timed_fun_void([&]
+                                                   {
     const Eigen::VectorXd &state1 = ego_traj[s];
     const Eigen::VectorXd &state2 = other_traj[s];
     update_obj(robot_id, state1);
     update_obj(other_robot_id, state2);
 
-    fcl::CollisionRequestd request;
-    fcl::CollisionResultd result;
-    fcl::collide(robot_objs[robot_id], robot_objs[other_robot_id], request, result);
+    fcl::collide(robot_objs[robot_id], robot_objs[other_robot_id], request, result); });
 
     if (result.isCollision())
     {
@@ -167,7 +195,7 @@ bool db_PIBT::has_inter_robot_collision(dynobench::Trajectory robot_traj, size_t
   }
   return false;
 }
-
+// collision with planned robot trajectories
 bool db_PIBT::is_motion_valid(size_t robot_id,
                               const dynobench::Trajectory &traj,
                               const std::vector<dynobench::Trajectory> &M_to)
@@ -176,12 +204,33 @@ bool db_PIBT::is_motion_valid(size_t robot_id,
   {
     if (other_robot_id == robot_id || M_to[other_robot_id].is_empty())
       continue;
-
+    // collision with other robot
     if (has_inter_robot_collision(traj, robot_id, M_to[other_robot_id], other_robot_id))
     {
       std::cout << "invalid motion, skip" << std::endl;
       return false;
     }
+  }
+  return true;
+}
+// collision with the env
+bool db_PIBT::is_motion_valid_env_collision(size_t /*robot_id*/ i,
+                                            dynobench::Trajectory &traj)
+{
+  Motion motion;
+  time_planner.time_traj_to_motion += timed_fun_void([&]
+                                                     { traj_to_motion(traj, *(robots[i]), motion, /*compute collision*/ true); });
+  fcl::DefaultCollisionData<double> collision_data;
+  time_planner.time_collisions += timed_fun_void([&]
+                                                 {
+    assert(motion.collision_manager);
+    assert(robots[i]->env.get());
+    motion.collision_manager->collide(robots[i]->env.get(), &collision_data,
+                                      fcl::DefaultCollisionFunction<double>); });
+  if (collision_data.result.isCollision())
+  {
+    std::cout << "collision with the env" << std::endl;
+    return false;
   }
   return true;
 }

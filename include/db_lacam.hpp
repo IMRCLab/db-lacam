@@ -9,6 +9,7 @@
 #include "dynobench/dyno_macros.hpp"
 #include "dynobench/motions.hpp"
 #include "dynobench/multirobot_trajectory.hpp"
+#include "dynobench/general_utils.hpp"
 // custom
 #include "db_pibt.hpp"
 #include "utils.hpp"
@@ -63,8 +64,12 @@ struct LaCAM
   Expander &expander;
   std::vector<std::shared_ptr<dynoplan::Heu_fun>> h_funs;
   Planner_options planner_options;
+  Time_planner &m_time_planner;
   std::vector<std::shared_ptr<dynobench::Model_robot>> robots;
   std::map<size_t, RobotData> rolled_robot_data; // sorted, rolled robot trajs
+  std::vector<double> h_values;                  // keep track of h-values for sorting motions
+  double min_h = std::numeric_limits<double>::max();
+  double max_h = std::numeric_limits<double>::lowest();
   // tmp params
   std::vector<dynoplan::LazyTraj> tmp_lazy_trajs;
   dynobench::TrajWrapper tmp_traj_wrapper;
@@ -86,6 +91,7 @@ struct LaCAM
         std::vector<std::shared_ptr<dynoplan::Heu_fun>> _h_funs,
         Planner_options _planner_options,
         std::vector<std::shared_ptr<dynobench::Model_robot>> _robots,
+        Time_planner &time_planner,
         int _verbose = 0,
         const Deadline *_timelimit = nullptr);
   ~LaCAM();
@@ -97,9 +103,13 @@ struct LaCAM
                       std::map<size_t, RobotData> valid_trajs);
 
   void get_applicable_trajs(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id);
-  void get_applicable_trajs_precise(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id);
+  void get_applicable_trajs_precise_no_clustering(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id);
+  void get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id);
+  void get_applicable_trajs_precise_sort_actions(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id);
+
   RobotData GetTopNPerClusterByH(const RobotData &input, double range, double min_h, double max_h, size_t N, bool shuffle);
   RobotData GetFilteredUniqueTopByH(const RobotData &input, double min_distance, size_t robot_id);
+  bool check_and_add(const double h_value);
   // DEBUG
   void export_node_expansion();
 

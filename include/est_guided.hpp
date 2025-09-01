@@ -22,3 +22,10 @@ void est_guided(dynobench::Problem &problem,
                 Planner_options planner_options,
                 size_t &robot_id,
                 ompl::NearestNeighbors<std::shared_ptr<dynoplan::AStarNode>> **heuristic_result);
+
+double est(const Eigen::VectorXd &state,
+           const dynobench::Problem &problem,
+           Planner_options planner_options,
+           std::shared_ptr<dynobench::Model_robot>robot,
+           size_t &robot_id,
+           ompl::NearestNeighbors<std::shared_ptr<dynoplan::AStarNode>> &heuristic_result);

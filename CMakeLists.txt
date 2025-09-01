@@ -131,6 +131,7 @@ add_library(db_lacam
   src/db_lacam.cpp
   src/db_pibt.cpp
   src/map.cpp
+  src/est_guided.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/src/dbastar/heuristics.cpp
 )
 

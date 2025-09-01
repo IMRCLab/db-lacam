@@ -1,8 +1,9 @@
-#include "db_lacam.hpp"
-#include "db_pibt.hpp"
 #include "utils.hpp"
 #include <cassert>
 #include <chrono>
+#include "db_lacam.hpp"
+#include "db_pibt.hpp"
+#include "est_guided.hpp"
 
 LNode::LNode() : who(), where(), where_state(), where_dbN(), depth(0) {}
 
@@ -42,7 +43,6 @@ HNode::~HNode()
 LaCAM::LaCAM(const dynobench::Problem _problem,
              std::vector<std::shared_ptr<AStarNode>> _dbNodes,
              Expander &_expander,
-             std::vector<std::shared_ptr<dynoplan::Heu_fun>> _h_funs,
              Planner_options _planner_options,
              std::vector<std::shared_ptr<dynobench::Model_robot>> _robots,
              Time_planner &_time_planner,
@@ -51,7 +51,6 @@ LaCAM::LaCAM(const dynobench::Problem _problem,
     : problem(_problem),
       dbNodes(_dbNodes),
       expander(_expander),
-      h_funs(_h_funs),
       planner_options(_planner_options),
       robots(_robots),
       timelimit(_timelimit),
@@ -65,9 +64,26 @@ LaCAM::LaCAM(const dynobench::Problem _problem,
 
 {
   tmp_traj_wrapper.allocate_size(/*max_traj_size*/ 100, robots.at(0)->nx, robots.at(0)->nu);
+  heuristics.resize(robots.size());
+
+  for (size_t i = 0; i < robots.size(); ++i)
+  {
+    heuristics[i] = nigh_factory2<std::shared_ptr<AStarNode>>(problem.robotTypes[i], robots[i]);
+    auto h_fun = std::make_shared<HeuRoadmapBwdNearestR<std::shared_ptr<AStarNode>, AStarNode>>(
+        robots[i], heuristics[i], problem.goals[i], /*use_nn*/ true);
+
+    h_funs.push_back(h_fun);
+  }
 }
 
-LaCAM::~LaCAM() {}
+LaCAM::~LaCAM()
+{
+  for (auto nn_ptr : heuristics)
+  {
+    delete nn_ptr; // free memory
+  }
+  heuristics.clear();
+}
 
 MultiRobotTrajectory LaCAM::solve()
 {
@@ -402,7 +418,6 @@ void LaCAM::get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> d
   double gScore = 0;
   double min_h = std::numeric_limits<double>::max();
   double max_h = std::numeric_limits<double>::lowest();
-
   for (size_t j = 0; j < tmp_lazy_trajs.size(); j++)
   {
     auto &lazy_traj = tmp_lazy_trajs[j];
@@ -465,14 +480,27 @@ void LaCAM::get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> d
       continue;
     tmp_data.trajectories.push_back(traj);
     tmp_data.last_state_g.push_back(traj_wrap.last_state_g);
-    m_time_planner.time_hfun += timed_fun_void([&]
-                                               { last_state_h = h_funs[robot_id]->h(traj.goal); });
+    // m_time_planner.time_hfun += timed_fun_void([&]
+    //                                            { last_state_h = h_funs[robot_id]->h(traj.goal); });
+    // std::cout << "traj: " << k << std::endl;
+    last_state_h = h_funs[robot_id]->h(traj.goal);
+    if (last_state_h == -1.0)
+    {
+      last_state_h = est(traj.goal, problem, planner_options, robots[robot_id], robot_id, *heuristics[robot_id]);
+      if (last_state_h == -1.0)
+      {
+        std::cout << "EST failed to give h-value, skipping the motion" << std::endl;
+        continue;
+      }
+    }
+    // std::cout << "h value: " << last_state_h << std::endl;
     tmp_data.last_state_h.push_back(last_state_h);
     if (last_state_h < min_h)
       min_h = last_state_h;
     if (last_state_h > max_h)
       max_h = last_state_h;
   }
+  // std::cout << "HEURISTIC size: " << heuristics[robot_id]->size() << std::endl;
   std::cout << "tmp data traj size: " << tmp_data.trajectories.size() << std::endl;
   robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ planner_options.cluster_range, min_h, max_h, planner_options.cluster_n, /*shuffle*/ false);
 }

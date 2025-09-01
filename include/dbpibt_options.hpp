@@ -12,12 +12,13 @@ struct Planner_options
   float alpha =
       .5; // How discontinuity bound is shared between expansion and reaching
   size_t max_motions = 1e4;
+  std::string motionsFile = "";
   std::string outFile =
       "/tmp/dynoplan/out_db.yaml"; // output file to write some results
   float maxCost =
       std::numeric_limits<float>::infinity();           // Cost bound during search
   std::vector<dynoplan::Motion> *motions_ptr = nullptr; // Pointer to loaded motions
-  size_t max_expands = 5 * 1e3;                             // 1e6
+  size_t max_expands = 5 * 1e3;                         // 1e6
   bool debug = false;
   int limit_branching_factor =
       20;                        // Limit on branching factor to encourage more deep search

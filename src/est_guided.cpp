@@ -32,12 +32,10 @@ double est(const Eigen::VectorXd &state,
            ompl::NearestNeighbors<std::shared_ptr<AStarNode>> &heuristic_result)
 {
   // custom tmp params
+  std::cout << "Running EST" << std::endl;
   int expansions = 0;
   int cost_delta_factor = 1;
-  double weight = 0;
-  int alpha = 1;
-  int betta = 2;
-  int gamma = 3;
+  // planner_options.max_expands = 500;
   // load motions
   std::vector<Motion> &motions = *planner_options.motions_ptr;
   auto check_motions = [&]
@@ -163,7 +161,7 @@ double est(const Eigen::VectorXd &state,
     }
     double distance_to_goal =
         robot->distance(best_node->state_eig, problem.goals[robot_id]);
-
+    // std::cout << "EST distance to goal: " << distance_to_goal << std::endl;
     if (distance_to_goal < best_distance_to_goal)
     {
       best_distance_to_goal = distance_to_goal;
@@ -171,7 +169,6 @@ double est(const Eigen::VectorXd &state,
     if (distance_to_goal < planner_options.goal_delta)
     {
       status = Terminate_status::SOLVED;
-      std::cout << "EST h-value: " << best_node->gScore << std::endl;
       // put path nodes to heuristic
       std::shared_ptr<AStarNode> n = best_node;
       while (n != nullptr)
@@ -179,6 +176,8 @@ double est(const Eigen::VectorXd &state,
         heuristic_result.add(n);
         n = n->came_from;
       }
+      // std::cout << "heuristic size (inside est): " << heuristic_result.size() << std::endl;
+      // std::cout << "Leaving EST" << std::endl;
       return best_node->gScore;
     }
     size_t num_expansion_best_node = 0;
@@ -229,7 +228,22 @@ double est(const Eigen::VectorXd &state,
                                         fcl::DefaultCollisionFunction<double>);
       if (collision_data.result.isCollision())
         continue;
-      // DEBUG
+      // check if the mid state close to goal
+      Eigen::VectorXd tmp_mid_state = traj.states.at(6); // middle of the motion
+      if (robot->distance(tmp_mid_state, problem.goals[robot_id]) < planner_options.goal_delta)
+      {
+        status = Terminate_status::SOLVED;
+        // put path nodes to heuristic
+        std::shared_ptr<AStarNode> n = best_node;
+        n->hScore = h_fun->h(tmp_mid_state);
+        while (n != nullptr)
+        {
+          heuristic_result.add(n);
+          n = n->came_from;
+        }
+        std::cout << "MID state reached the goal" << std::endl;
+        return best_node->gScore;
+      }
       // ii. valid, add it to open set
       tmp_node->state_eig = xs.back();
       // expanded_nodes.push_back(tmp_node->state_eig);

@@ -14,7 +14,8 @@ def run_dblacam(filename_env, folder, timelimit, cfg):
         with open(filename_cfg, 'w') as f:
             yaml.dump(cfg, f, Dumper=yaml.CSafeDumper)
         filename_stats = "{}/stats.yaml".format(folder)
-        duration_dblacam = 0
+        # duration_dblacam = 0
+        t = 0
         with open(filename_stats, 'w') as stats:
             stats.write("stats:\n")
             
@@ -31,7 +32,8 @@ def run_dblacam(filename_env, folder, timelimit, cfg):
                 with open("{}/log.txt".format(folder), 'w') as logfile:
                     result = subprocess.run(cmd, timeout=timelimit, stdout=logfile, stderr=logfile)
                 stop = time.time()
-                duration_dblacam += stop - start
+                t += stop - start
+                # duration_dblacam += stop - start
                 if result.returncode != 0:
                     print("db-lacam failed ", result.returncode)
                 else:
@@ -42,11 +44,11 @@ def run_dblacam(filename_env, folder, timelimit, cfg):
                             cost += len(r["actions"]) * 0.1 # time step = 0.1
         
                     now = time.time()
-                    t = now - start
+                    # t = now - start
                     print("success!", cost, t)
                     stats.write("  - t: {}\n".format(t))
                     stats.write("    cost: {}\n".format(cost))
-                    stats.write("    duration_dblacam: {}\n".format(duration_dblacam))
+                    # stats.write("    duration_dblacam: {}\n".format(duration_dblacam))
                     stats.flush()
 
             except Exception as e:

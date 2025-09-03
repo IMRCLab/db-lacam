@@ -142,6 +142,7 @@ MultiRobotTrajectory LaCAM::solve()
       m_time_planner.time_get_trajs += timed_fun_void([&]
                                                       { get_applicable_trajs_precise_exhaustive(H->dbN[r], rolled_robot_data[r], r); });
       // if no applicable motions for the current state, then remove the node
+      // std::cout << "heuristic size after get trajs: " << heuristics[r]->size() << std::endl;
       if (!rolled_robot_data[r].trajectories.size())
       {
         std::cout << "Invalid Node: " << OPEN.front()->id << std::endl;
@@ -211,6 +212,23 @@ MultiRobotTrajectory LaCAM::solve()
   }
   // if OPEN is empty
   // export_node_expansion();
+  // DEBUG EST
+  auto space6 = std::string(6, ' ');
+  for (size_t i = 0; i < heuristics.size(); ++i)
+  {
+    std::string filename = "node_expansion_est_" + std::to_string(i) + ".yaml";
+    std::ofstream out(filename);
+    out << "states:" << std::endl;
+    auto *nn = heuristics[i];
+    std::vector<std::shared_ptr<AStarNode>> nodes;
+    nn->list(nodes);
+    std::cout << "writing " << nodes.size() << " nodes for robot " << i << std::endl;
+    for (auto &node : nodes)
+    {
+      const Eigen::VectorXd &state = node->state_eig;
+      out << space6 << "  - " << state.format(dynobench::FMT) << std::endl;
+    }
+  }
   // backtrack the solution
   {
     auto H = H_goal;
@@ -500,7 +518,6 @@ void LaCAM::get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> d
     if (last_state_h > max_h)
       max_h = last_state_h;
   }
-  // std::cout << "HEURISTIC size: " << heuristics[robot_id]->size() << std::endl;
   std::cout << "tmp data traj size: " << tmp_data.trajectories.size() << std::endl;
   robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ planner_options.cluster_range, min_h, max_h, planner_options.cluster_n, /*shuffle*/ false);
 }

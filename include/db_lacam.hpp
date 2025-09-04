@@ -65,6 +65,7 @@ struct LaCAM
   // std::vector<std::shared_ptr<dynoplan::Heu_fun>> h_funs;
   std::vector<std::shared_ptr<HeuRoadmapBwdNearestR<std::shared_ptr<AStarNode>, AStarNode>>> h_funs;
   std::vector<ompl::NearestNeighbors<std::shared_ptr<AStarNode>> *> heuristics;
+  std::vector<ompl::NearestNeighbors<std::shared_ptr<AStarNode>> *> heuristics_reverse;
   Planner_options planner_options;
   Time_planner &m_time_planner;
   std::vector<std::shared_ptr<dynobench::Model_robot>> robots;
@@ -90,6 +91,7 @@ struct LaCAM
   LaCAM(const dynobench::Problem _problem,
         std::vector<std::shared_ptr<AStarNode>> _dbNodes,
         Expander &_expander,
+        std::vector<ompl::NearestNeighbors<std::shared_ptr<AStarNode>> *> &_heuristics_reverse,
         Planner_options _planner_options,
         std::vector<std::shared_ptr<dynobench::Model_robot>> _robots,
         Time_planner &time_planner,

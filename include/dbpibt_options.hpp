@@ -7,8 +7,9 @@
 struct Planner_options
 {
 
-  float delta = .5;      // discontinuity bound
-  float goal_delta = .5; // pibt needs it
+  float delta = .5;          // discontinuity bound
+  float goal_delta = .5;     // pibt needs it
+  int cost_delta_factor = 0; // take into account the cost for discountinuity
   float alpha =
       .5; // How discontinuity bound is shared between expansion and reaching
   size_t max_motions = 1e4;
@@ -32,6 +33,7 @@ struct Planner_options
   {
     std::cout << "*** options for the planner ***" << std::endl;
     std::cout << "  delta: " << delta << "\n";
+    std::cout << "  cost_delta_factor: " << cost_delta_factor << "\n";
     std::cout << "  goal_delta: " << goal_delta << "\n";
     std::cout << "  alpha: " << alpha << "\n";
     std::cout << "  max_motions: " << max_motions << "\n";

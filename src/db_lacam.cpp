@@ -43,6 +43,7 @@ HNode::~HNode()
 LaCAM::LaCAM(const dynobench::Problem _problem,
              std::vector<std::shared_ptr<AStarNode>> _dbNodes,
              Expander &_expander,
+             std::vector<ompl::NearestNeighbors<std::shared_ptr<AStarNode>> *> &_heuristics_reverse,
              Planner_options _planner_options,
              std::vector<std::shared_ptr<dynobench::Model_robot>> _robots,
              Time_planner &_time_planner,
@@ -51,6 +52,7 @@ LaCAM::LaCAM(const dynobench::Problem _problem,
     : problem(_problem),
       dbNodes(_dbNodes),
       expander(_expander),
+      heuristics_reverse(_heuristics_reverse),
       planner_options(_planner_options),
       robots(_robots),
       timelimit(_timelimit),
@@ -109,7 +111,23 @@ MultiRobotTrajectory LaCAM::solve()
     ++loop_cnt;
     if (loop_cnt > 1000)
     {
-      export_node_expansion();
+      // export_node_expansion();
+      // auto space6 = std::string(6, ' ');
+      // for (size_t i = 0; i < heuristics.size(); ++i)
+      // {
+        // std::string filename = "heuristics_dblacam_" + std::to_string(i) + ".yaml";
+        // std::ofstream out(filename);
+        // out << "states:" << std::endl;
+        // auto *nn = heuristics[i];
+        // std::vector<std::shared_ptr<AStarNode>> nodes;
+        // nn->list(nodes);
+        // std::cout << "writing " << nodes.size() << " nodes for robot " << i << std::endl;
+        // for (auto &node : nodes)
+        // {
+          // const Eigen::VectorXd &state = node->state_eig;
+          // out << space6 << "  - " << state.format(dynobench::FMT) << std::endl;
+        // }
+      // }
       return solution;
     }
     // do not pop here!
@@ -196,11 +214,11 @@ MultiRobotTrajectory LaCAM::solve()
     // always add the node
     if (EXPLORED.find(Q_to) == EXPLORED.end())
     {
-      std::cout << "Config is new, adding a new node!" << std::endl;
-      for (auto &q : Q_to)
-      {
-        std::cout << q.format(dynobench::FMT) << std::endl;
-      }
+      // std::cout << "Config is new, adding a new node!" << std::endl;
+      // for (auto &q : Q_to)
+      // {
+      //   std::cout << q.format(dynobench::FMT) << std::endl;
+      // }
       order.clear();
       order = get_sorted_order(robots, Q_to, problem.goals);
       h_id++;
@@ -212,23 +230,22 @@ MultiRobotTrajectory LaCAM::solve()
   }
   // if OPEN is empty
   // export_node_expansion();
-  // DEBUG EST
-  auto space6 = std::string(6, ' ');
-  for (size_t i = 0; i < heuristics.size(); ++i)
-  {
-    std::string filename = "node_expansion_est_" + std::to_string(i) + ".yaml";
-    std::ofstream out(filename);
-    out << "states:" << std::endl;
-    auto *nn = heuristics[i];
-    std::vector<std::shared_ptr<AStarNode>> nodes;
-    nn->list(nodes);
-    std::cout << "writing " << nodes.size() << " nodes for robot " << i << std::endl;
-    for (auto &node : nodes)
-    {
-      const Eigen::VectorXd &state = node->state_eig;
-      out << space6 << "  - " << state.format(dynobench::FMT) << std::endl;
-    }
-  }
+  // auto space6 = std::string(6, ' ');
+  // for (size_t i = 0; i < heuristics.size(); ++i)
+  // {
+    // std::string filename = "heuristics_dblacam_" + std::to_string(i) + ".yaml";
+    // std::ofstream out(filename);
+    // out << "states:" << std::endl;
+    // auto *nn = heuristics[i];
+    // std::vector<std::shared_ptr<AStarNode>> nodes;
+    // nn->list(nodes);
+    // std::cout << "writing " << nodes.size() << " nodes for robot " << i << std::endl;
+    // for (auto &node : nodes)
+    // {
+      // const Eigen::VectorXd &state = node->state_eig;
+      // out << space6 << "  - " << state.format(dynobench::FMT) << std::endl;
+    // }
+  // }
   // backtrack the solution
   {
     auto H = H_goal;
@@ -425,6 +442,7 @@ void LaCAM::get_applicable_trajs_precise_no_clustering(std::shared_ptr<AStarNode
 // exhaustive, does check all motions for collision, clustering
 void LaCAM::get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id)
 {
+  std::cout << "robot " << robot_id << " get applicable trajs" << std::endl;
   // clear
   tmp_lazy_trajs.clear();
   tmp_traj_wrappers.clear();
@@ -504,7 +522,8 @@ void LaCAM::get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> d
     last_state_h = h_funs[robot_id]->h(traj.goal);
     if (last_state_h == -1.0)
     {
-      last_state_h = est(traj.goal, problem, planner_options, robots[robot_id], robot_id, *heuristics[robot_id]);
+      std::cout << "using EST for h-value" << std::endl;
+      last_state_h = est(traj.goal, problem, planner_options, robots[robot_id], robot_id, heuristics_reverse[robot_id], *heuristics[robot_id]);
       if (last_state_h == -1.0)
       {
         std::cout << "EST failed to give h-value, skipping the motion" << std::endl;

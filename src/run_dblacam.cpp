@@ -39,6 +39,7 @@
 #include "utils.hpp"
 #include "db_lacam.hpp"
 #include "dbpibt_options.hpp"
+#include "est_guided.hpp"
 
 namespace fs = std::filesystem;
 #define DYNOBENCH_BASE "../dynoplan/dynobench/"
@@ -86,7 +87,7 @@ int main(int argc, char *argv[])
   }
   auto start_time = std::chrono::steady_clock::now();
   YAML::Node cfg = YAML::LoadFile(cfgFile);
-  cfg = cfg["db-lacam"]["default"];
+  // cfg = cfg["db-lacam"]["default"];
   // setup dblacam options
   Planner_options planner_options;
   planner_options.delta = cfg["delta_0"].as<float>();
@@ -160,6 +161,37 @@ int main(int argc, char *argv[])
     return true;
   };
   assert(check_motions());
+  std::vector<ompl::NearestNeighbors<std::shared_ptr<AStarNode>> *> heuristics_rev(
+      robots.size(), nullptr);
+  if (cfg["heuristic1"].as<std::string>() == "reverse-search")
+  {
+    dynobench::Problem problem_original(inputFile);
+    Planner_options planner_options_rev = planner_options;
+    planner_options_rev.delta = cfg["heuristic1_delta"].as<float>();
+    planner_options_rev.max_motions = cfg["heuristic1_num_primitives_0"].as<size_t>();
+    planner_options_rev.cost_delta_factor = 1;
+    time_planner.reverse_search += timed_fun_void([&]
+                                                  {
+      auto start_rev = std::chrono::steady_clock::now();
+      size_t robot_id = 0;
+      for (const auto &robot : robots)
+      {
+
+        Eigen::VectorXd tmp_state = problem.starts[robot_id];
+        problem.starts[robot_id] = problem.goals[robot_id];
+        problem.goals[robot_id] = tmp_state;
+        est_unguided(problem, planner_options_rev, robot_id, &heuristics_rev[robot_id]);
+        std::cout << "computed heuristic with " << heuristics_rev[robot_id]->size()
+                  << " entries." << std::endl;
+        robot_id++;
+      }
+      auto end_rev = std::chrono::steady_clock::now();
+      duration duration_rev = end_rev - start_rev;
+      std::cout << "Time taken reverse search: " << duration_rev.count() << " seconds" << std::endl; });
+    // put back settings
+    problem.starts = problem_original.starts;
+    problem.goals = problem_original.goals;
+  }
   ompl::NearestNeighbors<Motion *> *T_m = nullptr;
   T_m = nigh_factory_t<Motion *>(problem.robotTypes[0], robots[0], // homogeneous case
                                  /*reverse_search*/ false);
@@ -191,7 +223,7 @@ int main(int argc, char *argv[])
     DYNO_CHECK_LEQ(node->hScore, 1e5, "hScore should be bounded");
   }
   const auto deadline = Deadline(timelimit);
-  LaCAM lacam(problem, dbN_start, expander, planner_options, robots, time_planner, /*verbose*/ 1, &deadline);
+  LaCAM lacam(problem, dbN_start, expander, heuristics_rev, planner_options, robots, time_planner, /*verbose*/ 1, &deadline);
   MultiRobotTrajectory solution = lacam.solve();
   if (solution.is_empty())
   {

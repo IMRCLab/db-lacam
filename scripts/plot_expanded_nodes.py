@@ -43,7 +43,7 @@ def plot_problem_and_results(problem_file: str, result_files: list[str]):
 
         if states_xy:
             xs, ys = zip(*states_xy)
-            ax.plot(xs, ys, marker="o", markersize=4, linewidth=1.2,
+            ax.plot(xs, ys, marker="o", markersize=4, linestyle = "None",
                     c=color, label=f"Robot {idx+1}")
 
         # --- Draw start & goal for this robot ---

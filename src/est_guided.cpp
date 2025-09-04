@@ -29,13 +29,12 @@ double est(const Eigen::VectorXd &state,
            Planner_options planner_options,
            std::shared_ptr<dynobench::Model_robot> robot,
            size_t &robot_id,
+           ompl::NearestNeighbors<std::shared_ptr<AStarNode>> *heuristic_nn,
            ompl::NearestNeighbors<std::shared_ptr<AStarNode>> &heuristic_result)
 {
   // custom tmp params
-  std::cout << "Running EST" << std::endl;
   int expansions = 0;
-  int cost_delta_factor = 1;
-  // planner_options.max_expands = 500;
+  planner_options.max_expands = 1000;
   // load motions
   std::vector<Motion> &motions = *planner_options.motions_ptr;
   auto check_motions = [&]
@@ -65,7 +64,11 @@ double est(const Eigen::VectorXd &state,
   srand(time(0));
 
   std::shared_ptr<Heu_fun> h_fun = nullptr;
-  h_fun = std::make_shared<Heu_euclidean>(robot, problem.goals[robot_id]); //  uses action-aware distance (lower-bound-time)
+  // h_fun = std::make_shared<Heu_euclidean>(robot, problem.goals[robot_id]);
+  h_fun = std::make_shared<
+      Heu_roadmap_bwd2<std::shared_ptr<AStarNode>, AStarNode>>(
+      robot, heuristic_nn, problem.goals[robot_id], /*use_nn*/ false);
+
   std::vector<std::shared_ptr<AStarNode>> all_nodes;
   all_nodes.push_back(std::make_shared<AStarNode>());
   // start node
@@ -83,7 +86,6 @@ double est(const Eigen::VectorXd &state,
   DYNO_CHECK_GEQ(start_node->hScore, 0, "hScore should be positive");
   DYNO_CHECK_LEQ(start_node->hScore, 1e5, "hScore should be bounded");
   T_n->add(start_node);
-  // heuristic_result.add(start_node);
   // goal node
   auto goal_node = std::make_shared<AStarNode>();
   goal_node->state_eig = problem.goals[robot_id];
@@ -168,16 +170,18 @@ double est(const Eigen::VectorXd &state,
     }
     if (distance_to_goal < planner_options.goal_delta)
     {
+      std::cout << "State reached the goal" << std::endl;
       status = Terminate_status::SOLVED;
       // put path nodes to heuristic
       std::shared_ptr<AStarNode> n = best_node;
+      // std::cout << "heuristic_result size in EST (before): " << heuristic_result.size() << std::endl;
       while (n != nullptr)
       {
+        // std::cout << n->state_eig.format(dynobench::FMT) << std::endl;
         heuristic_result.add(n);
         n = n->came_from;
       }
-      // std::cout << "heuristic size (inside est): " << heuristic_result.size() << std::endl;
-      // std::cout << "Leaving EST" << std::endl;
+      // std::cout << "heuristic_result size in EST (after): " << heuristic_result.size() << std::endl;
       return best_node->gScore;
     }
     size_t num_expansion_best_node = 0;
@@ -233,26 +237,30 @@ double est(const Eigen::VectorXd &state,
       if (robot->distance(tmp_mid_state, problem.goals[robot_id]) < planner_options.goal_delta)
       {
         status = Terminate_status::SOLVED;
+        std::cout << "MID state reached the goal" << std::endl;
         // put path nodes to heuristic
-        std::shared_ptr<AStarNode> n = best_node;
-        n->hScore = h_fun->h(tmp_mid_state);
+        tmp_node->state_eig = tmp_mid_state;
+        tmp_node->gScore = best_node->gScore + (5 * robot->ref_dt);
+        tmp_node->hScore = h_fun->h(tmp_mid_state);
+        tmp_node->came_from = best_node;
+        std::shared_ptr<AStarNode> n = tmp_node; // best_node;
+        // std::cout << "heuristic_result size in EST (before): " << heuristic_result.size() << std::endl;
         while (n != nullptr)
         {
+          // std::cout << n->state_eig.format(dynobench::FMT) << std::endl;
           heuristic_result.add(n);
           n = n->came_from;
         }
-        std::cout << "MID state reached the goal" << std::endl;
-        return best_node->gScore;
+        // std::cout << "heuristic_result size in EST (after): " << heuristic_result.size() << std::endl;
+        return best_node->gScore + (5 * robot->ref_dt); // motion has length 12
       }
       // ii. valid, add it to open set
       tmp_node->state_eig = xs.back();
       // expanded_nodes.push_back(tmp_node->state_eig);
-      tmp_node->out_degree = 0;
       double hScore = h_fun->h(tmp_node->state_eig);
       double cost_motion = us.size() * robot->ref_dt;
       double gScore = best_node->gScore + cost_motion;
       T_n->nearestR(tmp_node, (1. - planner_options.alpha) * planner_options.delta, neighbors_n); // R can be customized
-      // heuristic_result.nearestR(tmp_node, (1. - planner_options.alpha) * planner_options.delta, neighbors_n);
       if (!neighbors_n.size())
       {
         // STATE is NOVEL, we add the node
@@ -276,7 +284,7 @@ double est(const Eigen::VectorXd &state,
         {
           // STATE is not novel, we udpate
           if (float tentative_g =
-                  gScore + cost_delta_factor *
+                  gScore + planner_options.cost_delta_factor *
                                robot->lower_bound_time(tmp_node->state_eig,
                                                        n->state_eig);
               tentative_g < n->gScore)
@@ -311,19 +319,15 @@ double est(const Eigen::VectorXd &state,
   return -1.0;
 }
 
-void est_guided(dynobench::Problem &problem,
-                Planner_options planner_options,
-                size_t &robot_id,
-                ompl::NearestNeighbors<std::shared_ptr<AStarNode>> **heuristic_result)
+// no look up table, kd-tree contains all expanded nodes
+void est_unguided(dynobench::Problem &problem,
+                  Planner_options planner_options,
+                  size_t &robot_id,
+                  ompl::NearestNeighbors<std::shared_ptr<AStarNode>> **heuristic_rev)
 {
   // custom tmp params
   int expansions = 0;
-  int cost_delta_factor = 1;
-  double weight = 0;
-  int alpha = 1;
-  int betta = 2;
-  int gamma = 3;
-  // std::vector<Eigen::VectorXd> expanded_nodes;
+  std::vector<Eigen::VectorXd> expanded_nodes;
   // create the robot
   std::shared_ptr<dynobench::Model_robot>
       robot = dynobench::robot_factory(
@@ -355,7 +359,7 @@ void est_guided(dynobench::Problem &problem,
   }
   ompl::NearestNeighbors<std::shared_ptr<AStarNode>> *T_n = nullptr;
   T_n = nigh_factory2<std::shared_ptr<AStarNode>>(problem.robotTypes[robot_id], robot);
-  *heuristic_result = T_n;
+  *heuristic_rev = T_n;
   // motion primitives expander
   Expander expander(robot.get(), T_m,
                     planner_options.alpha * planner_options.delta, /*add static motion*/ true);
@@ -464,7 +468,6 @@ void est_guided(dynobench::Problem &problem,
     }
     if (distance_to_goal < planner_options.goal_delta)
     {
-      std::cout << "CLOSE to GOAL: " << distance_to_goal << std::endl;
       status = Terminate_status::SOLVED;
       break;
     }
@@ -516,14 +519,28 @@ void est_guided(dynobench::Problem &problem,
                                         fcl::DefaultCollisionFunction<double>);
       if (collision_data.result.isCollision())
         continue;
-      // DEBUG
       // ii. valid, add it to open set
       tmp_node->state_eig = xs.back();
-      // expanded_nodes.push_back(tmp_node->state_eig);
+      expanded_nodes.push_back(tmp_node->state_eig);
       tmp_node->out_degree = 0;
       double hScore = h_fun->h(tmp_node->state_eig);
       double cost_motion = us.size() * robot->ref_dt;
       double gScore = best_node->gScore + cost_motion;
+      // inter solution
+      Eigen::VectorXd tmp_mid_state = traj.states.at(6); // middle of the motion
+      if (robot->distance(tmp_mid_state, problem.goals[robot_id]) < planner_options.goal_delta)
+      {
+        std::cout << "MID STATE CLOSE to GOAL" << std::endl;
+        tmp_node->state_eig = tmp_mid_state;
+        tmp_node->gScore = best_node->gScore + (5 * robot->ref_dt);
+        tmp_node->hScore = h_fun->h(tmp_mid_state);
+        tmp_node->fScore = tmp_node->gScore + tmp_node->hScore;
+        tmp_node->is_in_open = true;
+        tmp_node->handle = open.push(tmp_node);
+        T_n->add(tmp_node);
+        status = Terminate_status::SOLVED;
+        break;
+      }
       T_n->nearestR(tmp_node, (1. - planner_options.alpha) * planner_options.delta, neighbors_n); // R can be customized
       if (!neighbors_n.size())
       {
@@ -533,16 +550,12 @@ void est_guided(dynobench::Problem &problem,
         __node->state_eig = tmp_node->state_eig;
         __node->gScore = gScore;
         __node->hScore = hScore;
-        double neighbors = 0;
-        double out_degree = tmp_node->out_degree;
         double cost = gScore + hScore;
-        double order = 1; // CHECK, UPDATE
-        int neigh_density = 0;
-        weight = 1 / (neigh_density + std::pow(out_degree, betta) + std::pow(cost, gamma));
         __node->fScore = cost; // SHOULD BE WEIGHT
         __node->is_in_open = true;
         __node->handle = open.push(__node);
         T_n->add(__node);
+        expanded_nodes.push_back(__node->state_eig);
       }
       else
       {
@@ -551,18 +564,13 @@ void est_guided(dynobench::Problem &problem,
         {
           // STATE is not novel, we udpate
           if (float tentative_g =
-                  gScore + cost_delta_factor *
+                  gScore + planner_options.cost_delta_factor *
                                robot->lower_bound_time(tmp_node->state_eig,
                                                        n->state_eig);
               tentative_g < n->gScore)
           {
             n->gScore = tentative_g;
-            double neighbors = neighbors_n.size();
-            double out_degree = tmp_node->out_degree;
-            double cost = tentative_g + n->hScore; // fScore
-            double order = 1;                      // CHECK, UPDATE
-            int neigh_density = neighbors_n.size();
-            weight = 1 / (+std::pow(out_degree, betta) + std::pow(cost, gamma));
+            double cost = tentative_g + n->hScore;
             n->fScore = cost; // SHOULD BE WEIGHT
             if (n->is_in_open)
             {
@@ -578,8 +586,7 @@ void est_guided(dynobench::Problem &problem,
       }
     }
   }
-  // DEBUG for viz., export expanded trajs
-  // std::string filename = "est_expansion_cost.yaml";
+  // std::string filename = "est_expansion_" + std::to_string(robot_id) + ".yaml";
   // std::ofstream out(filename);
   // auto space6 = std::string(6, ' ');
   // out << "states:" << std::endl;

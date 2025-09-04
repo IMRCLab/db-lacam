@@ -141,10 +141,10 @@ db-lacam:
     heuristic1: "reverse-search" 
     heuristic1_delta: 0.9
     heuristic1_num_primitives_0: 200 
-    goal_delta: 0.5 
-    cluster_range: 0.1
-    cluster_n: 1
-    merged_aabb: true
+    goal_delta: 0.75
+    cluster_range: 0.05
+    cluster_n: 8
+    merged_aabb: false
   '*_integrator':
     delta_0: 0.5
     num_primitives_0: 200 
@@ -162,9 +162,9 @@ db-lacam:
     num_primitives_0: 200 
     heuristic1_delta: 0.9
     heuristic1_num_primitives_0: 200
-    goal_delta: 0.5
-    cluster_range: 0.1
-    cluster_n: 1
+    goal_delta: 0.75
+    cluster_range: 0.05
+    cluster_n: 8
     merged_aabb: false
   '*alcove3_unicycle':
     delta_0: 0.5
@@ -177,23 +177,23 @@ db-lacam:
     num_primitives_0: 200 
     heuristic1_delta: 0.9
     heuristic1_num_primitives_0: 200 
-    goal_delta: 0.5
-    cluster_range: 0.1
-    cluster_n: 1
+    goal_delta: 0.75
+    cluster_range: 0.05
+    cluster_n: 8
     merged_aabb: false
   '*forest4':
     delta_0: 0.3
     num_primitives_0: 300 
-    heuristic1_delta: 0.5
-    heuristic1_num_primitives_0: 100 
+    heuristic1_delta: 0.9
+    heuristic1_num_primitives_0: 200 
     cluster_range: 0.05
-    cluster_n: 1
+    cluster_n: 8
   '*wall4':
     delta_0: 0.3
     num_primitives_0: 300 
     heuristic1_delta: 0.9
     heuristic1_num_primitives_0: 200 
     cluster_range: 0.05
-    cluster_n: 1
+    cluster_n: 8
 
   

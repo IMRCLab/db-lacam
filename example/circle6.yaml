@@ -1,0 +1,60 @@
+environment:
+  min: [0, 0, 0]
+  max: [6, 5, 2]
+  obstacles:
+    - type: box # 1
+      center: [4., 4.]
+      size: [0.5, 0.5]
+    - type: box # 2
+      center: [7., 4.]
+      size: [0.5, 0.5]
+    - type: box # 3
+      center: [4., 7.]
+      size: [0.5, 0.5]
+    - type: box # 4
+      center: [7., 7.]
+      size: [0.5, 0.5]
+robots:
+  - type: integrator2_3d_v0 
+    start: [1, 1, 0.5, 0,0,0] 
+    goal: [5, 4, 0,5, 0,0,0] 
+
+  # - type: integrator2_3d_v0 
+    # start: [2, 1, 0.5,0,0,0]
+    # goal: [4, 4, 0.5,0,0,0] 
+
+  - type: integrator2_3d_v0 
+    start: [3, 1, 0.5,0,0,0] 
+    goal: [3, 4, 0.5,0,0,0] 
+
+  # - type: integrator2_3d_v0 
+    # start: [4, 1, 0.5,0,0,0] 
+    # goal: [2, 4, 0.5,0,0,0] 
+
+  - type: integrator2_3d_v0 
+    start: [5, 1, 0.5,0,0,0]
+    goal: [1, 4, 0.5,0,0,0] 
+
+  - type: integrator2_3d_v0 
+    start: [1, 4, 0.5, 0,0,0] 
+    goal: [5, 1, 0,5, 0,0,0] 
+
+  # - type: integrator2_3d_v0 
+    # start: [2, 4, 0.5,0,0,0]
+    # goal: [4, 1, 0.5,0,0,0] 
+
+  - type: integrator2_3d_v0 
+    start: [3, 4, 0.5,0,0,0] 
+    goal: [3, 1, 0.5,0,0,0] 
+
+  # - type: integrator2_3d_v0 
+    # start: [4, 4, 0.5,0,0,0] 
+    # goal: [2, 1, 0.5,0,0,0] 
+
+  - type: integrator2_3d_v0 
+    start: [5, 4, 0.5,0,0,0]
+    goal: [1, 1, 0.5,0,0,0] 
+
+
+
+   

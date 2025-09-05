@@ -74,20 +74,18 @@ def visualize(env_file, result_file, filename_video=None):
           vis["Quadrotor" + str(name_robot)].set_object(g.StlMeshGeometry.from_file('../meshes/cf2_assembly.stl'), g.MeshLambertMaterial(color=0x0000FF)) # blue
         vis["trajectory" + str(name_robot)].set_object(g.Line(g.PointsGeometry(position), g.LineBasicMaterial(color=0x000000))) # green - 0x00FF00 
         # Initialize marker spheres at every 13th state
-        for k in range(0, len(state), 13):
-          marker_name = f"marker_{name_robot}_{k}"
-          # Compute opacity: closer to the end → lighter (lower opacity)
-          # linear fade from 0.9 (start) to 0.2 (end)
-          fade_ratio = k / len(state)
-          opacity = 0.9 * (1 - fade_ratio) + 0.2 * fade_ratio  # linear blend
+        # for k in range(0, len(state), 6):
+        #   marker_name = f"marker_{name_robot}_{k}"
+        #   fade_ratio = k / len(state)
+        #   opacity = 0.9 * (1 - fade_ratio) + 0.2 * fade_ratio  # linear blend
 
-          vis[marker_name].set_object(
-              g.Mesh(
-                  g.Sphere(0.02),
-                  g.MeshLambertMaterial(opacity=opacity, color=0xFF0000, transparent=True)
-              )
-          )
-          vis[marker_name].set_transform(tf.translation_matrix(state[k][0:3]))
+        #   vis[marker_name].set_object(
+        #       g.Mesh(
+        #           g.Sphere(0.02),
+        #           g.MeshLambertMaterial(opacity=opacity, color=0xFF0000, transparent=True)
+        #       )
+        #   )
+        #   vis[marker_name].set_transform(tf.translation_matrix(state[k][0:3]))
 
         name_robot+=1
     for k in range(max_k):

@@ -78,6 +78,7 @@ struct LaCAM
   dynobench::TrajWrapper tmp_traj_wrapper;
   std::vector<dynobench::TrajWrapper> tmp_traj_wrappers;
   MultiRobotTrajectory solution;
+  double cost = 0.;
   // solver utils
   db_PIBT db_pibt;
   HNode *H_goal;

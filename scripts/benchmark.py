@@ -99,7 +99,9 @@ def main():
     "atgoal_unicycle",
     # 3D case
     "forest4",
-    "wall4",
+    "corridor4",
+    "circle6",
+    "circle7_swap",
   ]
   for kind in ["unicycle","unicycle_sphere"]: 
     for n in [8]:
@@ -114,7 +116,7 @@ def main():
     "db-pibt",
     "db-lacam",
   ]
-  trials = 1 * 5
+  trials = 1 * 1
   timelimit_2d = 1 * 60 
   timelimit_3d = 5 * 60 
   timelimit_max = 0 # plot needs higher timelimit

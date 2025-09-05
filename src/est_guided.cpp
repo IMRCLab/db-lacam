@@ -233,14 +233,15 @@ double est(const Eigen::VectorXd &state,
       if (collision_data.result.isCollision())
         continue;
       // check if the mid state close to goal
-      Eigen::VectorXd tmp_mid_state = traj.states.at(6); // middle of the motion
+      size_t mid_index = traj.states.size() / 2;
+      Eigen::VectorXd tmp_mid_state = traj.states.at(mid_index); // middle of the motion
       if (robot->distance(tmp_mid_state, problem.goals[robot_id]) < planner_options.goal_delta)
       {
         status = Terminate_status::SOLVED;
         std::cout << "MID state reached the goal" << std::endl;
         // put path nodes to heuristic
         tmp_node->state_eig = tmp_mid_state;
-        tmp_node->gScore = best_node->gScore + (5 * robot->ref_dt);
+        tmp_node->gScore = best_node->gScore + ((mid_index - 1) * robot->ref_dt);
         tmp_node->hScore = h_fun->h(tmp_mid_state);
         tmp_node->came_from = best_node;
         std::shared_ptr<AStarNode> n = tmp_node; // best_node;
@@ -252,7 +253,7 @@ double est(const Eigen::VectorXd &state,
           n = n->came_from;
         }
         // std::cout << "heuristic_result size in EST (after): " << heuristic_result.size() << std::endl;
-        return best_node->gScore + (5 * robot->ref_dt); // motion has length 12
+        return best_node->gScore + ((mid_index - 1) * robot->ref_dt); // motion has length 12
       }
       // ii. valid, add it to open set
       tmp_node->state_eig = xs.back();
@@ -527,12 +528,13 @@ void est_unguided(dynobench::Problem &problem,
       double cost_motion = us.size() * robot->ref_dt;
       double gScore = best_node->gScore + cost_motion;
       // inter solution
-      Eigen::VectorXd tmp_mid_state = traj.states.at(6); // middle of the motion
+      size_t mid_index = traj.states.size() / 2;
+      Eigen::VectorXd tmp_mid_state = traj.states.at(mid_index); // middle of the motion
       if (robot->distance(tmp_mid_state, problem.goals[robot_id]) < planner_options.goal_delta)
       {
         std::cout << "MID STATE CLOSE to GOAL" << std::endl;
         tmp_node->state_eig = tmp_mid_state;
-        tmp_node->gScore = best_node->gScore + (5 * robot->ref_dt);
+        tmp_node->gScore = best_node->gScore + ((mid_index - 1) * robot->ref_dt);
         tmp_node->hScore = h_fun->h(tmp_mid_state);
         tmp_node->fScore = tmp_node->gScore + tmp_node->hScore;
         tmp_node->is_in_open = true;

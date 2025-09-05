@@ -115,18 +115,18 @@ MultiRobotTrajectory LaCAM::solve()
       // auto space6 = std::string(6, ' ');
       // for (size_t i = 0; i < heuristics.size(); ++i)
       // {
-        // std::string filename = "heuristics_dblacam_" + std::to_string(i) + ".yaml";
-        // std::ofstream out(filename);
-        // out << "states:" << std::endl;
-        // auto *nn = heuristics[i];
-        // std::vector<std::shared_ptr<AStarNode>> nodes;
-        // nn->list(nodes);
-        // std::cout << "writing " << nodes.size() << " nodes for robot " << i << std::endl;
-        // for (auto &node : nodes)
-        // {
-          // const Eigen::VectorXd &state = node->state_eig;
-          // out << space6 << "  - " << state.format(dynobench::FMT) << std::endl;
-        // }
+      //   std::string filename = "heuristics_dblacam_" + std::to_string(i) + ".yaml";
+      //   std::ofstream out(filename);
+      //   out << "states:" << std::endl;
+      //   auto *nn = heuristics[i];
+      //   std::vector<std::shared_ptr<AStarNode>> nodes;
+      //   nn->list(nodes);
+      //   std::cout << "writing " << nodes.size() << " nodes for robot " << i << std::endl;
+      //   for (auto &node : nodes)
+      //   {
+      //     const Eigen::VectorXd &state = node->state_eig;
+      //     out << space6 << "  - " << state.format(dynobench::FMT) << std::endl;
+      //   }
       // }
       return solution;
     }
@@ -139,7 +139,7 @@ MultiRobotTrajectory LaCAM::solve()
                                                      { H->order = get_sorted_order(robots, H->Q, problem.goals); });
     if (H->parent != nullptr)
       // check goal condition
-      if (H_goal == nullptr && is_close_config(H->Q, problem.goals, robots.at(0), /*threshold*/ planner_options.goal_delta))
+      if (H_goal == nullptr && is_close_config(H->Q, problem.goals, robots.at(0), /*threshold*/ 0.75)) // planner_options.goal_delta
       {
         H_goal = H;
         solver_info(2, "found solution!");
@@ -160,7 +160,6 @@ MultiRobotTrajectory LaCAM::solve()
       m_time_planner.time_get_trajs += timed_fun_void([&]
                                                       { get_applicable_trajs_precise_exhaustive(H->dbN[r], rolled_robot_data[r], r); });
       // if no applicable motions for the current state, then remove the node
-      // std::cout << "heuristic size after get trajs: " << heuristics[r]->size() << std::endl;
       if (!rolled_robot_data[r].trajectories.size())
       {
         std::cout << "Invalid Node: " << OPEN.front()->id << std::endl;
@@ -214,11 +213,6 @@ MultiRobotTrajectory LaCAM::solve()
     // always add the node
     if (EXPLORED.find(Q_to) == EXPLORED.end())
     {
-      // std::cout << "Config is new, adding a new node!" << std::endl;
-      // for (auto &q : Q_to)
-      // {
-      //   std::cout << q.format(dynobench::FMT) << std::endl;
-      // }
       order.clear();
       order = get_sorted_order(robots, Q_to, problem.goals);
       h_id++;
@@ -228,23 +222,28 @@ MultiRobotTrajectory LaCAM::solve()
       EXPLORED[H_new->Q] = H_new;
     }
   }
+  if (OPEN.empty())
+  {
+    std::cout << "open set is empty" << std::endl;
+    return solution;
+  }
   // if OPEN is empty
   // export_node_expansion();
   // auto space6 = std::string(6, ' ');
   // for (size_t i = 0; i < heuristics.size(); ++i)
   // {
-    // std::string filename = "heuristics_dblacam_" + std::to_string(i) + ".yaml";
-    // std::ofstream out(filename);
-    // out << "states:" << std::endl;
-    // auto *nn = heuristics[i];
-    // std::vector<std::shared_ptr<AStarNode>> nodes;
-    // nn->list(nodes);
-    // std::cout << "writing " << nodes.size() << " nodes for robot " << i << std::endl;
-    // for (auto &node : nodes)
-    // {
-      // const Eigen::VectorXd &state = node->state_eig;
-      // out << space6 << "  - " << state.format(dynobench::FMT) << std::endl;
-    // }
+  // std::string filename = "heuristics_dblacam_" + std::to_string(i) + ".yaml";
+  // std::ofstream out(filename);
+  // out << "states:" << std::endl;
+  // auto *nn = heuristics[i];
+  // std::vector<std::shared_ptr<AStarNode>> nodes;
+  // nn->list(nodes);
+  // std::cout << "writing " << nodes.size() << " nodes for robot " << i << std::endl;
+  // for (auto &node : nodes)
+  // {
+  // const Eigen::VectorXd &state = node->state_eig;
+  // out << space6 << "  - " << state.format(dynobench::FMT) << std::endl;
+  // }
   // }
   // backtrack the solution
   {
@@ -260,7 +259,7 @@ MultiRobotTrajectory LaCAM::solve()
     std::reverse(segments.begin(), segments.end());
 
     solution.trajectories.resize(robots.size());
-
+    cost = 0;
     for (const auto &seg : segments)
     {
       for (size_t id = 0; id < seg.size(); ++id)
@@ -269,6 +268,7 @@ MultiRobotTrajectory LaCAM::solve()
         const auto &seg_traj = seg[id];
         traj_out.states.insert(traj_out.states.end(), seg_traj.states.begin(), seg_traj.states.end());
         traj_out.actions.insert(traj_out.actions.end(), seg_traj.actions.begin(), seg_traj.actions.end());
+        cost += traj_out.actions.size();
       }
     }
   }
@@ -280,6 +280,7 @@ MultiRobotTrajectory LaCAM::solve()
 
   std::cout << "per iteration: " << std::fixed << std::setprecision(3)
             << avg_ms << " ms\n";
+  std::cout << "cost: " << std::fixed << cost * 0.1 << std::endl;
   return solution;
 }
 // without rollout. h-vlaue is for the "expected state", but can diverge hugely with unicycle dynamics
@@ -798,25 +799,6 @@ std::vector<int> LaCAM::get_sorted_order(
 
   return orders;
 }
-
-// DEBUG
-// void LaCAM::export_node_expansion()
-// {
-//   const std::string filename = "node_expansion_output.yaml";
-//   std::ofstream out(filename);
-
-//   if (!out.is_open())
-//   {
-//     std::cerr << "Failed to open file: " << filename << std::endl;
-//     return;
-//   }
-//   out << "trajs:" << std::endl;
-//   for (auto traj : expanded_trajs)
-//   {
-//     out << "  - " << std::endl;
-//     traj.to_yaml_format(out, "    ");
-//   }
-// }
 
 void LaCAM::export_node_expansion()
 {

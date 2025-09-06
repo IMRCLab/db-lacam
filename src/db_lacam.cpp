@@ -109,7 +109,7 @@ MultiRobotTrajectory LaCAM::solve()
   while (!OPEN.empty() && !is_expired(timelimit))
   {
     ++loop_cnt;
-    if (loop_cnt > 200)
+    if (loop_cnt > 1000)
     {
       // export_node_expansion();
       // auto space6 = std::string(6, ' ');

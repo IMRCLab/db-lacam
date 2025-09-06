@@ -185,7 +185,8 @@ void est(const Eigen::VectorXd &state,
       success = true;
       if (reverse_search)
       {
-        return;
+        break;
+        // return;
       }
       // put path nodes to heuristic
       std::shared_ptr<AStarNode> n = best_node;
@@ -195,8 +196,10 @@ void est(const Eigen::VectorXd &state,
         n = n->came_from;
       }
       h_value = best_node->gScore;
-      return;
+      break;
     }
+    if (success)
+      return;
     std::vector<LazyTraj> lazy_trajs;
     expander.expand_lazy(best_node->state_eig, lazy_trajs);
     std::vector<std::vector<Eigen::VectorXd>> all_actions;
@@ -251,26 +254,29 @@ void est(const Eigen::VectorXd &state,
         status = Terminate_status::SOLVED;
         std::cout << "MID state reached the goal" << std::endl;
         // put path nodes to heuristic
-        tmp_node->state_eig = tmp_mid_state;
-        tmp_node->gScore = best_node->gScore + ((mid_index - 1) * robot->ref_dt);
-        tmp_node->hScore = h_fun->h(tmp_mid_state);
-        tmp_node->fScore = tmp_node->gScore + tmp_node->hScore;
-        tmp_node->came_from = best_node;
+        auto mid_node = std::make_shared<AStarNode>();
+        mid_node->state_eig = tmp_mid_state;
+        mid_node->gScore = best_node->gScore + ((mid_index - 1) * robot->ref_dt);
+        mid_node->hScore = h_fun->h(tmp_mid_state);
+        mid_node->fScore = mid_node->gScore + mid_node->hScore;
+        mid_node->came_from = best_node;
         success = true;
         if (reverse_search)
         {
-          T_n->add(tmp_node);
-          return;
+          T_n->add(mid_node);
+          break;
         }
-        std::shared_ptr<AStarNode> n = tmp_node;
+        std::shared_ptr<AStarNode> n = mid_node;
         while (n != nullptr)
         {
           heuristic_result->get().add(n);
           n = n->came_from;
         }
         h_value = best_node->gScore + ((mid_index - 1) * robot->ref_dt);
-        return;
+        break;
       }
+      if (success)
+        return;
       // ii. valid, add it to open set
       tmp_node->state_eig = xs.back();
       // expanded_nodes.push_back(tmp_node->state_eig);

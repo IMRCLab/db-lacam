@@ -68,7 +68,7 @@ add_executable(
   src/db_pibt.cpp
   src/db_lacam.cpp
   src/utils.cpp
-  src/est_guided.cpp
+  src/est_planner.cpp
 )
 
 target_include_directories(
@@ -131,7 +131,7 @@ add_library(db_lacam
   src/db_lacam.cpp
   src/db_pibt.cpp
   src/map.cpp
-  src/est_guided.cpp
+  src/est_planner.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/src/dbastar/heuristics.cpp
 )
 
@@ -166,7 +166,7 @@ add_executable(
   src/db_pibt.cpp
   src/utils.cpp
   src/map.cpp
-  src/est_guided.cpp
+  src/est_planner.cpp
 )
 
 target_include_directories(
@@ -189,15 +189,15 @@ target_link_libraries(run_dblacam PRIVATE
   ${LZ4_LIBRARIES}
   PUBLIC Eigen3::Eigen)
 
-# est_guided
-add_library(est_guided
-  src/est_guided.cpp
+# est
+add_library(est_planner
+  src/est_planner.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/src/dbastar/heuristics.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/src/tdbastar/tdbastar.cpp
 
 )
 
-target_include_directories(est_guided
+target_include_directories(est_planner
   PUBLIC
     $<INSTALL_INTERFACE:include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -209,7 +209,7 @@ target_include_directories(est_guided
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-target_link_libraries(est_guided PRIVATE 
+target_link_libraries(est_planner PRIVATE 
   Eigen3::Eigen
   idbastar::tdbastar 
   ${Boost_LIBRARIES}

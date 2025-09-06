@@ -3,7 +3,7 @@
 #include <chrono>
 #include "db_lacam.hpp"
 #include "db_pibt.hpp"
-#include "est_guided.hpp"
+#include "est_planner.hpp"
 
 LNode::LNode() : who(), where(), where_state(), where_dbN(), depth(0) {}
 
@@ -43,7 +43,7 @@ HNode::~HNode()
 LaCAM::LaCAM(const dynobench::Problem _problem,
              std::vector<std::shared_ptr<AStarNode>> _dbNodes,
              Expander &_expander,
-             std::vector<ompl::NearestNeighbors<std::shared_ptr<AStarNode>> *> &_heuristics_reverse,
+             std::vector<ompl::NearestNeighbors<std::shared_ptr<AStarNode>> *> &_heuristics_nn,
              Planner_options _planner_options,
              std::vector<std::shared_ptr<dynobench::Model_robot>> _robots,
              Time_planner &_time_planner,
@@ -52,7 +52,7 @@ LaCAM::LaCAM(const dynobench::Problem _problem,
     : problem(_problem),
       dbNodes(_dbNodes),
       expander(_expander),
-      heuristics_reverse(_heuristics_reverse),
+      heuristics_nn(_heuristics_nn),
       planner_options(_planner_options),
       robots(_robots),
       timelimit(_timelimit),
@@ -109,7 +109,7 @@ MultiRobotTrajectory LaCAM::solve()
   while (!OPEN.empty() && !is_expired(timelimit))
   {
     ++loop_cnt;
-    if (loop_cnt > 1000)
+    if (loop_cnt > 200)
     {
       // export_node_expansion();
       // auto space6 = std::string(6, ' ');
@@ -519,19 +519,18 @@ void LaCAM::get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> d
     tmp_data.last_state_g.push_back(traj_wrap.last_state_g);
     // m_time_planner.time_hfun += timed_fun_void([&]
     //                                            { last_state_h = h_funs[robot_id]->h(traj.goal); });
-    // std::cout << "traj: " << k << std::endl;
     last_state_h = h_funs[robot_id]->h(traj.goal);
     if (last_state_h == -1.0)
     {
       std::cout << "using EST for h-value" << std::endl;
-      last_state_h = est(traj.goal, problem, planner_options, robots[robot_id], robot_id, heuristics_reverse[robot_id], *heuristics[robot_id]);
+      est(traj.goal, problem, planner_options, robots[robot_id], robot_id, last_state_h,
+          heuristics_nn[robot_id], nullptr, *heuristics[robot_id], /*reverse search*/ false);
       if (last_state_h == -1.0)
       {
         std::cout << "EST failed to give h-value, skipping the motion" << std::endl;
         continue;
       }
     }
-    // std::cout << "h value: " << last_state_h << std::endl;
     tmp_data.last_state_h.push_back(last_state_h);
     if (last_state_h < min_h)
       min_h = last_state_h;

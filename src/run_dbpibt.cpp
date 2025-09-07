@@ -40,7 +40,7 @@
 #include "utils.hpp"
 #include "dbpibt_utils.hpp"
 #include "dbpibt_options.hpp"
-#include "est_guided.hpp"
+#include "est_planner.hpp"
 
 namespace fs = std::filesystem;
 #define DYNOBENCH_BASE "../dynoplan/dynobench/"
@@ -159,9 +159,6 @@ int main(int argc, char *argv[])
   if (cfg["heuristic1"].as<std::string>() == "reverse-search")
   {
     dynobench::Problem problem_original(inputFile);
-    // Planner_options planner_options_rev = planner_options;
-    // planner_options_rev.delta = cfg["heuristic1_delta"].as<float>();
-    // planner_options_rev.max_motions = cfg["heuristic1_num_primitives_0"].as<size_t>();
     time_planner.reverse_search += timed_fun_void([&]
                                                   {
     auto start_rev = std::chrono::steady_clock::now();
@@ -182,7 +179,6 @@ int main(int argc, char *argv[])
       tdbastar(problem, tdb_options, tmp_solution.trajectory,
                /*constraints*/ {}, out_pibt, robot_id, /*reverse_search*/ true,
                nullptr, &heuristics[robot_id]);
-      // est_guided(problem, planner_options_rev, robot_id, &heuristics[robot_id]);
       std::cout << "computed heuristic with " << heuristics[robot_id]->size()
                 << " entries." << std::endl;
       robot_id++;

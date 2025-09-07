@@ -39,7 +39,7 @@
 #include "utils.hpp"
 #include "db_lacam.hpp"
 #include "dbpibt_options.hpp"
-#include "est_guided.hpp"
+#include "est_planner.hpp"
 
 namespace fs = std::filesystem;
 #define DYNOBENCH_BASE "../dynoplan/dynobench/"
@@ -165,6 +165,7 @@ int main(int argc, char *argv[])
       robots.size(), nullptr);
   if (cfg["heuristic1"].as<std::string>() == "reverse-search")
   {
+    double fake_h;
     dynobench::Problem problem_original(inputFile);
     Planner_options planner_options_rev = planner_options;
     planner_options_rev.delta = cfg["heuristic1_delta"].as<float>();
@@ -176,11 +177,11 @@ int main(int argc, char *argv[])
       size_t robot_id = 0;
       for (const auto &robot : robots)
       {
-
         Eigen::VectorXd tmp_state = problem.starts[robot_id];
         problem.starts[robot_id] = problem.goals[robot_id];
         problem.goals[robot_id] = tmp_state;
-        est_unguided(problem, planner_options_rev, robot_id, &heuristics_rev[robot_id]);
+        est(problem.starts[robot_id], problem, planner_options_rev, robots[robot_id], 
+                              robot_id, fake_h, nullptr, &heuristics_rev[robot_id], std::nullopt, /*reverse search*/true);
         std::cout << "computed heuristic with " << heuristics_rev[robot_id]->size()
                   << " entries." << std::endl;
         robot_id++;

@@ -234,6 +234,7 @@ int main(int argc, char *argv[])
   auto end_time = std::chrono::steady_clock::now();
   duration duration = end_time - start_time;
   std::cout << "Time taken (total): " << duration.count() * 1000 << " ms" << std::endl;
+  solution.trimTrajectories();
   solution.to_yaml_format(outputFile.c_str());
   time_planner.print();
   return 0;

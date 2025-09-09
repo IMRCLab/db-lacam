@@ -47,6 +47,7 @@ LaCAM::LaCAM(const dynobench::Problem _problem,
              Planner_options _planner_options,
              std::vector<std::shared_ptr<dynobench::Model_robot>> _robots,
              Time_planner &_time_planner,
+             MultiRobotTrajectory _dynamic_obstacles,
              int _verbose,
              const Deadline *_timelimit)
     : problem(_problem),
@@ -58,7 +59,8 @@ LaCAM::LaCAM(const dynobench::Problem _problem,
       timelimit(_timelimit),
       verbose(_verbose),
       m_time_planner(_time_planner),
-      db_pibt(robots, _time_planner),
+      dynamic_obstacles(_dynamic_obstacles),
+      db_pibt(robots, _time_planner, dynamic_obstacles),
       H_goal(nullptr),
       OPEN(),
       order(robots.size(), 0),
@@ -111,23 +113,6 @@ MultiRobotTrajectory LaCAM::solve()
     ++loop_cnt;
     if (loop_cnt > 1000)
     {
-      // export_node_expansion();
-      // auto space6 = std::string(6, ' ');
-      // for (size_t i = 0; i < heuristics.size(); ++i)
-      // {
-      //   std::string filename = "heuristics_dblacam_" + std::to_string(i) + ".yaml";
-      //   std::ofstream out(filename);
-      //   out << "states:" << std::endl;
-      //   auto *nn = heuristics[i];
-      //   std::vector<std::shared_ptr<AStarNode>> nodes;
-      //   nn->list(nodes);
-      //   std::cout << "writing " << nodes.size() << " nodes for robot " << i << std::endl;
-      //   for (auto &node : nodes)
-      //   {
-      //     const Eigen::VectorXd &state = node->state_eig;
-      //     out << space6 << "  - " << state.format(dynobench::FMT) << std::endl;
-      //   }
-      // }
       return solution;
     }
     // do not pop here!
@@ -227,24 +212,6 @@ MultiRobotTrajectory LaCAM::solve()
     std::cout << "open set is empty" << std::endl;
     return solution;
   }
-  // if OPEN is empty
-  // export_node_expansion();
-  // auto space6 = std::string(6, ' ');
-  // for (size_t i = 0; i < heuristics.size(); ++i)
-  // {
-  // std::string filename = "heuristics_dblacam_" + std::to_string(i) + ".yaml";
-  // std::ofstream out(filename);
-  // out << "states:" << std::endl;
-  // auto *nn = heuristics[i];
-  // std::vector<std::shared_ptr<AStarNode>> nodes;
-  // nn->list(nodes);
-  // std::cout << "writing " << nodes.size() << " nodes for robot " << i << std::endl;
-  // for (auto &node : nodes)
-  // {
-  // const Eigen::VectorXd &state = node->state_eig;
-  // out << space6 << "  - " << state.format(dynobench::FMT) << std::endl;
-  // }
-  // }
   // backtrack the solution
   {
     auto H = H_goal;
@@ -259,19 +226,30 @@ MultiRobotTrajectory LaCAM::solve()
     std::reverse(segments.begin(), segments.end());
 
     solution.trajectories.resize(robots.size());
-    cost = 0;
+    size_t p = 0;
+    // solution has zeros actions still, they are filtered in exporting function
     for (const auto &seg : segments)
     {
       for (size_t id = 0; id < seg.size(); ++id)
       {
         auto &traj_out = solution.trajectories[id];
         const auto &seg_traj = seg[id];
-        traj_out.states.insert(traj_out.states.end(), seg_traj.states.begin(), seg_traj.states.end());
-        traj_out.actions.insert(traj_out.actions.end(), seg_traj.actions.begin(), seg_traj.actions.end());
-        cost += traj_out.actions.size();
+        if (p != 0)
+        {
+          traj_out.states.insert(traj_out.states.end(), seg_traj.states.begin() + 1, seg_traj.states.end());
+          traj_out.actions.insert(traj_out.actions.end(), seg_traj.actions.begin(), seg_traj.actions.end());
+        }
+        else
+        {
+          traj_out.states.insert(traj_out.states.end(), seg_traj.states.begin(), seg_traj.states.end());
+          traj_out.actions.insert(traj_out.actions.end(), seg_traj.actions.begin(), seg_traj.actions.end());
+        }
       }
+      p++;
     }
   }
+  solution.trimTrajectories(); // remove zeros action-states
+  double cost = solution.get_cost();
   auto end_time = std::chrono::steady_clock::now();
   auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
   std::cout << "elapsed:" << std::setw(6) << elapsed_ms << "ms"
@@ -280,7 +258,7 @@ MultiRobotTrajectory LaCAM::solve()
 
   std::cout << "per iteration: " << std::fixed << std::setprecision(3)
             << avg_ms << " ms\n";
-  std::cout << "cost: " << std::fixed << cost * 0.1 << std::endl;
+  // std::cout << "cost: " << std::fixed << cost * 0.1 << std::endl;
   return solution;
 }
 // without rollout. h-vlaue is for the "expected state", but can diverge hugely with unicycle dynamics

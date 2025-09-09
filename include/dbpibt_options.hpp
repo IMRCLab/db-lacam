@@ -2,7 +2,7 @@
 
 #include <string>
 #include <vector>
-#include <boost/program_options.hpp>
+#include <boost/program_options.hpp>                             
 
 struct Planner_options
 {
@@ -28,6 +28,7 @@ struct Planner_options
   double cluster_range = 0.05;   // range to compute the threshold for motion clustering based on h-value
   size_t cluster_n = 8;          // number of elements per cluster to return
   bool merged_aabb = false;      // some problems don't work with merged aabb
+  bool refine_solution = false;  // refined the solution using 1) Large Neighborhood Search
 
   void print() const
   {

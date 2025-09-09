@@ -78,6 +78,7 @@ struct LaCAM
   dynobench::TrajWrapper tmp_traj_wrapper;
   std::vector<dynobench::TrajWrapper> tmp_traj_wrappers;
   MultiRobotTrajectory solution;
+  MultiRobotTrajectory dynamic_obstacles; // used for the refinement stage
   double cost = 0.;
   // solver utils
   db_PIBT db_pibt;
@@ -96,6 +97,7 @@ struct LaCAM
         Planner_options _planner_options,
         std::vector<std::shared_ptr<dynobench::Model_robot>> _robots,
         Time_planner &time_planner,
+        MultiRobotTrajectory _dynamic_obstacles,
         int _verbose = 0,
         const Deadline *_timelimit = nullptr);
   ~LaCAM();

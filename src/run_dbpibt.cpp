@@ -286,7 +286,8 @@ int main(int argc, char *argv[])
     }
     return false;
   };
-  db_PIBT dbpibt(robots, time_planner);
+  MultiRobotTrajectory dynamic_obstacles;
+  db_PIBT dbpibt(robots, time_planner, dynamic_obstacles);
   std::shared_ptr<AStarNode> best_node;
   // store the output
   MultiRobotTrajectory solution;

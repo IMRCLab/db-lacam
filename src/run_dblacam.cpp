@@ -97,6 +97,7 @@ int main(int argc, char *argv[])
   planner_options.cluster_range = cfg["cluster_range"].as<double>();
   planner_options.cluster_n = cfg["cluster_n"].as<size_t>();
   planner_options.merged_aabb = cfg["merged_aabb"].as<bool>();
+  planner_options.refine_solution = cfg["refine_solution"].as<bool>();
   planner_options.print();
   bool use_nn = false;
   Time_planner time_planner;
@@ -223,8 +224,9 @@ int main(int argc, char *argv[])
     DYNO_CHECK_GEQ(node->hScore, 0, "hScore should be positive");
     DYNO_CHECK_LEQ(node->hScore, 1e5, "hScore should be bounded");
   }
+  MultiRobotTrajectory dynamic_obstacles;
   const auto deadline = Deadline(timelimit);
-  LaCAM lacam(problem, dbN_start, expander, heuristics_rev, planner_options, robots, time_planner, /*verbose*/ 1, &deadline);
+  LaCAM lacam(problem, dbN_start, expander, heuristics_rev, planner_options, robots, time_planner, dynamic_obstacles, /*verbose*/ 1, &deadline);
   MultiRobotTrajectory solution = lacam.solve();
   if (solution.is_empty())
   {
@@ -234,8 +236,55 @@ int main(int argc, char *argv[])
   auto end_time = std::chrono::steady_clock::now();
   duration duration = end_time - start_time;
   std::cout << "Time taken (total): " << duration.count() * 1000 << " ms" << std::endl;
-  solution.trimTrajectories();
-  solution.to_yaml_format(outputFile.c_str());
   time_planner.print();
+  solution.to_yaml_format(outputFile.c_str());
+  if (duration.count() * 1000 < timelimit && planner_options.refine_solution)
+  {
+    dynamic_obstacles.trajectories.clear();
+    std::vector<int> ids_ref = {1};
+    dynobench::Problem problem_ref;
+    problem_ref.models_base_path = problem.models_base_path;
+    problem_ref.obstacles = problem.obstacles;
+    problem_ref.p_lb = problem.p_lb;
+    problem_ref.p_ub = problem.p_ub;
+    std::vector<std::shared_ptr<AStarNode>> dbN_start_ref;
+    std::vector<ompl::NearestNeighbors<std::shared_ptr<AStarNode>> *> heuristics_rev_ref;
+    std::vector<std::shared_ptr<dynobench::Model_robot>> robots_ref;
+    Time_planner time_planner_ref;
+    double old_cost = 0.;
+    const auto deadline_ref = Deadline(timelimit - duration.count() * 1000);
+    for (size_t i = 0; i < robots.size(); i++)
+    {
+      if (std::find(ids_ref.begin(), ids_ref.end(), i) != ids_ref.end())
+      {
+        problem_ref.starts.push_back(problem.starts[i]);
+        problem_ref.goals.push_back(problem.goals[i]);
+        problem_ref.robotTypes.push_back(problem.robotTypes[i]);
+        dbN_start_ref.push_back(dbN_start[i]);
+        heuristics_rev_ref.push_back(heuristics_rev[i]);
+        robots_ref.push_back(robots[i]);
+        std::cout << "i: " << i << ", cost: " << solution.trajectories[i].cost << std::endl;
+        old_cost += solution.trajectories[i].cost;
+      }
+      else
+        dynamic_obstacles.trajectories.push_back(solution.trajectories[i]);
+    }
+    LaCAM lacam_ref(problem_ref, dbN_start_ref, expander, heuristics_rev_ref, planner_options, robots_ref, time_planner_ref, dynamic_obstacles, /*verbose*/ 1, &deadline_ref);
+    MultiRobotTrajectory tmp_solution = lacam_ref.solve();
+    double new_cost = tmp_solution.get_cost();
+    std::cout << "old cost: " << old_cost << std::endl;
+    std::cout << "new cost: " << new_cost << std::endl;
+    if (new_cost < old_cost)
+    {
+      std::cout << "Refined returns a better solution" << std::endl;
+      size_t i = 0;
+      for (auto &traj : tmp_solution.trajectories)
+      {
+        solution.trajectories[ids_ref[i]] = traj;
+        i++;
+      }
+      solution.to_yaml_format("../results/forest4_ref.yaml");
+    }
+  }
   return 0;
 }

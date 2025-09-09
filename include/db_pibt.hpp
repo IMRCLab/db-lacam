@@ -21,6 +21,7 @@
 #include "dynobench/robot_models_base.hpp"
 #include "dynobench/dyno_macros.hpp"
 #include "dynobench/motions.hpp"
+#include "dynobench/multirobot_trajectory.hpp"
 // custom
 #include "map.hpp"
 #include "utils.hpp"
@@ -31,19 +32,34 @@ struct db_PIBT
 {
   std::vector<std::shared_ptr<dynobench::Model_robot>> robots;
   std::vector<fcl::CollisionObjectd *> robot_objs;
+  std::vector<fcl::CollisionObjectd *> dyn_objs;
+  std::vector<std::shared_ptr<dynobench::Model_robot>> dyn_robots;
   const int N; // number of robots
   Time_planner &time_planner;
+  MultiRobotTrajectory dyn_obstacles;
 
   // Constructor with robots argument
-  db_PIBT(std::vector<std::shared_ptr<dynobench::Model_robot>> _robots, Time_planner &_time_planner)
+  db_PIBT(std::vector<std::shared_ptr<dynobench::Model_robot>> _robots, Time_planner &_time_planner, MultiRobotTrajectory _dyn_obstacles)
       : robots(std::move(_robots)),
         time_planner(_time_planner),
+        dyn_obstacles(_dyn_obstacles),
         N(robots.size())
   {
     for (const auto &robot : robots)
     {
       auto robot_obj = new fcl::CollisionObject(robot->collision_geometries.at(0)); // homogeneous case
       robot_objs.push_back(robot_obj);
+    }
+    if (!dyn_obstacles.is_empty())
+    {
+      dyn_objs.reserve(dyn_obstacles.trajectories.size());
+      dyn_robots.reserve(dyn_obstacles.trajectories.size());
+      for (size_t i = 0; i < dyn_obstacles.trajectories.size(); ++i)
+      {
+        auto dyn_obj = new fcl::CollisionObject(robots[0]->collision_geometries.at(0)); // homogeneous case
+        dyn_objs.push_back(dyn_obj);
+        dyn_robots.push_back(robots[0]);
+      }
     }
   }
 
@@ -69,9 +85,10 @@ struct db_PIBT
 
   bool has_inter_robot_collision(dynobench::Trajectory robot_traj, size_t robot_id,
                                  dynobench::Trajectory other_robot_traj, size_t other_robot_id,
-                                 bool other_fixed = false);
+                                 bool lazy_check,
+                                 bool dynamic_obs);
 
-  void update_obj(size_t id, const Eigen::VectorXd state);
+  void update_obj(size_t id, const Eigen::VectorXd state, bool dynamic_obstacles);
 
   bool is_motion_valid(size_t robot_id,
                        const dynobench::Trajectory &traj,

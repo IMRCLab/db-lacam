@@ -53,19 +53,17 @@ int main(int argc, char *argv[])
   po::options_description desc("Allowed options");
   std::string inputFile;
   std::string outputFile;
+  std::string statsFile;
   std::string cfgFile;
   double timelimit;
 
   desc.add_options()("help", "produce help message")(
       "input,i", po::value<std::string>(&inputFile)->required(),
-      "input file (yaml)")("output,o",
-                           po::value<std::string>(&outputFile)->required(),
-                           "output file (yaml)")(
-      "cfg,c", po::value<std::string>(&cfgFile)->required(),
-      "configuration file (yaml)")("time_limit,t",
-                                   po::value<double>(&timelimit)->required(),
-                                   "time limit for search");
-
+      "input file (yaml)")("output,o", po::value<std::string>(&outputFile)->required(),
+                           "output file (yaml)")("stats,s", po::value<std::string>(&statsFile)->required(),
+                                                 "stats file (yaml)")("cfg,c", po::value<std::string>(&cfgFile)->required(),
+                                                                      "configuration file (yaml)")("time_limit,t", po::value<double>(&timelimit)->required(),
+                                                                                                   "time limit for search");
   try
   {
     po::variables_map vm;
@@ -83,6 +81,13 @@ int main(int argc, char *argv[])
     std::cerr << e.what() << std::endl
               << std::endl;
     std::cerr << desc << std::endl;
+    return 1;
+  }
+  create_dir_if_necessary(statsFile);
+  std::ofstream stats(statsFile, std::ios::app);
+  if (!stats)
+  {
+    std::cerr << "Failed to open stats.yaml file.\n";
     return 1;
   }
   auto start_time = std::chrono::steady_clock::now();
@@ -233,57 +238,88 @@ int main(int argc, char *argv[])
     std::cout << "LaCAM failed!" << std::endl;
     return false;
   }
+
   auto end_time = std::chrono::steady_clock::now();
-  duration duration = end_time - start_time;
-  std::cout << "Time taken (total): " << duration.count() * 1000 << " ms" << std::endl;
+  duration first_run_time = end_time - start_time;
+  std::cout << "Time taken (total): " << first_run_time.count() * 1000 << " ms" << std::endl;
+  double cost = solution.get_cost() * 0.1;
   time_planner.print();
-  solution.to_yaml_format(outputFile.c_str());
-  if (duration.count() * 1000 < timelimit && planner_options.refine_solution)
+  solution.to_yaml_format(outputFile.c_str()); // save just in case
+  // save stats
+  stats << "stats: " << "\n";
+  stats << "  - t: " << first_run_time.count() << "\n";
+  stats << "    cost: " << cost << "\n";
+  stats.flush();
+  if (first_run_time.count() * 1000 < timelimit && planner_options.refine_solution)
   {
-    dynamic_obstacles.trajectories.clear();
-    std::vector<int> ids_ref = {1};
-    dynobench::Problem problem_ref;
-    problem_ref.models_base_path = problem.models_base_path;
-    problem_ref.obstacles = problem.obstacles;
-    problem_ref.p_lb = problem.p_lb;
-    problem_ref.p_ub = problem.p_ub;
-    std::vector<std::shared_ptr<AStarNode>> dbN_start_ref;
-    std::vector<ompl::NearestNeighbors<std::shared_ptr<AStarNode>> *> heuristics_rev_ref;
-    std::vector<std::shared_ptr<dynobench::Model_robot>> robots_ref;
-    Time_planner time_planner_ref;
-    double old_cost = 0.;
-    const auto deadline_ref = Deadline(timelimit - duration.count() * 1000);
-    for (size_t i = 0; i < robots.size(); i++)
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::vector<int> all_ids(robots.size());
+    auto start_time_refine = std::chrono::steady_clock::now();
+    auto elapsed = first_run_time;
+    while (true)
     {
-      if (std::find(ids_ref.begin(), ids_ref.end(), i) != ids_ref.end())
+      auto now = std::chrono::steady_clock::now();
+      elapsed = first_run_time + (now - start_time_refine);
+      // check if timelimit exceeded
+      if (elapsed.count() * 1000 >= timelimit)
+        break;
+      // create new problem for a run
+      dynamic_obstacles.trajectories.clear();
+      dynobench::Problem problem_ref;
+      problem_ref.models_base_path = problem.models_base_path;
+      problem_ref.obstacles = problem.obstacles;
+      problem_ref.p_lb = problem.p_lb;
+      problem_ref.p_ub = problem.p_ub;
+      std::vector<std::shared_ptr<AStarNode>> dbN_start_ref;
+      std::vector<ompl::NearestNeighbors<std::shared_ptr<AStarNode>> *> heuristics_rev_ref;
+      std::vector<std::shared_ptr<dynobench::Model_robot>> robots_ref;
+      Time_planner time_planner_ref;
+      double old_cost = 0.;
+      const auto deadline_ref = Deadline(timelimit - elapsed.count() * 1000);
+      // randomly choose 2 distinct IDs
+      std::iota(all_ids.begin(), all_ids.end(), 0);
+      std::shuffle(all_ids.begin(), all_ids.end(), gen);
+      std::vector<int> ids_ref(all_ids.begin(), all_ids.begin() + 2);
+
+      for (size_t i = 0; i < robots.size(); i++)
       {
-        problem_ref.starts.push_back(problem.starts[i]);
-        problem_ref.goals.push_back(problem.goals[i]);
-        problem_ref.robotTypes.push_back(problem.robotTypes[i]);
-        dbN_start_ref.push_back(dbN_start[i]);
-        heuristics_rev_ref.push_back(heuristics_rev[i]);
-        robots_ref.push_back(robots[i]);
-        std::cout << "i: " << i << ", cost: " << solution.trajectories[i].cost << std::endl;
-        old_cost += solution.trajectories[i].cost;
+        if (std::find(ids_ref.begin(), ids_ref.end(), i) != ids_ref.end())
+        {
+          problem_ref.starts.push_back(problem.starts[i]);
+          problem_ref.goals.push_back(problem.goals[i]);
+          problem_ref.robotTypes.push_back(problem.robotTypes[i]);
+          dbN_start_ref.push_back(dbN_start[i]);
+          heuristics_rev_ref.push_back(heuristics_rev[i]);
+          robots_ref.push_back(robots[i]);
+          old_cost += solution.trajectories[i].cost;
+        }
+        else
+          dynamic_obstacles.trajectories.push_back(solution.trajectories[i]);
       }
-      else
-        dynamic_obstacles.trajectories.push_back(solution.trajectories[i]);
-    }
-    LaCAM lacam_ref(problem_ref, dbN_start_ref, expander, heuristics_rev_ref, planner_options, robots_ref, time_planner_ref, dynamic_obstacles, /*verbose*/ 1, &deadline_ref);
-    MultiRobotTrajectory tmp_solution = lacam_ref.solve();
-    double new_cost = tmp_solution.get_cost();
-    std::cout << "old cost: " << old_cost << std::endl;
-    std::cout << "new cost: " << new_cost << std::endl;
-    if (new_cost < old_cost)
-    {
-      std::cout << "Refined returns a better solution" << std::endl;
-      size_t i = 0;
-      for (auto &traj : tmp_solution.trajectories)
+      LaCAM lacam_ref(problem_ref, dbN_start_ref, expander, heuristics_rev_ref, planner_options, robots_ref, time_planner_ref, dynamic_obstacles, /*verbose*/ 1, &deadline_ref);
+      // save stats
+      MultiRobotTrajectory tmp_solution = lacam_ref.solve();
+      double new_cost = tmp_solution.get_cost();
+      std::cout << "old cost: " << old_cost << std::endl;
+      std::cout << "new cost: " << new_cost << std::endl;
+      if (new_cost < old_cost)
       {
-        solution.trajectories[ids_ref[i]] = traj;
-        i++;
+        std::cout << "Refined returns a better solution" << std::endl;
+        auto now_ref = std::chrono::steady_clock::now();
+        size_t i = 0;
+        for (auto &traj : tmp_solution.trajectories)
+        {
+          solution.trajectories[ids_ref[i]] = traj;
+          i++;
+        }
+        duration ref_time = now_ref - start_time;
+        cost = solution.get_cost() * 0.1;
+        stats << "  - t: " << ref_time.count() << "\n";
+        stats << "    cost: " << cost << "\n";
+        stats.flush();
+        solution.to_yaml_format(outputFile.c_str()); // save just in case
       }
-      solution.to_yaml_format("../results/forest4_ref.yaml");
     }
   }
   return 0;

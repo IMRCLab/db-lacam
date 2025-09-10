@@ -227,7 +227,7 @@ MultiRobotTrajectory LaCAM::solve()
 
     solution.trajectories.resize(robots.size());
     size_t p = 0;
-    // solution has zeros actions still, they are filtered in exporting function
+    // end of the motion is the beginning of the next one, that's why duplicate states when the stitch happens
     for (const auto &seg : segments)
     {
       for (size_t id = 0; id < seg.size(); ++id)
@@ -235,15 +235,10 @@ MultiRobotTrajectory LaCAM::solve()
         auto &traj_out = solution.trajectories[id];
         const auto &seg_traj = seg[id];
         if (p != 0)
-        {
           traj_out.states.insert(traj_out.states.end(), seg_traj.states.begin() + 1, seg_traj.states.end());
-          traj_out.actions.insert(traj_out.actions.end(), seg_traj.actions.begin(), seg_traj.actions.end());
-        }
         else
-        {
           traj_out.states.insert(traj_out.states.end(), seg_traj.states.begin(), seg_traj.states.end());
-          traj_out.actions.insert(traj_out.actions.end(), seg_traj.actions.begin(), seg_traj.actions.end());
-        }
+        traj_out.actions.insert(traj_out.actions.end(), seg_traj.actions.begin(), seg_traj.actions.end());
       }
       p++;
     }

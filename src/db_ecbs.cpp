@@ -11,9 +11,6 @@
 #include <boost/program_options.hpp>
 #include <boost/program_options.hpp>
 #include <boost/heap/d_ary_heap.hpp>
-// FCL
-#include "fcl/broadphase/broadphase_collision_manager.h"
-#include <fcl/fcl.h>
 // DYNOPLAN
 #include <dynoplan/optimization/ocp.hpp>
 #include "dynoplan/optimization/multirobot_optimization.hpp"
@@ -21,13 +18,14 @@
 #include "dynoplan/tdbastar/tdbastar_epsilon.hpp"
 #include "dynoplan/tdbastar/planresult.hpp"
 #include "dynoplan/ompl/robots.h"
+
 // DYNOBENCH
 #include "dynobench/general_utils.hpp"
 #include "dynobench/robot_models_base.hpp"
 #include <dynobench/multirobot_trajectory.hpp>
-#include "dynobench/general_utils.hpp"
-#include "dynobench/robot_models_base.hpp"
-// others
+
+#include "fcl/broadphase/broadphase_collision_manager.h"
+#include <fcl/fcl.h>
 #include "dbcbs_utils.hpp"
 
 using namespace dynoplan;
@@ -86,13 +84,11 @@ int main(int argc, char *argv[])
   // cfg = cfg["db-ecbs"]["default"];
   float alpha = cfg["alpha"].as<float>();
   bool filter_duplicates = cfg["filter_duplicates"].as<bool>();
-  fs::path output_path(outputFile);
-  std::string output_folder = output_path.parent_path().string();
-  // optimization-related params
-  bool sum_robot_cost = true;
   bool feasible = false;
   // tdbstar options
   Options_tdbastar options_tdbastar;
+  options_tdbastar.search_timelimit = timeLimit;
+  options_tdbastar.delta = cfg["delta_0"].as<float>();
   options_tdbastar.cost_delta_factor = 0;
   options_tdbastar.fix_seed = 1;
   options_tdbastar.max_motions = cfg["num_primitives_0"].as<size_t>();
@@ -105,7 +101,7 @@ int main(int argc, char *argv[])
   problem.models_base_path = models_base_path;
 
   Out_info_tdb tmp_out_tdb, out_tdb;
-  std::cout << "*** options_tdbastar_epsilon ***" << std::endl;
+  std::cout << "*** options_tdbastar ***" << std::endl;
   options_tdbastar.print(std::cout);
   std::cout << "***" << std::endl;
   // load problem description
@@ -142,9 +138,8 @@ int main(int argc, char *argv[])
     {
       motionsFile = "../new_format_motions/integrator1_2d_v0/unit_length2/integrator1_2d_v0.bin.im.bin.sp.bin";
     }
-    else if (problem.robotType == "integrator2_3d_v0")
+    else if (robotType == "integrator2_3d_v0")
     {
-      // motionsFile = "../new_format_motions/integrator2_3d_v0/spread/integrator2_3d_v0.bin.im.bin.sp.bin";
       motionsFile = "../new_format_motions/integrator2_3d_v0/short/integrator2_3d_v0.bin.im.bin.sp.bin";
     }
     else
@@ -200,9 +195,8 @@ int main(int argc, char *argv[])
   std::vector<double> upper_bounds(num_robots, std::numeric_limits<double>::max());
   std::vector<double> hs(num_robots, -1.0); // start->hScore
 
+  double cost_tmp = 0;
   double lowest_cost = std::numeric_limits<double>::max();
-  YAML::Node itr_cost_data;
-  std::string itr_cost_file = output_folder + "/iteration_cost.yaml";
   bool check_anytime = true;
 
   if (cfg["heuristic1"].as<std::string>() == "reverse-search")
@@ -252,7 +246,7 @@ int main(int argc, char *argv[])
   problem.goals = problem_original.goals;
   options_tdbastar.delta = cfg["delta_0"].as<float>();
   options_tdbastar.max_motions = cfg["num_primitives_0"].as<size_t>();
-  options_tdbastar.search_timelimit = 1e4; // by default value
+  options_tdbastar.search_timelimit = 1e4;
   stats << "stats: " << "\n";
   int success_run = 0;
   for (size_t iteration = 0;; ++iteration)
@@ -290,7 +284,6 @@ int main(int argc, char *argv[])
         }
       }
     }
-    std::cout << "ITR: " << iteration << ", MOTIONS: " << options_tdbastar.max_motions << ", delta: " << options_tdbastar.delta << std::endl;
     solved_db = false;
     HighLevelNodeFocal start;
     start.solution.resize(env["robots"].size());
@@ -417,12 +410,8 @@ int main(int argc, char *argv[])
       }
       assert(!mismatch);
 #endif
-      std::cout << "high-level Open set size: " << open.size() << std::endl;
-      std::cout << "high-level Focal set size: " << focal.size() << std::endl;
-      std::cout << "cost bound: " << LB * options_tdbastar.w << std::endl;
       auto current_handle = focal.top();
       HighLevelNodeFocal P = *current_handle;
-      std::cout << "high-level best node focalHeuristic: " << P.focalHeuristic << std::endl;
       focal.pop();
       open.erase(current_handle);
       Conflict inter_robot_conflict;
@@ -436,7 +425,6 @@ int main(int argc, char *argv[])
         auto discrete_end = std::chrono::steady_clock::now();
         duration_discrete = discrete_end - discrete_start;
         std::cout << "Time taken for discrete search: " << duration_discrete.count() << " seconds" << std::endl;
-        // read the discrete search as initial guess
         MultiRobotTrajectory discrete_search_sol;
         discrete_search_sol.read_from_yaml(outputFile.c_str());
 
@@ -448,7 +436,7 @@ int main(int argc, char *argv[])
                                                    /*initialGuess*/ discrete_search_sol,
                                                    /*solution*/ optimization_sol,
                                                    DYNOBENCH_BASE,
-                                                   sum_robot_cost);
+                                                   /*sum robot case*/ true);
           if (feasible)
           {
             success_run++;
@@ -459,16 +447,29 @@ int main(int argc, char *argv[])
             std::cout << "Time taken for joint optimization: " << duration_opt.count() << " seconds" << std::endl;
             auto now = std::chrono::steady_clock::now();
             duration t = now - dbecbs_start;
-            optimization_sol.to_yaml_format(optimizationFile.c_str());
-            std::cout << "Optimization better solution is saved!" << std::endl;
-            double cost = optimization_sol.get_cost();
-            stats << "  - t: " << t.count() << "\n";
-            stats << "    cost: " << cost << "\n";
-            stats << "    duration_discrete: " << duration_discrete.count() << "\n";
-            stats << "    duration_opt: " << duration_opt.count() << "\n";
-            stats << "    discrete cost: " << P.cost << "\n";
-            stats.flush();
-            return 0;
+            // get the optimized solution cost
+            // check for lower-bounds
+            cost_tmp = 0;
+            for (auto &traj : optimization_sol.trajectories)
+            {
+              cost_tmp += traj.cost;
+            }
+            for (size_t l = 0; l < num_robots; l++)
+            {
+              upper_bounds[l] = cost_tmp - (hs_total - hs[l]);
+            }
+            if (cost_tmp < lowest_cost)
+            {
+              lowest_cost = cost_tmp;
+              optimization_sol.to_yaml_format(optimizationFile.c_str());
+              std::cout << "Optimization better solution is saved!" << std::endl;
+              stats << "  - t: " << t.count() << "\n";
+              stats << "    cost: " << cost_tmp << "\n";
+              stats << "    discrete cost: " << P.cost << "\n";
+              stats.flush();
+            }
+            // extract motions from the solution. Lengths depend on the environment (2D-short(1,2), 3D wall-long(8 length for example))
+            extract_motion_primitives(problem, optimization_sol, sub_motions, robots, /*length*/ 8);
           }
           break; // continue with the next iteration
         }
@@ -504,9 +505,6 @@ int main(int argc, char *argv[])
           newNode.cost += newNode.solution[tmp_robot_id].trajectory.cost;
           newNode.LB += newNode.solution[tmp_robot_id].trajectory.fmin;
           newNode.focalHeuristic = highLevelfocalHeuristicState(newNode.solution, robots, problem.robotTypes, col_mng_robots, robot_objs, problem.is_residual);
-          std::cout << "New node solution cost:  " << newNode.solution[tmp_robot_id].trajectory.cost << std::endl;
-          std::cout << "New node cost: " << newNode.cost << " New node LB: " << newNode.LB << std::endl;
-          std::cout << "New node focal heuristic: " << newNode.focalHeuristic << std::endl;
           auto handle = open.push(newNode);
           (*handle).handle = handle;
           if (newNode.cost <= open.top().LB * options_tdbastar.w)

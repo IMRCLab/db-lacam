@@ -63,20 +63,20 @@ int get_random_int(std::mt19937 *MT, int from, int to)
   return get_random_int(*MT, from, to);
 }
 // allow threshold for reaching the goal for now. Homogeneous robots
-bool is_close_config(std::vector<Eigen::VectorXd> Q1, std::vector<Eigen::VectorXd> Q2, std::shared_ptr<dynobench::Model_robot> robot, double threshold)
-{
-  assert(Q1.size() == Q2.size());
-  int cnt = 0;
-  for (size_t i = 0; i < Q1.size(); i++)
-  {
-    if (robot->distance(Q1.at(i), Q2.at(i)) <= threshold)
-    {
-      std::cout << "close to final: " << robot->distance(Q1.at(i), Q2.at(i)) << std::endl;
-      cnt++;
-    }
-  }
-  return (cnt == Q1.size()) ? true : false;
-}
+// bool is_close_config(std::vector<Eigen::VectorXd> Q1, std::vector<Eigen::VectorXd> Q2, std::shared_ptr<dynobench::Model_robot> robot, double threshold)
+// {
+// assert(Q1.size() == Q2.size());
+// int cnt = 0;
+// for (size_t i = 0; i < Q1.size(); i++)
+// {
+// if (robot->distance(Q1.at(i), Q2.at(i)) <= threshold)
+// {
+// std::cout << "close to final: " << robot->distance(Q1.at(i), Q2.at(i)) << std::endl;
+// cnt++;
+// }
+// }
+// return (cnt == Q1.size()) ? true : false;
+// }
 
 Node::Node(Eigen::VectorXd _state_eig, double _gScore, double _hScore) : state_eig(_state_eig),
                                                                          gScore(_gScore),

@@ -79,6 +79,7 @@ struct LaCAM
   std::vector<dynobench::TrajWrapper> tmp_traj_wrappers;
   MultiRobotTrajectory solution;
   MultiRobotTrajectory dynamic_obstacles; // used for the refinement stage
+  size_t max_T = 0;                       // used for refinement stage, the max time
   double cost = 0.;
   // solver utils
   db_PIBT db_pibt;
@@ -86,8 +87,6 @@ struct LaCAM
   std::deque<HNode *> OPEN;
   int loop_cnt;
   std::vector<int> order;
-  // DEBUG
-  // std::vector<dynobench::Trajectory> expanded_trajs;
   std::map<size_t, std::vector<dynobench::Trajectory>> expanded_trajs; // MRS case
 
   LaCAM(const dynobench::Problem _problem,
@@ -119,6 +118,7 @@ struct LaCAM
   bool check_and_add(const double h_value);
   // DEBUG
   void export_node_expansion();
+  bool is_close_config(HNode *S, std::vector<Eigen::VectorXd> Q2, double threshold);
 
   std::vector<int> get_sorted_order(
       std::vector<std::shared_ptr<dynobench::Model_robot>> &robots,

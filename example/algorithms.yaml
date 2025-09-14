@@ -159,7 +159,7 @@ db-lacam:
     cluster_range: 0.05
     cluster_n: 1 # 1
     merged_aabb: false
-    refine_solution: True
+    refine_solution: False
   '*_integrator':
     delta_0: 0.5
     num_primitives_0: 200 

@@ -78,6 +78,14 @@ LaCAM::LaCAM(const dynobench::Problem _problem,
 
     h_funs.push_back(h_fun);
   }
+  if (!dynamic_obstacles.is_empty())
+  {
+    for (auto &traj : dynamic_obstacles.trajectories)
+    {
+      max_T = std::max(max_T, traj.states.size());
+    }
+    std::cout << "max_T: " << max_T << std::endl;
+  }
 }
 
 LaCAM::~LaCAM()
@@ -124,7 +132,7 @@ MultiRobotTrajectory LaCAM::solve()
                                                      { H->order = get_sorted_order(robots, H->Q, problem.goals); });
     if (H->parent != nullptr)
       // check goal condition
-      if (H_goal == nullptr && is_close_config(H->Q, problem.goals, robots.at(0), /*threshold*/ 0.75)) // planner_options.goal_delta
+      if (H_goal == nullptr && is_close_config(H, problem.goals, /*threshold*/ 0.75))
       {
         H_goal = H;
         solver_info(2, "found solution!");
@@ -224,10 +232,9 @@ MultiRobotTrajectory LaCAM::solve()
     }
 
     std::reverse(segments.begin(), segments.end());
-
     solution.trajectories.resize(robots.size());
     size_t p = 0;
-    // end of the motion is the beginning of the next one, that's why duplicate states when the stitch happens
+    // end of the motion is the beginning of the next one, that's why duplicate states when the stitch
     for (const auto &seg : segments)
     {
       for (size_t id = 0; id < seg.size(); ++id)
@@ -253,7 +260,7 @@ MultiRobotTrajectory LaCAM::solve()
 
   std::cout << "per iteration: " << std::fixed << std::setprecision(3)
             << avg_ms << " ms\n";
-  // std::cout << "cost: " << std::fixed << cost * 0.1 << std::endl;
+  std::cout << "cost: " << std::fixed << cost * 0.1 << std::endl;
   return solution;
 }
 // without rollout. h-vlaue is for the "expected state", but can diverge hugely with unicycle dynamics
@@ -510,7 +517,7 @@ void LaCAM::get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> d
     if (last_state_h > max_h)
       max_h = last_state_h;
   }
-  std::cout << "tmp data traj size: " << tmp_data.trajectories.size() << std::endl;
+  // std::cout << "tmp data traj size: " << tmp_data.trajectories.size() << std::endl;
   robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ planner_options.cluster_range, min_h, max_h, planner_options.cluster_n, /*shuffle*/ false);
 }
 // OPTION 3: sort actions based on epsilon
@@ -799,4 +806,21 @@ void LaCAM::export_node_expansion()
     std::cout << "Wrote " << traj_list.size()
               << " trajectories to " << filename << std::endl;
   }
+}
+
+// allow threshold for reaching the goal for now. Homogeneous robots
+bool LaCAM::is_close_config(HNode *S, std::vector<Eigen::VectorXd> Q2, double threshold)
+{
+  std::vector<Eigen::VectorXd> Q1 = S->Q;
+  assert(Q1.size() == Q2.size());
+  int cnt = 0;
+  for (size_t i = 0; i < Q1.size(); i++)
+  {
+    if (robots[0]->distance(Q1.at(i), Q2.at(i)) <= threshold && S->dbN.at(i)->gScore / robots[0]->ref_dt >= max_T)
+    {
+      std::cout << "close to final: " << robots[0]->distance(Q1.at(i), Q2.at(i)) << std::endl;
+      cnt++;
+    }
+  }
+  return (cnt == Q1.size()) ? true : false;
 }

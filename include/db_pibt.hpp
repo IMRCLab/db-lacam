@@ -52,13 +52,14 @@ struct db_PIBT
     }
     if (!dyn_obstacles.is_empty())
     {
-      dyn_objs.reserve(dyn_obstacles.trajectories.size());
-      dyn_robots.reserve(dyn_obstacles.trajectories.size());
       for (size_t i = 0; i < dyn_obstacles.trajectories.size(); ++i)
       {
-        auto dyn_obj = new fcl::CollisionObject(robots[0]->collision_geometries.at(0)); // homogeneous case
-        dyn_objs.push_back(dyn_obj);
         dyn_robots.push_back(robots[0]);
+      }
+      for (const auto &robot : dyn_robots)
+      {
+        auto robot_obj = new fcl::CollisionObject(robot->collision_geometries.at(0)); // homogeneous case
+        dyn_objs.push_back(robot_obj);
       }
     }
   }
@@ -95,5 +96,8 @@ struct db_PIBT
                        const std::vector<dynobench::Trajectory> &M_to);
 
   bool is_motion_valid_env_collision(size_t robot_id,
+                                     dynobench::Trajectory &traj);
+
+  bool is_motion_valid_dyn_obstacles(size_t robot_id, int start_index,
                                      dynobench::Trajectory &traj);
 };

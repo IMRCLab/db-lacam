@@ -107,8 +107,8 @@ std::ostream &operator<<(std::ostream &os, const std::set<int> &arr)
     os << ele << ",";
   return os;
 }
-bool is_close_config(std::vector<Eigen::VectorXd> Q1, std::vector<Eigen::VectorXd> Q2,
-                     std::shared_ptr<dynobench::Model_robot> robot, double threshold);
+// bool is_close_config(std::vector<Eigen::VectorXd> Q1, std::vector<Eigen::VectorXd> Q2,
+//  std::shared_ptr<dynobench::Model_robot> robot, double threshold);
 
 struct Node
 {

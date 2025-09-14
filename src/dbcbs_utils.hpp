@@ -374,3 +374,59 @@ void extract_motion_primitives(dynobench::Problem &problem,
     robot_idx++;
   }
 }
+
+bool sanity_check(
+    const dynobench::Trajectory &sol1,
+    const dynobench::Trajectory &sol2,
+    double robot_size = 0.4)
+{
+  using CollisionGeometry = fcl::CollisionGeometryd;
+  using CollisionObject = fcl::CollisionObjectd;
+
+  // --- Create robot shapes depending on type ---
+  std::shared_ptr<CollisionGeometry> geom1;
+  std::shared_ptr<CollisionGeometry> geom2;
+
+  geom1 = std::make_shared<fcl::Sphered>(robot_size);
+  geom2 = std::make_shared<fcl::Sphered>(robot_size);
+
+  CollisionObject obj1(geom1);
+  CollisionObject obj2(geom2);
+
+  fcl::CollisionRequestd request;
+  fcl::CollisionResultd result;
+
+  size_t max_t = std::max(sol1.states.size() - 1, sol2.states.size() - 1);
+
+  for (size_t t = 0; t <= max_t; ++t)
+  {
+    Eigen::VectorXd state1 = (t < sol1.states.size()) ? sol1.states[t] : sol1.states.back();
+    Eigen::VectorXd state2 = (t < sol2.states.size()) ? sol2.states[t] : sol2.states.back();
+
+    fcl::Vector3d p1, p2;
+    if (state1.size() >= 3 && state2.size() >= 3)
+    {
+      p1 = fcl::Vector3d(state1[0], state1[1], state1[2]);
+      p2 = fcl::Vector3d(state2[0], state2[1], state2[2]);
+    }
+    else
+    {
+      p1 = fcl::Vector3d(state1[0], state1[1], 0.0);
+      p2 = fcl::Vector3d(state2[0], state2[1], 0.0);
+    }
+
+    obj1.setTranslation(p1);
+    obj2.setTranslation(p2);
+
+    result.clear();
+    fcl::collide(&obj1, &obj2, request, result);
+
+    if (result.isCollision())
+    {
+      std::cout << "collision at timestep " << t << std::endl;
+      return false; // sanity check failed, they collide
+    }
+  }
+
+  return true; // no collisions detected
+}

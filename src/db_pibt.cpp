@@ -52,6 +52,17 @@ bool db_PIBT::set_new_config(std::vector<Eigen::VectorXd> Q_from,
         success = false;
         break;
       }
+      if (!dyn_obstacles.is_empty())
+      {
+        int start_indx = std::lround(dbN_from.at(i)->gScore / robots.at(i)->ref_dt);
+        valid = is_motion_valid_dyn_obstacles(i, start_indx, M_to[i]);
+        std::cout << "robot " << i << " start state: " << dbN_from[i]->state_eig.format(dynobench::FMT) << std::endl;
+      }
+      if (!valid)
+      {
+        success = false;
+        break;
+      }
     }
   }
   if (success)
@@ -80,9 +91,10 @@ bool db_PIBT::funcPIBT(size_t robot_id,
 {
   std::cout << "Calling dbPIBT for robot " << robot_id << ", PI: " << pi << std::endl;
   Eigen::VectorXd now_state = Q_from[robot_id];
-  // std::cout << "robot " << robot_id << " start state: " << now_state.format(dynobench::FMT) << std::endl;
+  std::cout << "robot " << robot_id << " start state: " << now_state.format(dynobench::FMT) << std::endl;
   RobotData robot_data = robot_data_rolled[robot_id];
   bool success;
+  std::cout << "robot " << robot_id << " trajs size: " << robot_data.trajectories.size() << std::endl;
   for (size_t i = 0; i < robot_data.trajectories.size(); i++)
   {
     std::cout << "robot " << robot_id << " motion: " << i << std::endl;
@@ -98,45 +110,9 @@ bool db_PIBT::funcPIBT(size_t robot_id,
     // check for collision with moving obstacles - only in refinement stage
     if (!dyn_obstacles.is_empty())
     {
-      int start_index = std::lround(dbN_from.at(robot_id)->gScore / robots.at(robot_id)->ref_dt);
-      dynobench::Trajectory tmp_traj;
-      int end = start_index + traj.states.size();
-      for (size_t d = 0; d < dyn_obstacles.trajectories.size(); d++)
-      {
-        const auto &states = dyn_obstacles.trajectories.at(d).states;
-        size_t n = states.size();
-
-        if (start_index < n)
-        {
-          size_t safe_end = std::min(static_cast<size_t>(end), n);
-          // Insert valid states
-          tmp_traj.states.insert(tmp_traj.states.begin(),
-                                 states.begin() + start_index,
-                                 states.begin() + safe_end);
-          // If end goes past the size, repeat the last element
-          if (static_cast<size_t>(end) > n)
-          {
-            tmp_traj.states.insert(tmp_traj.states.end(),
-                                   end - n, // how many times to add
-                                   states.back());
-          }
-        }
-        else
-        {
-          // start_index already outside -> just fill everything with last element
-          tmp_traj.states.insert(tmp_traj.states.begin(),
-                                 end - start_index, // fill the gap length
-                                 states.back());
-        }
-        // tmp_traj.states.insert(tmp_traj.states.begin(), dyn_obstacles.trajectories.at(d).states.begin() + start_index, dyn_obstacles.trajectories.at(d).states.begin() + end);
-        if (has_inter_robot_collision(traj, robot_id, tmp_traj, /*other robot*/ d, /*lazy check*/ false, true))
-        {
-          valid = false;
-          break;
-        }
-      }
-      if (!valid)
-        continue;
+      int start_indx = std::lround(dbN_from.at(robot_id)->gScore / robots.at(robot_id)->ref_dt);
+      std::cout << "start index: " << start_indx << std::endl;
+      valid = is_motion_valid_dyn_obstacles(robot_id, start_indx, traj);
     }
     if (!valid)
       continue;
@@ -239,17 +215,21 @@ bool db_PIBT::has_inter_robot_collision(dynobench::Trajectory robot_traj, size_t
   {
     // state-by-state check
     size_t N = std::min(ego_traj.size(), other_traj.size());
-
+    assert(ego_traj.size() == other_traj.size());
     for (size_t s = 0; s < N; ++s)
     {
       result.clear();
 
-      update_obj(robot_id, ego_traj[s]);
+      update_obj(robot_id, ego_traj[s], false);
       update_obj(other_robot_id, other_traj[s], dynamic_obs);
       if (dynamic_obs)
+      {
         fcl::collide(robot_objs[robot_id], dyn_objs[other_robot_id], request, result);
+      }
       else
+      {
         fcl::collide(robot_objs[robot_id], robot_objs[other_robot_id], request, result);
+      }
 
       if (result.isCollision())
       {
@@ -296,6 +276,41 @@ bool db_PIBT::is_motion_valid_env_collision(size_t /*robot_id*/ i,
   {
     std::cout << "collision with the env" << std::endl;
     return false;
+  }
+  return true;
+}
+
+bool db_PIBT::is_motion_valid_dyn_obstacles(size_t i, int start_index, dynobench::Trajectory &traj)
+{
+  for (size_t d = 0; d < dyn_obstacles.trajectories.size(); d++)
+  {
+    const auto &obs_states = dyn_obstacles.trajectories[d].states;
+    size_t obs_len = obs_states.size();
+    dynobench::Trajectory tmp_traj;
+    tmp_traj.states.reserve(traj.states.size());
+
+    for (size_t i = 0; i < traj.states.size(); ++i)
+    {
+      size_t obs_idx = start_index + i;
+
+      if (obs_idx < obs_len)
+      {
+        tmp_traj.states.push_back(obs_states[obs_idx]);
+      }
+      else
+      {
+        // If obstacle trajectory ended, repeat the last state
+        tmp_traj.states.push_back(obs_states.back());
+      }
+    }
+
+    // Check collisions for this aligned chunk
+    if (has_inter_robot_collision(traj, /*robot id*/ i, tmp_traj, /*other robot*/ d, /*lazy*/ false, /*dynamic obstacles*/ true))
+    {
+      std::cout << "collision with dynamic obstacle" << std::endl;
+      std::cout << "robot: " << i << ", other robot: " << d << std::endl;
+      return false;
+    }
   }
   return true;
 }

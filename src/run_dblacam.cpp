@@ -281,18 +281,18 @@ int main(int argc, char *argv[])
       std::vector<std::shared_ptr<dynobench::Model_robot>> robots_tmp;
       Time_planner time_planner_tmp;
       // Option 1: randomly choose 2 distinct IDs
-      // std::iota(all_ids.begin(), all_ids.end(), 0);
-      // std::shuffle(all_ids.begin(), all_ids.end(), gen);
-      // std::vector<int> ids_tmp(all_ids.begin(), all_ids.begin() + 2);
+      std::iota(all_ids.begin(), all_ids.end(), 0);
+      std::shuffle(all_ids.begin(), all_ids.end(), gen);
+      std::vector<int> ids_tmp(all_ids.begin(), all_ids.begin() + 2);
 
       // Option 2: pick based on ratio = actual_cost / lower_bound_cost
-      for (size_t j = 0; j < robots.size(); j++)
-      {
-        ratios.push_back(solution.trajectories[j].cost / lower_bound_costs[j]);
-      }
-      std::uniform_int_distribution<> dist(1, robots.size());
-      const auto num_refine_robots = std::max(1, std::min(dist(gen), int(robots.size() / 2)));
-      std::vector<int> ids_tmp = pick_subset_robots(ratios, /*N*/ num_refine_robots, gen);
+      // for (size_t j = 0; j < robots.size(); j++)
+      // {
+      //   ratios.push_back(solution.trajectories[j].cost / lower_bound_costs[j]);
+      // }
+      // std::uniform_int_distribution<> dist(1, robots.size());
+      // const auto num_refine_robots = std::max(1, std::min(dist(gen), int(robots.size() / 2)));
+      // std::vector<int> ids_tmp = pick_subset_robots(ratios, /*N*/ num_refine_robots, gen);
       double old_cost = 0.;
       const auto deadline_tmp = Deadline(timelimit - elapsed.count());
       for (size_t i = 0; i < robots.size(); i++)

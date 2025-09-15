@@ -117,7 +117,7 @@ def main():
     "db-lacam",
   ]
   trials = 1 * 5
-  timelimit_2d = 1 * 60 
+  timelimit_2d = 5 * 60 
   timelimit_3d = 1 * 60 # 5 
   timelimit_max = 0 # plot needs higher timelimit
   tasks = []

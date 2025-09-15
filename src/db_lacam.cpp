@@ -119,7 +119,7 @@ MultiRobotTrajectory LaCAM::solve()
   while (!OPEN.empty() && !is_expired(timelimit))
   {
     ++loop_cnt;
-    if (loop_cnt > 1000)
+    if (loop_cnt > 5000)
     {
       return solution;
     }

@@ -820,7 +820,9 @@ bool LaCAM::is_close_config(HNode *S, std::vector<Eigen::VectorXd> Q2, double th
     {
       std::cout << "close to final: " << robots[0]->distance(Q1.at(i), Q2.at(i)) << std::endl;
       cnt++;
+      S->dbN[i]->reaches_goal = true;
     }
+    S->dbN[i]->reaches_goal = false;
   }
   return (cnt == Q1.size()) ? true : false;
 }

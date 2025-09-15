@@ -91,13 +91,30 @@ bool db_PIBT::funcPIBT(size_t robot_id,
 {
   std::cout << "Calling dbPIBT for robot " << robot_id << ", PI: " << pi << std::endl;
   Eigen::VectorXd now_state = Q_from[robot_id];
-  std::cout << "robot " << robot_id << " start state: " << now_state.format(dynobench::FMT) << std::endl;
+  // if the robot reaches the goal and no request to move, then stay in place
+  // if (!pi && dbN_from[robot_id]->reaches_goal)
+  // {
+  //   Q_to[robot_id] = now_state;
+  //   dbN_to[robot_id]->state_eig = now_state;
+  //   dbN_to[robot_id]->gScore = dbN_from[robot_id]->gScore;
+  //   dbN_to[robot_id]->hScore = dbN_from[robot_id]->hScore;
+  //   dynobench::Trajectory traj_fake;
+  //   int N = robot_data_rolled[robot_id].trajectories[0].states.size();
+  //   std::vector<Eigen::VectorXd> xs(N, now_state);
+  //   std::vector<Eigen::VectorXd> us(N - 1,
+  //                                   Eigen::VectorXd::Zero(robots[robot_id]->nu));
+  //   traj_fake.states = xs;
+  //   traj_fake.actions = us;
+  //   M_to[robot_id] = traj_fake;
+  //   return true;
+  // }
+  // std::cout << "robot " << robot_id << " start state: " << now_state.format(dynobench::FMT) << std::endl;
   RobotData robot_data = robot_data_rolled[robot_id];
   bool success;
-  std::cout << "robot " << robot_id << " trajs size: " << robot_data.trajectories.size() << std::endl;
+  // std::cout << "robot " << robot_id << " trajs size: " << robot_data.trajectories.size() << std::endl;
   for (size_t i = 0; i < robot_data.trajectories.size(); i++)
   {
-    std::cout << "robot " << robot_id << " motion: " << i << std::endl;
+    // std::cout << "robot " << robot_id << " motion: " << i << std::endl;
     dynobench::Trajectory traj = robot_data.trajectories[i];
 
     // check for collision with planned robots
@@ -111,7 +128,6 @@ bool db_PIBT::funcPIBT(size_t robot_id,
     if (!dyn_obstacles.is_empty())
     {
       int start_indx = std::lround(dbN_from.at(robot_id)->gScore / robots.at(robot_id)->ref_dt);
-      std::cout << "start index: " << start_indx << std::endl;
       valid = is_motion_valid_dyn_obstacles(robot_id, start_indx, traj);
     }
     if (!valid)

@@ -153,11 +153,11 @@ db-lacam:
     alpha: 0.5 # 0.01 for grid
     filter_duplicates: True
     heuristic1: "reverse-search" 
-    heuristic1_delta: 0.9
+    heuristic1_delta: 0.75
     heuristic1_num_primitives_0: 500 
-    goal_delta: 0.5 
+    goal_delta: 0.5
     cluster_range: 0.05
-    cluster_n: 1 # 1
+    cluster_n: 10 # 1
     merged_aabb: false
     refine_solution: True
   '*_integrator':
@@ -169,10 +169,10 @@ db-lacam:
     delta_0: 0.5
     goal_delta: 0.5
     num_primitives_0: 500
-    heuristic1_delta: 0.9
+    heuristic1_delta: 0.75 # 0.9
     heuristic1_num_primitives_0: 500 
     cluster_range: 0.05
-    cluster_n: 1 # or 4
+    cluster_n: 8 # or 1, 4
   '*alcove_unicycle':
     delta_0: 0.5
     num_primitives_0: 200 

@@ -260,7 +260,7 @@ MultiRobotTrajectory LaCAM::solve()
 
   std::cout << "per iteration: " << std::fixed << std::setprecision(3)
             << avg_ms << " ms\n";
-  std::cout << "cost: " << std::fixed << cost * 0.1 << std::endl;
+  std::cout << "cost: " << std::fixed << cost << std::endl;
   return solution;
 }
 // without rollout. h-vlaue is for the "expected state", but can diverge hugely with unicycle dynamics

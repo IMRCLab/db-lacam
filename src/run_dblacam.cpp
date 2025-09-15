@@ -214,7 +214,6 @@ int main(int argc, char *argv[])
   Expander expander(robots[0].get(), T_m, planner_options.alpha * planner_options.delta, /*add static motion*/ true); // false for integrator1
   // for LaCam
   std::vector<std::shared_ptr<AStarNode>> dbN_start;
-  std::map<int, double> dist_to_goal;
   for (size_t i = 0; i < robots.size(); i++)
   {
     dbN_start.push_back(std::make_shared<AStarNode>());
@@ -230,97 +229,108 @@ int main(int argc, char *argv[])
          planner_options.goal_delta); // don't change distance weights!
     DYNO_CHECK_GEQ(node->hScore, 0, "hScore should be positive");
     DYNO_CHECK_LEQ(node->hScore, 1e5, "hScore should be bounded");
-    // save distance to goal for subgroup generation
-    dist_to_goal[i] = robots[i]->distance(problem.starts[i], problem.goals[i]);
   }
-  // move map to a vector for sorting
-  std::vector<std::pair<int, double>> vec(dist_to_goal.begin(), dist_to_goal.end());
-  // sort descending by distance
-  std::sort(vec.begin(), vec.end(),
-            [](const std::pair<int, double> &a, const std::pair<int, double> &b)
-            {
-              return a.second > b.second;
-            });
-  // std::random_device rd;
-  // std::mt19937 g(rd());
-  // std::shuffle(vec.begin(), vec.end(), g);
-  // create subgroups of 2
-  std::vector<std::vector<int>> subgroups;
-  for (size_t i = 0; i < vec.size(); i += 2)
-  {
-    std::vector<int> group;
-    group.push_back(vec[i].first);
-    if (i + 1 < vec.size())
-      group.push_back(vec[i + 1].first);
-    subgroups.push_back(group);
-  }
-  // iterate over those subgroups updating the dynamic_obstacles - homogeneous
-  MultiRobotTrajectory solution;
-  solution.trajectories.resize(robots.size());
+  const auto deadline = Deadline(timelimit);
   MultiRobotTrajectory dynamic_obstacles;
-  dynobench::Problem problem_tmp;
-  problem_tmp.models_base_path = problem.models_base_path;
-  problem_tmp.obstacles = problem.obstacles;
-  problem_tmp.p_lb = problem.p_lb;
-  problem_tmp.p_ub = problem.p_ub;
-  std::vector<std::shared_ptr<AStarNode>> dbN_start_tmp;
-  std::vector<ompl::NearestNeighbors<std::shared_ptr<AStarNode>> *> heuristics_rev_tmp;
-  std::vector<std::shared_ptr<dynobench::Model_robot>> robots_tmp;
-  for (size_t i = 0; i < subgroups.size(); i++)
+  LaCAM lacam(problem, dbN_start, expander, heuristics_rev, planner_options, robots, time_planner, dynamic_obstacles, /*verbose*/ 1, &deadline);
+  MultiRobotTrajectory solution = lacam.solve();
+  if (solution.is_empty())
   {
-    auto now = std::chrono::steady_clock::now();
-    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time);
-    if (elapsed.count() >= timelimit)
-      break;
-    // clear for each subgroup
-    dbN_start_tmp.clear();
-    heuristics_rev_tmp.clear();
-    robots_tmp.clear();
-    problem_tmp.starts.clear();
-    problem_tmp.goals.clear();
-    problem_tmp.robotTypes.clear();
-    Time_planner time_planner_tmp;
-    const auto deadline_tmp = Deadline(timelimit - elapsed.count());
-    std::cout << "Subgroup " << i << ": ";
-    for (int id : subgroups[i])
-    {
-      std::cout << id << std::endl;
-      problem_tmp.starts.push_back(problem.starts[id]);
-      problem_tmp.goals.push_back(problem.goals[id]);
-      problem_tmp.robotTypes.push_back(problem.robotTypes[id]);
-      dbN_start_tmp.push_back(dbN_start[id]);
-      heuristics_rev_tmp.push_back(heuristics_rev[id]);
-      robots_tmp.push_back(robots[id]);
-    }
-    LaCAM lacam_tmp(problem_tmp, dbN_start_tmp, expander, heuristics_rev_tmp, planner_options, robots_tmp, time_planner_tmp, dynamic_obstacles, /*verbose*/ 1, &deadline_tmp);
-    MultiRobotTrajectory sub_solution = lacam_tmp.solve();
-    if (!sub_solution.is_empty())
-    {
-      int k = 0;
-      for (int j : subgroups[i])
-      {
-        solution.trajectories[j] = sub_solution.trajectories[k];
-        solution.trajectories[j].cost = sub_solution.trajectories[k].cost;
-        dynamic_obstacles.trajectories.push_back(sub_solution.trajectories[k]);
-        k++;
-      }
-    }
-    else
-    {
-      std::cout << "LaCAM failed for subgroup, found for " << dynamic_obstacles.trajectories.size() << std::endl;
-      return false;
-    }
+    std::cout << "LaCAM failed!" << std::endl;
+    return false;
   }
   auto end_time = std::chrono::steady_clock::now();
-  duration run_time = end_time - start_time;
-  std::cout << "Time taken (total): " << run_time.count() * 1000 << " ms" << std::endl;
-  double cost = solution.get_cost() * 0.1;
-  // time_planner.print();
+  duration first_run_time = end_time - start_time;
+  std::cout << "Time taken (total): " << first_run_time.count() * 1000 << " ms" << std::endl;
+  double cost = solution.get_cost();
+  time_planner.print();
   solution.to_yaml_format(outputFile.c_str()); // save just in case
   // save stats
   stats << "stats: " << "\n";
-  stats << "  - t: " << run_time.count() << "\n";
-  stats << "    cost: " << cost << "\n";
+  stats << "  - t: " << first_run_time.count() << "\n";
+  stats << "    cost: " << cost * 0.1 << "\n";
   stats.flush();
+
+  if (first_run_time.count() * 1000 < timelimit && planner_options.refine_solution)
+  {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::vector<int> all_ids(robots.size());
+    auto start_time_refine = std::chrono::steady_clock::now();
+    int k = 0;
+    while (true)
+    {
+      std::cout << "New Refine Itr" << std::endl;
+      auto now = std::chrono::steady_clock::now();
+      auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(first_run_time + (now - start_time_refine));
+      // check if timelimit exceeded
+      if (elapsed.count() >= timelimit)
+        break;
+      // create new problem for a run
+      dynamic_obstacles.trajectories.clear();
+      dynobench::Problem problem_tmp;
+      problem_tmp.models_base_path = problem.models_base_path;
+      problem_tmp.obstacles = problem.obstacles;
+      problem_tmp.p_lb = problem.p_lb;
+      problem_tmp.p_ub = problem.p_ub;
+      std::vector<std::shared_ptr<AStarNode>> dbN_start_tmp;
+      std::vector<ompl::NearestNeighbors<std::shared_ptr<AStarNode>> *> heuristics_rev_tmp;
+      std::vector<std::shared_ptr<dynobench::Model_robot>> robots_tmp;
+      Time_planner time_planner_tmp;
+      double old_cost = 0.;
+      const auto deadline_tmp = Deadline(timelimit - elapsed.count());
+      // randomly choose 2 distinct IDs
+      std::iota(all_ids.begin(), all_ids.end(), 0);
+      std::shuffle(all_ids.begin(), all_ids.end(), gen);
+      std::vector<int> ids_tmp(all_ids.begin(), all_ids.begin() + 2);
+      for (size_t i = 0; i < robots.size(); i++)
+      {
+        if (std::find(ids_tmp.begin(), ids_tmp.end(), i) != ids_tmp.end())
+        {
+          problem_tmp.starts.push_back(problem.starts[i]);
+          problem_tmp.goals.push_back(problem.goals[i]);
+          problem_tmp.robotTypes.push_back(problem.robotTypes[i]);
+          dbN_start_tmp.push_back(dbN_start[i]);
+          heuristics_rev_tmp.push_back(heuristics_rev[i]);
+          robots_tmp.push_back(robots[i]);
+          old_cost += solution.trajectories[i].cost;
+          std::cout << "robot " << i << std::endl;
+        }
+        else
+          dynamic_obstacles.trajectories.push_back(solution.trajectories[i]);
+      }
+      LaCAM lacam_tmp(problem_tmp, dbN_start_tmp, expander, heuristics_rev_tmp, planner_options, robots_tmp, time_planner_tmp, dynamic_obstacles, /*verbose*/ 1, &deadline_tmp);
+      // save stats
+      MultiRobotTrajectory tmp_solution = lacam_tmp.solve();
+      // k++;
+      if (!tmp_solution.is_empty())
+      {
+        double new_cost = tmp_solution.get_cost();
+        std::cout << "old cost: " << old_cost << std::endl;
+        std::cout << "new cost: " << new_cost << std::endl;
+        if (new_cost < old_cost)
+        {
+          std::cout << "Refined returns a better solution" << std::endl;
+          auto now_tmp = std::chrono::steady_clock::now();
+          size_t i = 0;
+          for (auto &traj : tmp_solution.trajectories)
+          {
+            solution.trajectories[ids_tmp[i]] = traj;
+            i++;
+          }
+          duration ref_time = now_tmp - start_time;
+          cost = solution.get_cost();
+          stats << "  - t: " << ref_time.count() << "\n";
+          stats << "    cost: " << cost * 0.1 << "\n";
+          stats.flush();
+          solution.to_yaml_format(outputFile.c_str()); // save just in case
+          // std::string filename_id =
+          // "../results/traj_db_" + std::to_string(k) + ".yaml";
+          // solution.to_yaml_format(filename_id.c_str()); // save just in case
+          // k++;
+        }
+      }
+    }
+  }
   return 0;
 }

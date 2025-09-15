@@ -214,6 +214,8 @@ int main(int argc, char *argv[])
   Expander expander(robots[0].get(), T_m, planner_options.alpha * planner_options.delta, /*add static motion*/ true); // false for integrator1
   // for LaCam
   std::vector<std::shared_ptr<AStarNode>> dbN_start;
+  std::vector<double> lower_bound_costs;
+  std::vector<double> ratios;
   for (size_t i = 0; i < robots.size(); i++)
   {
     dbN_start.push_back(std::make_shared<AStarNode>());
@@ -227,6 +229,7 @@ int main(int argc, char *argv[])
     node->reaches_goal =
         (robots[i]->distance(problem.starts[i], problem.goals[i]) <=
          planner_options.goal_delta); // don't change distance weights!
+    lower_bound_costs.push_back(node->hScore);
     DYNO_CHECK_GEQ(node->hScore, 0, "hScore should be positive");
     DYNO_CHECK_LEQ(node->hScore, 1e5, "hScore should be bounded");
   }
@@ -277,12 +280,19 @@ int main(int argc, char *argv[])
       std::vector<ompl::NearestNeighbors<std::shared_ptr<AStarNode>> *> heuristics_rev_tmp;
       std::vector<std::shared_ptr<dynobench::Model_robot>> robots_tmp;
       Time_planner time_planner_tmp;
+      // Option 1: randomly choose 2 distinct IDs
+      // std::iota(all_ids.begin(), all_ids.end(), 0);
+      // std::shuffle(all_ids.begin(), all_ids.end(), gen);
+      // std::vector<int> ids_tmp(all_ids.begin(), all_ids.begin() + 2);
+
+      // Option 2: pick based on ratio = actual_cost / lower_bound_cost
+      for (size_t j = 0; j < robots.size(); j++)
+      {
+        ratios.push_back(solution.trajectories[j].cost / lower_bound_costs[j]);
+      }
+      std::vector<int> ids_tmp = pick_subset_robots(ratios, /*N*/ 2, gen);
       double old_cost = 0.;
       const auto deadline_tmp = Deadline(timelimit - elapsed.count());
-      // randomly choose 2 distinct IDs
-      std::iota(all_ids.begin(), all_ids.end(), 0);
-      std::shuffle(all_ids.begin(), all_ids.end(), gen);
-      std::vector<int> ids_tmp(all_ids.begin(), all_ids.begin() + 2);
       for (size_t i = 0; i < robots.size(); i++)
       {
         if (std::find(ids_tmp.begin(), ids_tmp.end(), i) != ids_tmp.end())

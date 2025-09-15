@@ -285,3 +285,5 @@ struct Time_planner
 double action_seq_distance(const std::vector<Eigen::VectorXd> &A, const std::vector<Eigen::VectorXd> &B);
 std::vector<std::vector<Eigen::VectorXd>> filter_diverse(const std::vector<std::vector<Eigen::VectorXd>> &candidates,
                                                          double eps);
+std::vector<int> pick_subset_robots(
+    const std::vector<double> &ratios, int N, std::mt19937 &gen);

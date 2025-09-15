@@ -145,3 +145,23 @@ std::vector<std::vector<Eigen::VectorXd>> filter_diverse(const std::vector<std::
   }
   return diverse;
 }
+// weighted sampling for probabilistic selection of N robots for LNS
+std::vector<int> pick_subset_robots(
+    const std::vector<double> &ratios, int N, std::mt19937 &gen)
+{
+  std::vector<std::pair<double, int>> keys;
+  for (size_t i = 0; i < ratios.size(); ++i)
+  {
+    double u = std::generate_canonical<double, 10>(gen);
+    double key = -std::log(u) / ratios[i];
+    keys.emplace_back(key, i);
+  }
+
+  std::partial_sort(keys.begin(), keys.begin() + N, keys.end());
+
+  std::vector<int> result(N);
+  for (int i = 0; i < N; ++i)
+    result[i] = keys[i].second;
+
+  return result;
+}

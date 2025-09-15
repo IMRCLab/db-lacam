@@ -290,7 +290,9 @@ int main(int argc, char *argv[])
       {
         ratios.push_back(solution.trajectories[j].cost / lower_bound_costs[j]);
       }
-      std::vector<int> ids_tmp = pick_subset_robots(ratios, /*N*/ 2, gen);
+      std::uniform_int_distribution<> dist(1, robots.size());
+      const auto num_refine_robots = std::max(1, std::min(dist(gen), int(robots.size() / 2)));
+      std::vector<int> ids_tmp = pick_subset_robots(ratios, /*N*/ num_refine_robots, gen);
       double old_cost = 0.;
       const auto deadline_tmp = Deadline(timelimit - elapsed.count());
       for (size_t i = 0; i < robots.size(); i++)

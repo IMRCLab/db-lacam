@@ -111,7 +111,6 @@ bool db_PIBT::funcPIBT(size_t robot_id,
   // std::cout << "robot " << robot_id << " start state: " << now_state.format(dynobench::FMT) << std::endl;
   RobotData robot_data = robot_data_rolled[robot_id];
   bool success;
-  // std::cout << "robot " << robot_id << " trajs size: " << robot_data.trajectories.size() << std::endl;
   for (size_t i = 0; i < robot_data.trajectories.size(); i++)
   {
     // std::cout << "robot " << robot_id << " motion: " << i << std::endl;

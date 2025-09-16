@@ -423,7 +423,7 @@ void LaCAM::get_applicable_trajs_precise_no_clustering(std::shared_ptr<AStarNode
 // exhaustive, does check all motions for collision, clustering
 void LaCAM::get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id)
 {
-  std::cout << "robot " << robot_id << " get applicable trajs" << std::endl;
+  // std::cout << "robot " << robot_id << " get applicable trajs" << std::endl;
   // clear
   tmp_lazy_trajs.clear();
   tmp_traj_wrappers.clear();
@@ -442,9 +442,9 @@ void LaCAM::get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> d
     num_valid_states = -1;
     lazy_traj.compute(tmp_traj_wrapper, /*forward*/ true, /*check_state*/ &ff,
                       &num_valid_states);
-    if (num_valid_states && num_valid_states < 1)
+    if (num_valid_states < 1)
     {
-      std::cout << "num_valid_states failed" << std::endl;
+      // std::cout << "num_valid_states failed" << std::endl;
       continue;
     }
     if (num_valid_states < lazy_traj.motion->traj.states.size())
@@ -472,7 +472,7 @@ void LaCAM::get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> d
                                                                               &num_valid_states); });
     if (num_valid_states && num_valid_states < xs.size())
     {
-      std::cout << "rollout, state violations" << std::endl;
+      // std::cout << "rollout, state violations" << std::endl;
       continue;
     }
     dynobench::Trajectory traj;
@@ -502,12 +502,12 @@ void LaCAM::get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> d
     last_state_h = h_funs[robot_id]->h(traj.goal);
     if (last_state_h == -1.0)
     {
-      std::cout << "using EST for h-value" << std::endl;
+      // std::cout << "using EST for h-value" << std::endl;
       est(traj.goal, problem, planner_options, robots[robot_id], robot_id, last_state_h,
           heuristics_nn[robot_id], nullptr, *heuristics[robot_id], /*reverse search*/ false);
       if (last_state_h == -1.0)
       {
-        std::cout << "EST failed to give h-value, skipping the motion" << std::endl;
+        // std::cout << "EST failed to give h-value, skipping the motion" << std::endl;
         continue;
       }
     }
@@ -518,7 +518,7 @@ void LaCAM::get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> d
       max_h = last_state_h;
   }
   // std::cout << "tmp data traj size: " << tmp_data.trajectories.size() << std::endl;
-  robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ planner_options.cluster_range, min_h, max_h, planner_options.cluster_n, /*shuffle*/ false);
+  robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ planner_options.cluster_range, min_h, max_h, planner_options.cluster_n, /*shuffle*/ planner_options.cluster_shuffle);
 }
 // OPTION 3: sort actions based on epsilon
 void LaCAM::get_applicable_trajs_precise_sort_actions(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id)
@@ -720,6 +720,12 @@ RobotData LaCAM::GetTopNPerClusterByH(const RobotData &input, double range, doub
   // Handle final cluster
   if (!current_cluster.empty())
   {
+    if (shuffle)
+    {
+      std::random_device rd;
+      std::mt19937 gen(rd());
+      std::shuffle(current_cluster.begin(), current_cluster.end(), gen);
+    }
     size_t take = std::min(N, current_cluster.size());
     for (size_t i = 0; i < take; ++i)
     {
@@ -728,8 +734,8 @@ RobotData LaCAM::GetTopNPerClusterByH(const RobotData &input, double range, doub
       result.last_state_g.push_back(current_cluster[i].g);
     }
   }
-  if (shuffle)
-    result.shuffle();
+  // if (shuffle)
+  //   result.shuffle();
   return result;
 }
 

@@ -90,18 +90,18 @@ def main():
     # "circle6_integrator",
     # "circle8_integrator",
     # "circle10_integrator",
-    # "circle2_unicycle",
-    # "circle4_unicycle",
-    # "circle6_unicycle",
-    # "circle8_unicycle",
-    # "circle10_unicycle",
-    # "alcove_unicycle",
-    # "atgoal_unicycle",
-    # # 3D case
-    # "forest4",
-    # "corridor4",
-    # "circle6",
-    # "circle7_swap",
+    "circle2_unicycle",
+    "circle4_unicycle",
+    "circle6_unicycle",
+    "circle8_unicycle",
+    "circle10_unicycle",
+    "alcove_unicycle",
+    "atgoal_unicycle",
+    # 3D case
+    "forest4",
+    "corridor4",
+    "circle6",
+    "circle7_swap",
   ]
   for kind in ["unicycle","unicycle_sphere"]: 
     for n in [8]:
@@ -111,9 +111,9 @@ def main():
   instances_3d = ["forest4", "wall4", "corridor4", "circle6", "circle7_swap"] 
 
   algs = [
-    # "db-cbs",
-    # "db-ecbs",
-    # "db-pibt",
+    "db-cbs",
+    "db-ecbs",
+    "db-pibt",
     "db-lacam",
   ]
   trials = 1 * 5

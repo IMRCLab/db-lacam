@@ -2,7 +2,7 @@
 
 #include <string>
 #include <vector>
-#include <boost/program_options.hpp>                             
+#include <boost/program_options.hpp>
 
 struct Planner_options
 {
@@ -29,6 +29,7 @@ struct Planner_options
   size_t cluster_n = 8;          // number of elements per cluster to return
   bool merged_aabb = false;      // some problems don't work with merged aabb
   bool refine_solution = false;  // refined the solution using 1) Large Neighborhood Search
+  bool cluster_shuffle = false;  // shuffle each subcluster
 
   void print() const
   {
@@ -40,6 +41,7 @@ struct Planner_options
     std::cout << "  max_motions: " << max_motions << "\n";
     std::cout << "  cluster_range: " << cluster_range << "\n";
     std::cout << "  cluster_n: " << cluster_n << "\n";
+    std::cout << "  cluster_shuffle: " << cluster_shuffle << "\n";
     std::cout << "  merged aabb: " << merged_aabb << "\n";
     std::cout << "***" << std::endl;
   }

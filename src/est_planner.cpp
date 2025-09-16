@@ -180,7 +180,7 @@ void est(const Eigen::VectorXd &state,
     }
     if (distance_to_goal < planner_options.goal_delta)
     {
-      std::cout << "State reached the goal" << std::endl;
+      // std::cout << "State reached the goal" << std::endl;
       status = Terminate_status::SOLVED;
       success = true;
       if (reverse_search)
@@ -252,7 +252,7 @@ void est(const Eigen::VectorXd &state,
       if (robot->distance(tmp_mid_state, problem.goals[robot_id]) < planner_options.goal_delta)
       {
         status = Terminate_status::SOLVED;
-        std::cout << "MID state reached the goal" << std::endl;
+        // std::cout << "MID state reached the goal" << std::endl;
         // put path nodes to heuristic
         auto mid_node = std::make_shared<AStarNode>();
         mid_node->state_eig = tmp_mid_state;

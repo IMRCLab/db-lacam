@@ -148,18 +148,19 @@ db-pibt:
     cluster_n: 1
 db-lacam:
   default:
-    delta_0: 0.9 # 0.01 for grid
+    delta_0: 0.5 # 0.01 for grid
     num_primitives_0: 300 
     alpha: 0.5 # 0.01 for grid
     filter_duplicates: True
     heuristic1: "reverse-search" 
     heuristic1_delta: 0.9
     heuristic1_num_primitives_0: 300 
-    goal_delta: 0.5
-    cluster_range: 0.05
-    cluster_n: 1 
+    goal_delta: 0.75
+    cluster_range: 0.02
+    cluster_n: 2
+    cluster_shuffle: True
+    refine_solution: false
     merged_aabb: false
-    refine_solution: True
   '*_integrator':
     delta_0: 0.5
     num_primitives_0: 200 
@@ -171,34 +172,38 @@ db-lacam:
     num_primitives_0: 500
     heuristic1_delta: 0.9
     heuristic1_num_primitives_0: 500 
-    cluster_range: 0.05
-    cluster_n: 1
+    cluster_range: 0.02 # 0.01
+    cluster_n: 2 # 1
+    cluster_shuffle: True
   '*alcove_unicycle':
     delta_0: 0.5
     num_primitives_0: 200 
     heuristic1_delta: 0.9
     heuristic1_num_primitives_0: 200
     goal_delta: 0.75
-    cluster_range: 0.05
-    cluster_n: 8 # or 4
+    cluster_range: 0.02 # 0.05
+    cluster_n: 2 # or 8
     merged_aabb: false
+    cluster_shuffle: True
   '*atgoal_unicycle':
     delta_0: 0.5
     num_primitives_0: 200 
     heuristic1_delta: 0.9
     heuristic1_num_primitives_0: 200 
     goal_delta: 0.75
-    cluster_range: 0.05
-    cluster_n: 8
+    cluster_range: 0.02 # 0.05
+    cluster_n: 2 # 8
     merged_aabb: false
+    cluster_shuffle: True
   '*forest4':
     delta_0: 0.5
     goal_delta: 0.75
-    num_primitives_0: 200 
+    num_primitives_0: 200 # 300 
     heuristic1_delta: 0.9
-    heuristic1_num_primitives_0: 300 
-    cluster_range: 0.05
-    cluster_n: 8
+    heuristic1_num_primitives_0: 200 # 300
+    cluster_range: 0.02 # 0.05
+    cluster_n: 2 # 8
+    cluster_shuffle: True
   '*wall4':
     delta_0: 0.3
     num_primitives_0: 300 
@@ -206,6 +211,7 @@ db-lacam:
     heuristic1_num_primitives_0: 200 
     cluster_range: 0.05
     cluster_n: 8
+    cluster_shuffle: false
   '*corridor4':
     delta_0: 0.3
     goal_delta: 0.5
@@ -214,6 +220,7 @@ db-lacam:
     heuristic1_num_primitives_0: 300 
     cluster_range: 0.05
     cluster_n: 2 # or 1
+    cluster_shuffle: false
   '*circle6':
     delta_0: 0.3 
     num_primitives_0: 300
@@ -223,6 +230,7 @@ db-lacam:
     goal_delta: 0.5
     cluster_range: 0.05
     cluster_n: 4
+    cluster_shuffle: false
   '*circle7_swap':
     delta_0: 0.3 
     num_primitives_0: 500
@@ -232,5 +240,6 @@ db-lacam:
     goal_delta: 0.5
     cluster_range: 0.05
     cluster_n: 4 # or 8
+    cluster_shuffle: false
 
   

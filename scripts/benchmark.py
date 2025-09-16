@@ -111,12 +111,12 @@ def main():
   instances_3d = ["forest4", "wall4", "corridor4", "circle6", "circle7_swap"] 
 
   algs = [
-    "db-cbs",
-    "db-ecbs",
-    "db-pibt",
+    # "db-cbs",
+    # "db-ecbs",
+    # "db-pibt",
     "db-lacam",
   ]
-  trials = 1 * 5
+  trials = 1 * 1
   timelimit_2d = 1 * 60 
   timelimit_3d = 1 * 60 # 5 
   timelimit_max = 0 # plot needs higher timelimit

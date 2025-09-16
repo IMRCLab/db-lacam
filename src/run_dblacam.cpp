@@ -102,7 +102,7 @@ int main(int argc, char *argv[])
   planner_options.goal_delta = cfg["goal_delta"].as<float>();
   planner_options.cluster_range = cfg["cluster_range"].as<double>();
   planner_options.cluster_n = cfg["cluster_n"].as<size_t>();
-  planner_options.cluster_shuffle = cfg["cluster_shuffle"].as<size_t>();
+  planner_options.cluster_shuffle = cfg["cluster_shuffle"].as<bool>();
   planner_options.merged_aabb = cfg["merged_aabb"].as<bool>();
   planner_options.refine_solution = cfg["refine_solution"].as<bool>();
   planner_options.print();

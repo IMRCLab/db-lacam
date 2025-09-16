@@ -5,6 +5,12 @@
 #include "db_pibt.hpp"
 #include "est_planner.hpp"
 
+bool LaCAM::ANYTIME = false;
+float LaCAM::RANDOM_INSERT_PROB1 = 4 * 0.001; // 4 within 1000 runs
+float LaCAM::RANDOM_INSERT_PROB2 = 4 * 0.001; // 4 within 1000 runs
+std::mt19937 MT(std::random_device{}());
+std::uniform_real_distribution<double> rrd(0.0, 1.0);
+
 LNode::LNode() : who(), where(), where_state(), where_dbN(), depth(0) {}
 
 LNode::LNode(LNode *parent, int i, dynobench::Trajectory v, Eigen::VectorXd v_s, std::shared_ptr<AStarNode> v_dbN)
@@ -123,6 +129,20 @@ MultiRobotTrajectory LaCAM::solve()
     {
       return solution;
     }
+    if (H_goal != nullptr)
+    {
+      auto r = rrd(MT);
+      if (r < RANDOM_INSERT_PROB1)
+      {
+        std::cout << "Random Insert" << std::endl;
+        OPEN.push_front(H_init);
+      }
+      else if (r < RANDOM_INSERT_PROB2)
+      {
+        auto H = OPEN[get_random_int(MT, 0, OPEN.size() - 1)];
+        OPEN.push_front(H);
+      }
+    }
     // do not pop here!
     auto H = OPEN.front(); // high-level node
     invalid_node = false;
@@ -136,7 +156,9 @@ MultiRobotTrajectory LaCAM::solve()
       {
         H_goal = H;
         solver_info(2, "found solution!");
-        break;
+        if (!ANYTIME)
+          break;
+        continue;
       }
     // extract constraints
     if (H->search_tree.empty())
@@ -197,22 +219,30 @@ MultiRobotTrajectory LaCAM::solve()
     if (!res)
       continue;
     H->M_to = M_to;
-    if (EXPLORED.find(Q_to) != EXPLORED.end())
+    auto iter = EXPLORED.find(Q_to);
+    if (iter == EXPLORED.end())
     {
-      std::cout << "Config is already explored, reinserting the node!" << std::endl;
-      OPEN.push_front(H);
-      continue;
-    }
-    // always add the node
-    if (EXPLORED.find(Q_to) == EXPLORED.end())
-    {
+      // new one -> insert
       order.clear();
       order = get_sorted_order(robots, Q_to, problem.goals);
       h_id++;
-      // H->M_to = M_to;
       auto H_new = new HNode(h_id, Q_to, dbN_to, order, H);
       OPEN.push_front(H_new);
       EXPLORED[H_new->Q] = H_new;
+    }
+    else
+    {
+      // known configuration
+      std::cout << "Config is already explored!" << std::endl;
+      if (rrd(MT) >= RANDOM_INSERT_PROB1)
+      {
+        OPEN.push_front(iter->second); // usual
+      }
+      else
+      {
+        solver_info(3, "random restart");
+        OPEN.push_front(H_init); // sometimes
+      }
     }
   }
   if (OPEN.empty())
@@ -502,12 +532,10 @@ void LaCAM::get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> d
     last_state_h = h_funs[robot_id]->h(traj.goal);
     if (last_state_h == -1.0)
     {
-      // std::cout << "using EST for h-value" << std::endl;
       est(traj.goal, problem, planner_options, robots[robot_id], robot_id, last_state_h,
           heuristics_nn[robot_id], nullptr, *heuristics[robot_id], /*reverse search*/ false);
       if (last_state_h == -1.0)
       {
-        // std::cout << "EST failed to give h-value, skipping the motion" << std::endl;
         continue;
       }
     }
@@ -517,7 +545,6 @@ void LaCAM::get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> d
     if (last_state_h > max_h)
       max_h = last_state_h;
   }
-  // std::cout << "tmp data traj size: " << tmp_data.trajectories.size() << std::endl;
   robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ planner_options.cluster_range, min_h, max_h, planner_options.cluster_n, /*shuffle*/ planner_options.cluster_shuffle);
 }
 // OPTION 3: sort actions based on epsilon

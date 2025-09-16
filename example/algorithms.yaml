@@ -149,17 +149,17 @@ db-pibt:
 db-lacam:
   default:
     delta_0: 0.5 # 0.01 for grid
-    num_primitives_0: 300 
+    num_primitives_0: 500 
     alpha: 0.5 # 0.01 for grid
     filter_duplicates: True
     heuristic1: "reverse-search" 
     heuristic1_delta: 0.9
-    heuristic1_num_primitives_0: 300 
-    goal_delta: 0.75
-    cluster_range: 0.02
-    cluster_n: 2
-    cluster_shuffle: True
-    refine_solution: false
+    heuristic1_num_primitives_0: 500 
+    goal_delta: 0.5
+    cluster_range: 0.05
+    cluster_n: 1
+    cluster_shuffle: false
+    refine_solution: True
     merged_aabb: false
   '*_integrator':
     delta_0: 0.5
@@ -167,14 +167,14 @@ db-lacam:
     heuristic1_delta: 0.5
     heuristic1_num_primitives_0: 100
   '*_unicycle_sphere':
-    delta_0: 0.9 # 0.5
+    delta_0: 0.5
     goal_delta: 0.5
     num_primitives_0: 500
     heuristic1_delta: 0.9
     heuristic1_num_primitives_0: 500 
-    cluster_range: 0.02 # 0.01
-    cluster_n: 2 # 1
-    cluster_shuffle: True
+    cluster_range: 0.05
+    cluster_n: 1
+    cluster_shuffle: false
   '*alcove_unicycle':
     delta_0: 0.5
     num_primitives_0: 200 
@@ -241,5 +241,23 @@ db-lacam:
     cluster_range: 0.05
     cluster_n: 4 # or 8
     cluster_shuffle: false
+  '*gen_p10_n8_5_unicycle sphere':
+    delta_0: 0.5 
+    goal_delta: 0.5
+    num_primitives_0: 500
+    heuristic1_delta: 0.9
+    heuristic1_num_primitives_0: 500 
+    cluster_range: 0.02 
+    cluster_n: 2 
+    cluster_shuffle: True
+  '*gen_p10_n8_9_unicycle_sphere':
+    delta_0: 0.5 
+    goal_delta: 0.5
+    num_primitives_0: 500
+    heuristic1_delta: 0.9
+    heuristic1_num_primitives_0: 500 
+    cluster_range: 0.02 
+    cluster_n: 2 
+    cluster_shuffle: True
 
   

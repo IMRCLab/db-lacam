@@ -88,6 +88,10 @@ struct LaCAM
   int loop_cnt;
   std::vector<int> order;
   std::map<size_t, std::vector<dynobench::Trajectory>> expanded_trajs; // MRS case
+  // hyperparameters
+  static float RANDOM_INSERT_PROB1;
+  static float RANDOM_INSERT_PROB2;
+  static bool ANYTIME;
 
   LaCAM(const dynobench::Problem _problem,
         std::vector<std::shared_ptr<AStarNode>> _dbNodes,

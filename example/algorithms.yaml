@@ -201,8 +201,8 @@ db-lacam:
     num_primitives_0: 200 # 300 
     heuristic1_delta: 0.9
     heuristic1_num_primitives_0: 200 # 300
-    cluster_range: 0.02 # 0.05
-    cluster_n: 2 # 8
+    cluster_range: 0.05
+    cluster_n: 8
     cluster_shuffle: True
   '*wall4':
     delta_0: 0.3
@@ -216,7 +216,7 @@ db-lacam:
     delta_0: 0.3
     goal_delta: 0.5
     num_primitives_0: 300 
-    heuristic1_delta: 0.5 # 0.9
+    heuristic1_delta: 0.9
     heuristic1_num_primitives_0: 300 
     cluster_range: 0.05
     cluster_n: 2 # or 1

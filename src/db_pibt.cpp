@@ -92,32 +92,35 @@ bool db_PIBT::funcPIBT(size_t robot_id,
   std::cout << "Calling dbPIBT for robot " << robot_id << ", PI: " << pi << std::endl;
   Eigen::VectorXd now_state = Q_from[robot_id];
   // if the robot reaches the goal and no request to move, then stay in place
-  // if (!pi && dbN_from[robot_id]->reaches_goal)
-  // {
-  //   Q_to[robot_id] = now_state;
-  //   dbN_to[robot_id]->state_eig = now_state;
-  //   dbN_to[robot_id]->gScore = dbN_from[robot_id]->gScore;
-  //   dbN_to[robot_id]->hScore = dbN_from[robot_id]->hScore;
-  //   dynobench::Trajectory traj_fake;
-  //   int N = robot_data_rolled[robot_id].trajectories[0].states.size();
-  //   std::vector<Eigen::VectorXd> xs(N, now_state);
-  //   std::vector<Eigen::VectorXd> us(N - 1,
-  //                                   Eigen::VectorXd::Zero(robots[robot_id]->nu));
-  //   traj_fake.states = xs;
-  //   traj_fake.actions = us;
-  //   M_to[robot_id] = traj_fake;
-  //   return true;
-  // }
-  // std::cout << "robot " << robot_id << " start state: " << now_state.format(dynobench::FMT) << std::endl;
+  if (!pi && dbN_from[robot_id]->reaches_goal)
+  {
+    Q_to[robot_id] = now_state;
+    dbN_to[robot_id]->state_eig = now_state;
+    dbN_to[robot_id]->gScore = dbN_from[robot_id]->gScore;
+    dbN_to[robot_id]->hScore = dbN_from[robot_id]->hScore;
+    dynobench::Trajectory traj_fake;
+    int N = robot_data_rolled[robot_id].trajectories[0].states.size();
+    std::vector<Eigen::VectorXd> xs(N, now_state);
+    std::vector<Eigen::VectorXd> us(N - 1,
+                                    Eigen::VectorXd::Zero(robots[robot_id]->nu));
+    traj_fake.states = xs;
+    traj_fake.actions = us;
+    M_to[robot_id] = traj_fake;
+    return true;
+  }
   RobotData robot_data = robot_data_rolled[robot_id];
   bool success;
+  std::cout << "robot " << robot_id << " start: " << now_state.format(dynobench::FMT) << std::endl;
   for (size_t i = 0; i < robot_data.trajectories.size(); i++)
   {
-    // std::cout << "robot " << robot_id << " motion: " << i << std::endl;
+    std::cout << "robot " << robot_id << " motion " << i << std::endl;
     dynobench::Trajectory traj = robot_data.trajectories[i];
-
     // check for collision with planned robots
     Eigen::VectorXd next_state = traj.states.back();
+    // deadlock prevent - if the robot did not reach the goal and pi=false, then no need to stay in place
+    if (!pi && !dbN_from[robot_id]->reaches_goal && next_state.isApprox(dbN_from[robot_id]->state_eig, 1e-5))
+      continue;
+
     bool valid = false;
     time_planner.time_collision_with_planned += timed_fun_void([&]
                                                                { valid = is_motion_valid(robot_id, traj, M_to); });
@@ -164,7 +167,7 @@ bool db_PIBT::funcPIBT(size_t robot_id,
     }
     if (!success)
       continue;
-    // std::cout << "robot " << robot_id << " end state: " << next_state.format(dynobench::FMT) << std::endl;
+    std::cout << "robot " << robot_id << " end: " << next_state.format(dynobench::FMT) << std::endl;
     return true;
   }
   // if no motion was applicable, then the robot does not move

@@ -173,6 +173,36 @@ struct RobotData
     last_state_g = std::move(shuffled_g);
     last_state_h = std::move(shuffled_h);
   }
+  // bad motions leading to livelock
+  bool remove_motion(const dynobench::Trajectory &traj)
+  {
+    auto same_states = [](const std::vector<Eigen::VectorXd> &a,
+                          const std::vector<Eigen::VectorXd> &b)
+    {
+      if (a.size() != b.size())
+        return false;
+      for (size_t i = 0; i < a.size(); i++)
+      {
+        if (!a[i].isApprox(b[i]))
+          return false;
+      }
+      return true;
+    };
+
+    for (size_t i = 0; i < trajectories.size(); i++)
+    {
+      if (same_states(trajectories[i].states, traj.states))
+      {
+        // erase corresponding elements
+        trajectories.erase(trajectories.begin() + i);
+        last_state_g.erase(last_state_g.begin() + i);
+        last_state_h.erase(last_state_h.begin() + i);
+        return true; // found and removed
+      }
+    }
+    return false; // not found
+  }
+
   void sort_by_h()
   {
     size_t N = last_state_h.size();

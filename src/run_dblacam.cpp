@@ -137,7 +137,7 @@ int main(int argc, char *argv[])
   else if (problem.robotTypes[0] == "integrator2_3d_v0")
   {
     // motionsFile = "../new_format_motions/integrator2_3d_v0/spread/integrator2_3d_v0.bin.im.bin.sp.bin";
-    motionsFile = "../new_format_motions/integrator2_3d_v0/short/integrator2_3d_v0.bin.im.bin.sp.bin";
+    motionsFile = "../new_format_motions/integrator2_3d_v0/short4/integrator2_3d_v0.bin.im.bin.sp.bin";
     use_nn = true;
   }
   else
@@ -315,7 +315,6 @@ int main(int argc, char *argv[])
       LaCAM lacam_tmp(problem_tmp, dbN_start_tmp, expander, heuristics_rev_tmp, planner_options, robots_tmp, time_planner_tmp, dynamic_obstacles, /*verbose*/ 1, &deadline_tmp);
       // save stats
       MultiRobotTrajectory tmp_solution = lacam_tmp.solve();
-      // k++;
       if (!tmp_solution.is_empty())
       {
         double new_cost = tmp_solution.get_cost();
@@ -337,10 +336,6 @@ int main(int argc, char *argv[])
           stats << "    cost: " << cost * 0.1 << "\n";
           stats.flush();
           solution.to_yaml_format(outputFile.c_str()); // save just in case
-          // std::string filename_id =
-          // "../results/traj_db_" + std::to_string(k) + ".yaml";
-          // solution.to_yaml_format(filename_id.c_str()); // save just in case
-          // k++;
         }
       }
     }

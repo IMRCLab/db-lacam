@@ -156,10 +156,10 @@ db-lacam:
     heuristic1: "reverse-search" 
     heuristic1_delta: 0.9
     heuristic1_num_primitives_0: 500 
-    cluster_range: 0.1
+    cluster_range: 0.05
     cluster_n: 1
     cluster_shuffle: false
-    refine_solution: false
+    refine_solution: True
     merged_aabb: false
   '*_integrator':
     delta_0: 0.5

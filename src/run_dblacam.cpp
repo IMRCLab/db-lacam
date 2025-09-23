@@ -137,7 +137,7 @@ int main(int argc, char *argv[])
   else if (problem.robotTypes[0] == "integrator2_3d_v0")
   {
     // motionsFile = "../new_format_motions/integrator2_3d_v0/spread/integrator2_3d_v0.bin.im.bin.sp.bin";
-    motionsFile = "../new_format_motions/integrator2_3d_v0/short4/integrator2_3d_v0.bin.im.bin.sp.bin";
+    motionsFile = "../new_format_motions/integrator2_3d_v0/short/integrator2_3d_v0.bin.im.bin.sp.bin";
     use_nn = true;
   }
   else

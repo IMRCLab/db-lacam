@@ -109,6 +109,8 @@ def main():
     "corridor4",
     "circle6",
     "circle7_swap",
+    "passage6",
+    # "passage10",
   ]
   for kind in ["unicycle","unicycle_sphere"]: 
     for n in [8]:

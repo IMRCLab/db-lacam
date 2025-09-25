@@ -1,19 +1,19 @@
 environment:
   min: [0, 0, 0]
   max: [6, 5, 2]
-  obstacles:
-    - type: box # 1
-      center: [4., 4.]
-      size: [0.5, 0.5]
-    - type: box # 2
-      center: [7., 4.]
-      size: [0.5, 0.5]
-    - type: box # 3
-      center: [4., 7.]
-      size: [0.5, 0.5]
-    - type: box # 4
-      center: [7., 7.]
-      size: [0.5, 0.5]
+  obstacles: []
+    # - type: box # 1
+    #   center: [4., 4.]
+    #   size: [0.5, 0.5]
+    # - type: box # 2
+    #   center: [7., 4.]
+    #   size: [0.5, 0.5]
+    # - type: box # 3
+    #   center: [4., 7.]
+    #   size: [0.5, 0.5]
+    # - type: box # 4
+    #   center: [7., 7.]
+    #   size: [0.5, 0.5]
 robots:
   - type: integrator2_3d_v0 
     start: [1, 1, 0.5, 0,0,0] 

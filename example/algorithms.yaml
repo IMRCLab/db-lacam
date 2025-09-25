@@ -203,55 +203,42 @@ db-lacam:
     heuristic1_delta: 0.9
     heuristic1_num_primitives_0: 200 # 300
     cluster_range: 0.05
-    cluster_n: 8
-    cluster_shuffle: True
-  '*wall4':
-    delta_0: 0.3
-    num_primitives_0: 300 
-    heuristic1_delta: 0.9
-    heuristic1_num_primitives_0: 200 
-    cluster_range: 0.05
-    cluster_n: 8
-    cluster_shuffle: false
+    cluster_n: 1
   '*corridor4':
-    delta_0: 0.3
-    goal_delta: 0.5
+    delta_0: 0.5
+    goal_delta: 0.9
     num_primitives_0: 300 
     heuristic1_delta: 0.9
     heuristic1_num_primitives_0: 300 
     cluster_range: 0.05
-    cluster_n: 2 # or 1
-    cluster_shuffle: false
+    cluster_n: 1
   '*circle6':
-    delta_0: 0.3 
+    delta_0: 0.5 
     num_primitives_0: 300
     alpha: 0.5
     heuristic1_delta: 0.9
     heuristic1_num_primitives_0: 300 
     goal_delta: 0.5
-    cluster_range: 0.05
-    cluster_n: 4
-    cluster_shuffle: false
+    cluster_range: 0.1
+    cluster_n: 1
   '*circle7_swap':
-    delta_0: 0.3 
-    num_primitives_0: 500
+    delta_0: 0.5 
+    num_primitives_0: 300
     alpha: 0.5
     heuristic1_delta: 0.9
-    heuristic1_num_primitives_0: 500 
+    heuristic1_num_primitives_0: 300 
     goal_delta: 0.5
-    cluster_range: 0.05
-    cluster_n: 4 # or 8
-    cluster_shuffle: false
-  '*passage4':
+    cluster_range: 0.1
+    cluster_n: 1
+  '*passage':
     delta_0: 0.5 
-    num_primitives_0: 500
+    num_primitives_0: 300
     alpha: 0.5
-    heuristic1_delta: 0.5
-    heuristic1_num_primitives_0: 500 
+    heuristic1_delta: 0.9
+    heuristic1_num_primitives_0: 300 
     goal_delta: 0.5
-    cluster_range: 0.05
-    cluster_n: 2
-    cluster_shuffle: false
+    cluster_range: 0.1
+    cluster_n: 1
   '*gen_p10_n8_1_unicycle':
     cluster_range: 0.02
     cluster_distance: 0.5

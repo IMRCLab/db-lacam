@@ -42,7 +42,7 @@ void est(const Eigen::VectorXd &state,
   bool success = false;
   std::vector<Eigen::VectorXd> expanded_nodes;
   if (!reverse_search)
-    planner_options.max_expands = 1000; // limit the expansion for the forward search
+    planner_options.max_expands = 2000; // limit the expansion for the forward search
 
   std::vector<Motion> &motions = *planner_options.motions_ptr;
   auto check_motions = [&]

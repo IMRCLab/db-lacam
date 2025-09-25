@@ -341,7 +341,7 @@ MultiRobotTrajectory LaCAM::solve()
 
   std::cout << "per iteration: " << std::fixed << std::setprecision(3)
             << avg_ms << " ms\n";
-  std::cout << "cost: " << std::fixed << cost << std::endl;
+  std::cout << "cost: " << std::fixed << cost * 0.1 << std::endl;
   return solution;
 }
 
@@ -511,7 +511,7 @@ void LaCAM::get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> d
   }
   if (livelock)
   {
-    robot_data = GetTopNPerClusterByRelativeDistance(tmp_data, 1, /*threshold*/ 1.5);
+    robot_data = GetTopNPerClusterByRelativeDistance(tmp_data, 1, /*threshold*/ planner_options.cluster_distance);
   }
   else
     robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ planner_options.cluster_range, min_h, max_h, planner_options.cluster_n, /*shuffle*/ planner_options.cluster_shuffle);

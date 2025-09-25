@@ -103,6 +103,7 @@ int main(int argc, char *argv[])
   planner_options.cluster_range = cfg["cluster_range"].as<double>();
   planner_options.cluster_n = cfg["cluster_n"].as<size_t>();
   planner_options.cluster_shuffle = cfg["cluster_shuffle"].as<bool>();
+  planner_options.cluster_distance = cfg["cluster_distance"].as<double>();
   planner_options.merged_aabb = cfg["merged_aabb"].as<bool>();
   planner_options.refine_solution = cfg["refine_solution"].as<bool>();
   planner_options.print();

@@ -157,6 +157,7 @@ db-lacam:
     heuristic1_delta: 0.9
     heuristic1_num_primitives_0: 500 
     cluster_range: 0.05
+    cluster_distance: 1.0
     cluster_n: 1
     cluster_shuffle: false
     refine_solution: True
@@ -172,9 +173,9 @@ db-lacam:
     num_primitives_0: 500
     heuristic1_delta: 0.9
     heuristic1_num_primitives_0: 500 
-    cluster_range: 0.02 # 0.05
+    cluster_range: 0.02 
+    cluster_distance: 1.0
     cluster_n: 1
-    cluster_shuffle: false
   '*alcove_unicycle':
     delta_0: 0.5
     num_primitives_0: 200 
@@ -251,22 +252,22 @@ db-lacam:
     cluster_range: 0.05
     cluster_n: 2
     cluster_shuffle: false
-  '*gen_p10_n8_5_unicycle sphere':
-    delta_0: 0.5 
-    goal_delta: 0.5
-    num_primitives_0: 500
-    heuristic1_delta: 0.9
-    heuristic1_num_primitives_0: 500 
-    cluster_range: 0.1 
-    cluster_n: 1 
-    cluster_shuffle: false
-  '*gen_p10_n8_9_unicycle sphere':
-    delta_0: 0.5 
-    goal_delta: 0.5
-    num_primitives_0: 500
-    heuristic1_delta: 0.9
-    heuristic1_num_primitives_0: 500 
-    cluster_range: 0.1 
-    cluster_n: 1 
+  '*gen_p10_n8_1_unicycle':
+    cluster_range: 0.02
+    cluster_distance: 0.5
+  '*gen_p10_n8_5_unicycle':
+    cluster_range: 0.02
+    cluster_distance: 0.5
+  '*gen_p10_n8_0_unicycle_sphere':
+    cluster_distance: 0.5
+  '*gen_p10_n8_1_unicycle_sphere':
+    cluster_distance: 0.5
+  '*gen_p10_n8_2_unicycle_sphere':
+    cluster_distance: 0.75
+  '*gen_p10_n8_5_unicycle_sphere':
+    cluster_range: 0.05
+  '*gen_p10_n8_9_unicycle_sphere':
+    cluster_range: 0.05 
+    cluster_distance: 0.5
 
   

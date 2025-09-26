@@ -188,14 +188,14 @@ db-lacam:
     cluster_shuffle: True
   '*atgoal_unicycle':
     delta_0: 0.5
-    num_primitives_0: 200 
-    heuristic1_delta: 0.9
-    heuristic1_num_primitives_0: 200 
-    goal_delta: 0.75
-    cluster_range: 0.02 # 0.05
-    cluster_n: 2 # 8
+    num_primitives_0: 500 
+    heuristic1_delta: 0.5
+    heuristic1_num_primitives_0: 500 
+    goal_delta: 0.5
+    cluster_range: 0.02 
+    cluster_n: 1
+    cluster_distance: 0.5
     merged_aabb: false
-    cluster_shuffle: True
   '*forest4':
     delta_0: 0.5
     goal_delta: 0.75

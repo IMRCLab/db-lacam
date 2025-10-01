@@ -155,7 +155,7 @@ def write_table_3d(trials, timelimit):
     'forest4': "forest (N=4)",
     'corridor4': "corridor (N=4)",
     'circle6': "circle (N=6)",
-    'circle7_swap': "circle_swap (N=7)",
+    'circle7_swap': "circle swap (N=7)",
     'passage6': "passage (N=6)",
     # 'passage10': "passage (N=10)",
   }
@@ -357,10 +357,10 @@ def write_table_scalability(trials, timelimit):
 
   benchmark_table.gen_pdf(output_path)
 def main():
-  trials = 1
-  timelimit = 2*60
-  write_table_2d(trials, timelimit) 
-  # write_table_3d(trials, timelimit) 
+  trials = 1 * 5
+  timelimit = 1*60
+  # write_table_2d(trials, timelimit) 
+  write_table_3d(trials, timelimit) 
   # write_table_scalability(trials, timelimit) 
 
 if __name__ == '__main__':

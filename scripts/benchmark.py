@@ -11,6 +11,8 @@ from main_dbcbs import run_dbcbs
 from main_dbecbs import run_dbecbs
 from main_dblacam import run_dblacam
 from benchmark_table import write_table
+from benchmark_stats import run_benchmark_stats
+import paper_tables
 
 @dataclass
 class ExecutionTask:
@@ -111,6 +113,12 @@ def main():
     "circle7_swap",
     "passage6",
     # "passage10",
+    # scalability test
+    "test_n10_0_unicycle",
+    "test_n20_0_unicycle",
+    "test_n30_0_unicycle",
+    "test_n40_0_unicycle",
+    "test_n50_0_unicycle",
   ]
   for kind in ["unicycle","unicycle_sphere"]: 
     for n in [8]:
@@ -127,7 +135,7 @@ def main():
   ]
   trials = 1 * 5
   timelimit_2d = 1 * 60 
-  timelimit_3d = 1 * 60 # 5 
+  timelimit_3d = 1 * 60 
   timelimit_max = 0 # plot needs higher timelimit
   tasks = []
   for instance in instances:
@@ -150,6 +158,12 @@ def main():
     for task in tasks:
       execute_task(task)
 
+  run_benchmark_stats(instances, algs, trials, timelimit_max)
   write_table(instances, algs, Path("../results"), "table.pdf", trials, timelimit_max)
+  paper_tables.write_table_2d(trials, timelimit)
+  paper_tables.write_table_3d(trials, timelimit)
+  paper_tables.write_table_scalability(trials, timelimit)
+
+
 if __name__ == '__main__':
   main()

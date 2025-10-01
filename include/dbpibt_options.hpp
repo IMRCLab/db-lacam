@@ -19,7 +19,7 @@ struct Planner_options
   float maxCost =
       std::numeric_limits<float>::infinity();           // Cost bound during search
   std::vector<dynoplan::Motion> *motions_ptr = nullptr; // Pointer to loaded motions
-  size_t max_expands = 5 * 1e3;                         // 1e6
+  size_t max_expands = 5 * 1e4;                         // 1e3
   bool debug = false;
   int limit_branching_factor =
       20;                        // Limit on branching factor to encourage more deep search

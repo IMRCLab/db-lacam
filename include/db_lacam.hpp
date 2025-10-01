@@ -45,11 +45,33 @@ struct HNode
   std::vector<dynobench::Trajectory> M_to;
   int depth;
   int id;
+  double sum_g = 0;
+  // livelock related
+  bool livelock = false;
+  std::vector<int> unguided;
+  std::vector<dynobench::Trajectory> bad_motions;
 
   std::vector<int> order;
   std::queue<LNode *> search_tree;
 
   HNode(int _id, std::vector<Eigen::VectorXd> _C, std::vector<std::shared_ptr<AStarNode>> _dbNodes, std::vector<int> _order, HNode *_parent = nullptr);
+  void get_sum_g()
+  {
+    sum_g = 0;
+    for (auto &node : dbN)
+    {
+      sum_g += node->gScore;
+    }
+    std::cout << "updated sum_g: " << sum_g << std::endl;
+  }
+  void clearSearchTree()
+  {
+    while (!search_tree.empty())
+    {
+      delete search_tree.front();
+      search_tree.pop();
+    }
+  }
   ~HNode();
 };
 using HNodes = std::vector<HNode *>;
@@ -78,6 +100,8 @@ struct LaCAM
   dynobench::TrajWrapper tmp_traj_wrapper;
   std::vector<dynobench::TrajWrapper> tmp_traj_wrappers;
   MultiRobotTrajectory solution;
+  MultiRobotTrajectory dynamic_obstacles; // used for the refinement stage
+  size_t max_T = 0;                       // used for refinement stage, the max time
   double cost = 0.;
   // solver utils
   db_PIBT db_pibt;
@@ -85,9 +109,11 @@ struct LaCAM
   std::deque<HNode *> OPEN;
   int loop_cnt;
   std::vector<int> order;
-  // DEBUG
-  // std::vector<dynobench::Trajectory> expanded_trajs;
   std::map<size_t, std::vector<dynobench::Trajectory>> expanded_trajs; // MRS case
+  // hyperparameters
+  static float RANDOM_INSERT_PROB1;
+  static float RANDOM_INSERT_PROB2;
+  static bool ANYTIME;
 
   LaCAM(const dynobench::Problem _problem,
         std::vector<std::shared_ptr<AStarNode>> _dbNodes,
@@ -96,6 +122,7 @@ struct LaCAM
         Planner_options _planner_options,
         std::vector<std::shared_ptr<dynobench::Model_robot>> _robots,
         Time_planner &time_planner,
+        MultiRobotTrajectory _dynamic_obstacles,
         int _verbose = 0,
         const Deadline *_timelimit = nullptr);
   ~LaCAM();
@@ -109,14 +136,17 @@ struct LaCAM
 
   void get_applicable_trajs(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id);
   void get_applicable_trajs_precise_no_clustering(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id);
-  void get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id);
+  void get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id, bool livelock);
   void get_applicable_trajs_precise_sort_actions(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id);
 
   RobotData GetTopNPerClusterByH(const RobotData &input, double range, double min_h, double max_h, size_t N, bool shuffle);
+  RobotData GetTopNPerClusterByRelativeDistance(const RobotData &input, size_t N, double threshold);
   RobotData GetFilteredUniqueTopByH(const RobotData &input, double min_distance, size_t robot_id);
   bool check_and_add(const double h_value);
   // DEBUG
   void export_node_expansion();
+  bool is_close_config(HNode *S, std::vector<Eigen::VectorXd> Q2, double threshold);
+  bool is_close_to_goal(std::vector<Eigen::VectorXd> Q, double threshold);
 
   std::vector<int> get_sorted_order(
       std::vector<std::shared_ptr<dynobench::Model_robot>> &robots,

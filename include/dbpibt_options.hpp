@@ -28,6 +28,9 @@ struct Planner_options
   double cluster_range = 0.05;   // range to compute the threshold for motion clustering based on h-value
   size_t cluster_n = 8;          // number of elements per cluster to return
   bool merged_aabb = false;      // some problems don't work with merged aabb
+  bool refine_solution = false;  // refined the solution using 1) Large Neighborhood Search
+  bool cluster_shuffle = false;  // shuffle each subcluster
+  double cluster_distance = 1.0; // distance threshold for state-based clustering
 
   void print() const
   {
@@ -39,6 +42,7 @@ struct Planner_options
     std::cout << "  max_motions: " << max_motions << "\n";
     std::cout << "  cluster_range: " << cluster_range << "\n";
     std::cout << "  cluster_n: " << cluster_n << "\n";
+    std::cout << "  cluster_distance: " << cluster_distance << "\n";
     std::cout << "  merged aabb: " << merged_aabb << "\n";
     std::cout << "***" << std::endl;
   }

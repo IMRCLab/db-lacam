@@ -42,7 +42,7 @@ void est(const Eigen::VectorXd &state,
   bool success = false;
   std::vector<Eigen::VectorXd> expanded_nodes;
   if (!reverse_search)
-    planner_options.max_expands = 1000; // limit the expansion for the forward search
+    planner_options.max_expands = 2000; // limit the expansion for the forward search
 
   std::vector<Motion> &motions = *planner_options.motions_ptr;
   auto check_motions = [&]
@@ -59,7 +59,7 @@ void est(const Eigen::VectorXd &state,
   assert(check_motions());
   // kd-tree related
   ompl::NearestNeighbors<Motion *> *T_m = nullptr;
-  T_m = nigh_factory_t<Motion *>(problem.robotTypes[robot_id], robot, /*reverse_search*/ true); // reverse search?
+  T_m = nigh_factory_t<Motion *>(problem.robotTypes[robot_id], robot, /*reverse_search*/ reverse_search);
   for (size_t i = 0; i < std::min(motions.size(), planner_options.max_motions); ++i)
   {
     T_m->add(&motions.at(i));
@@ -178,9 +178,9 @@ void est(const Eigen::VectorXd &state,
     {
       best_distance_to_goal = distance_to_goal;
     }
-    if (distance_to_goal < planner_options.goal_delta)
+    if (distance_to_goal <= planner_options.goal_delta)
     {
-      std::cout << "State reached the goal" << std::endl;
+      // std::cout << "State reached the goal" << std::endl;
       status = Terminate_status::SOLVED;
       success = true;
       if (reverse_search)
@@ -249,10 +249,10 @@ void est(const Eigen::VectorXd &state,
       // check if the mid state close to goal
       size_t mid_index = traj.states.size() / 2;
       Eigen::VectorXd tmp_mid_state = traj.states.at(mid_index); // middle of the motion
-      if (robot->distance(tmp_mid_state, problem.goals[robot_id]) < planner_options.goal_delta)
+      if (robot->distance(tmp_mid_state, problem.goals[robot_id]) <= planner_options.goal_delta)
       {
         status = Terminate_status::SOLVED;
-        std::cout << "MID state reached the goal" << std::endl;
+        // std::cout << "MID state reached the goal" << std::endl;
         // put path nodes to heuristic
         auto mid_node = std::make_shared<AStarNode>();
         mid_node->state_eig = tmp_mid_state;

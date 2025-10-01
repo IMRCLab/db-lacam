@@ -63,6 +63,13 @@ def execute_task(task: ExecutionTask):
     mycfg_instance = cfg[task.alg][Path(task.instance).name]
     mycfg = {**mycfg, **mycfg_instance} # merge two dictionaries
 
+  for k, v in cfg[task.alg].items():
+      if "*" in k and fnmatch.fnmatch(Path(task.instance), k):
+          mycfg |= v  
+
+  if Path(task.instance) in cfg[task.alg]:
+      mycfg |= cfg[task.alg][Path(task.instance)]
+
   print("Using configurations ", mycfg)
 
   if task.alg == "db-pibt":
@@ -102,6 +109,8 @@ def main():
     "corridor4",
     "circle6",
     "circle7_swap",
+    "passage6",
+    # "passage10",
   ]
   for kind in ["unicycle","unicycle_sphere"]: 
     for n in [8]:

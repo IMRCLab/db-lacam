@@ -151,15 +151,24 @@ def write_table(rows, algs, results_path, fname, trials, T, regret=False):
 
     out = r"\begin{tabular}{c || c"
     for alg in algs:
-      out += r" || r|r|r"
+      if (alg == "db-ecbs" or alg == "db-lacam") and not regret:
+        out += r" || r|r|r|r"
+      else:
+        out += r" || r|r|r"
     out += "}\n"
     f.write(out)
     out = r"\# & Instance"
     for k, alg in enumerate(algs):
       if k == len(algs) - 1:
-        out += r" & \multicolumn{3}{c}{"
+        if (alg == "db-ecbs" or alg == "db-lacam") and not regret:
+          out += r" & \multicolumn{4}{c}{"
+        else:
+          out += r" & \multicolumn{3}{c}{"
       else:
-        out += r" & \multicolumn{3}{c||}{"
+        if (alg == "db-ecbs" or alg == "db-lacam") and not regret:
+          out += r" & \multicolumn{4}{c||}{"
+        else:
+          out += r" & \multicolumn{3}{c||}{"
       out += alg_names[alg]
       out += r"}"
     out += r"\\"
@@ -167,7 +176,10 @@ def write_table(rows, algs, results_path, fname, trials, T, regret=False):
     out = r"& "
     if not regret:
       for alg in algs:
-        out += r" & $p$ & $t^{\mathrm{st}} [s]$ & $J^{\mathrm{st},f} [s]$"
+        if (alg == "db-ecbs" or alg == "db-lacam"):
+          out += r" & $p$ & $t^{\mathrm{st}} [s]$ & $J^{\mathrm{st}} [s]$ & $J^{f} [s]$"
+        else:
+          out += r" & $p$ & $t^{\mathrm{st}} [s]$ & $J^{\mathrm{st},f} [s]$"
     else:
       for alg in algs:
         out += r" & $p$ & $t_r^{\mathrm{st}} [\%]$ & $J_r^{f} [\%]$"
@@ -189,6 +201,8 @@ def write_table(rows, algs, results_path, fname, trials, T, regret=False):
           out = print_and_highlight_best_max(out, 'success', result[row], alg, algs)
           out = print_and_highlight_best(out, 't^st_mean', result[row], alg, algs)
           out = print_and_highlight_best(out, 'J^st_mean', result[row], alg, algs)
+          if (alg == "db-ecbs" or alg == "db-lacam"):
+            out = print_and_highlight_best(out, 'J^f_mean', result[row], alg, algs)
         else:
           out = print_and_highlight_best_max(out, 'success', result[row], alg, algs)
           out = print_and_highlight_best(out, 'tr^st_mean', result[row], alg, algs)

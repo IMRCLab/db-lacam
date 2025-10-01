@@ -32,7 +32,7 @@ using dynobench::Trajectory;
 
 bool db_PIBT::set_new_config(std::vector<Eigen::VectorXd> Q_from,
                              std::vector<Eigen::VectorXd> &Q_to,
-                             std::vector<std::shared_ptr<AStarNode>> dbN_from,
+                             std::vector<std::shared_ptr<AStarNode>> dbN_from, // current node, has the time index
                              std::vector<std::shared_ptr<AStarNode>> &dbN_to,
                              std::vector<dynobench::Trajectory> &M_to,
                              const std::vector<int> &order,
@@ -41,19 +41,23 @@ bool db_PIBT::set_new_config(std::vector<Eigen::VectorXd> Q_from,
   bool success = true;
   for (auto i = 0; i < N; i++)
   {
-    // ONLY with planned robots and env!
+    // ONLY with planned robots
     if (!M_to[i].is_empty())
     {
       bool valid = false;
-      // time_planner.time_collision_with_env += timed_fun_void([&]
-      //  { valid = is_motion_valid_env_collision(i, M_to[i]); });
-      // if (valid)
-      // {
-      // time_planner.time_collision_with_planned += timed_fun_void([&]
-      //  { valid = is_motion_valid(i, M_to[i], M_to); });
-      // }
       time_planner.time_collision_with_planned += timed_fun_void([&]
                                                                  { valid = is_motion_valid(i, M_to[i], M_to); });
+      if (!valid)
+      {
+        success = false;
+        break;
+      }
+      if (!dyn_obstacles.is_empty())
+      {
+        int start_indx = std::lround(dbN_from.at(i)->gScore / robots.at(i)->ref_dt);
+        valid = is_motion_valid_dyn_obstacles(i, start_indx, M_to[i]);
+        std::cout << "robot " << i << " start state: " << dbN_from[i]->state_eig.format(dynobench::FMT) << std::endl;
+      }
       if (!valid)
       {
         success = false;
@@ -87,27 +91,47 @@ bool db_PIBT::funcPIBT(size_t robot_id,
 {
   std::cout << "Calling dbPIBT for robot " << robot_id << ", PI: " << pi << std::endl;
   Eigen::VectorXd now_state = Q_from[robot_id];
-  // std::cout << "robot " << robot_id << " start state: " << now_state.format(dynobench::FMT) << std::endl;
+  // if the robot reaches the goal and no request to move, then stay in place
+  if (!pi && dbN_from[robot_id]->reaches_goal)
+  {
+    Q_to[robot_id] = now_state;
+    dbN_to[robot_id]->state_eig = now_state;
+    dbN_to[robot_id]->gScore = dbN_from[robot_id]->gScore;
+    dbN_to[robot_id]->hScore = dbN_from[robot_id]->hScore;
+    dynobench::Trajectory traj_fake;
+    int N = robot_data_rolled[robot_id].trajectories[0].states.size();
+    std::vector<Eigen::VectorXd> xs(N, now_state);
+    std::vector<Eigen::VectorXd> us(N - 1,
+                                    Eigen::VectorXd::Zero(robots[robot_id]->nu));
+    traj_fake.states = xs;
+    traj_fake.actions = us;
+    M_to[robot_id] = traj_fake;
+    return true;
+  }
   RobotData robot_data = robot_data_rolled[robot_id];
-  // std::cout << "rolled trajs size: " << robot_data.trajectories.size() << std::endl;
   bool success;
+  std::cout << "robot " << robot_id << " start: " << now_state.format(dynobench::FMT) << std::endl;
   for (size_t i = 0; i < robot_data.trajectories.size(); i++)
   {
-    std::cout << "robot " << robot_id << " motion: " << i << std::endl;
+    std::cout << "robot " << robot_id << " motion " << i << std::endl;
     dynobench::Trajectory traj = robot_data.trajectories[i];
-
-    // check for collision with env and planned robots
+    // check for collision with planned robots
     Eigen::VectorXd next_state = traj.states.back();
+    // deadlock prevent - if the robot did not reach the goal and pi=false, then no need to stay in place
+    if (!pi && !dbN_from[robot_id]->reaches_goal && next_state.isApprox(dbN_from[robot_id]->state_eig, 1e-5))
+      continue;
+
     bool valid = false;
-    // time_planner.time_collision_with_env += timed_fun_void([&]
-    //  { valid = is_motion_valid_env_collision(robot_id, traj); });
-    // if (valid)
-    // {
-    // time_planner.time_collision_with_planned += timed_fun_void([&]
-    //  { valid = is_motion_valid(robot_id, traj, M_to); });
-    // }
     time_planner.time_collision_with_planned += timed_fun_void([&]
                                                                { valid = is_motion_valid(robot_id, traj, M_to); });
+    if (!valid)
+      continue;
+    // check for collision with moving obstacles - only in refinement stage
+    if (!dyn_obstacles.is_empty())
+    {
+      int start_indx = std::lround(dbN_from.at(robot_id)->gScore / robots.at(robot_id)->ref_dt);
+      valid = is_motion_valid_dyn_obstacles(robot_id, start_indx, traj);
+    }
     if (!valid)
       continue;
     // reserve the motion
@@ -122,13 +146,13 @@ bool db_PIBT::funcPIBT(size_t robot_id,
     {
       if (key == robot_id || !M_to[key].is_empty())
         continue;
-      for (const auto &other_robot_trajs : rolled_trajs.trajectories) // potential motion for the neighbor
+      for (const auto &other_robot_traj : rolled_trajs.trajectories) // potential motion for the neighbor
       {
         if (M_to[key].is_empty())
         {
           bool collides = false;
           time_planner.time_collision_with_unplanned += timed_fun_void([&]
-                                                                       { collides = has_inter_robot_collision(traj, robot_id, other_robot_trajs, key, /*lazy coll check*/ true); });
+                                                                       { collides = has_inter_robot_collision(traj, robot_id, other_robot_traj, key, /*lazy coll check*/ true, false); });
           if (collides)
           {
             int j = key;
@@ -143,7 +167,7 @@ bool db_PIBT::funcPIBT(size_t robot_id,
     }
     if (!success)
       continue;
-    // std::cout << "robot " << robot_id << " end state: " << next_state.format(dynobench::FMT) << std::endl;
+    std::cout << "robot " << robot_id << " end: " << next_state.format(dynobench::FMT) << std::endl;
     return true;
   }
   // if no motion was applicable, then the robot does not move
@@ -158,24 +182,36 @@ bool db_PIBT::funcPIBT(size_t robot_id,
   return false;
 }
 
-void db_PIBT::update_obj(size_t id, const Eigen::VectorXd state)
+void db_PIBT::update_obj(size_t id, const Eigen::VectorXd state, bool dynamic_obstacles = false)
 {
   std::vector<fcl::Transform3d> tmp_ts(1);
-  robots[id]->transformation_collision_geometries(state, tmp_ts);
-  fcl::Transform3d &tf = tmp_ts[0];
-  robot_objs[id]->setTranslation(tf.translation());
-  robot_objs[id]->setRotation(tf.rotation());
-  robot_objs[id]->computeAABB();
+  if (dynamic_obstacles)
+  {
+    dyn_robots[id]->transformation_collision_geometries(state, tmp_ts);
+    fcl::Transform3d &tf = tmp_ts[0];
+    dyn_objs[id]->setTranslation(tf.translation());
+    dyn_objs[id]->setRotation(tf.rotation());
+    dyn_objs[id]->computeAABB();
+  }
+  else
+  {
+    robots[id]->transformation_collision_geometries(state, tmp_ts);
+    fcl::Transform3d &tf = tmp_ts[0];
+    robot_objs[id]->setTranslation(tf.translation());
+    robot_objs[id]->setRotation(tf.rotation());
+    robot_objs[id]->computeAABB();
+  }
 };
 
 // pair-wise collision checking for traj-to-traj, assumes equal length motions
-bool db_PIBT::has_inter_robot_collision(dynobench::Trajectory robot_traj, size_t robot_id, dynobench::Trajectory other_robot_traj, size_t other_robot_id, bool other_fixed)
+bool db_PIBT::has_inter_robot_collision(dynobench::Trajectory robot_traj, size_t robot_id, dynobench::Trajectory other_robot_traj, size_t other_robot_id, bool lazy_check = false, bool dynamic_obs = false)
 {
   const auto &ego_traj = robot_traj.states;
   const auto &other_traj = other_robot_traj.states;
   fcl::CollisionRequestd request;
   fcl::CollisionResultd result;
-  if (other_fixed)
+  // check only the first state of the other robot traj. Not for dynamic obstacles
+  if (lazy_check)
   {
     update_obj(other_robot_id, other_traj.front());
     for (size_t s = 0; s < ego_traj.size(); ++s)
@@ -197,15 +233,21 @@ bool db_PIBT::has_inter_robot_collision(dynobench::Trajectory robot_traj, size_t
   {
     // state-by-state check
     size_t N = std::min(ego_traj.size(), other_traj.size());
-
+    assert(ego_traj.size() == other_traj.size());
     for (size_t s = 0; s < N; ++s)
     {
       result.clear();
 
-      update_obj(robot_id, ego_traj[s]);
-      update_obj(other_robot_id, other_traj[s]);
-
-      fcl::collide(robot_objs[robot_id], robot_objs[other_robot_id], request, result);
+      update_obj(robot_id, ego_traj[s], false);
+      update_obj(other_robot_id, other_traj[s], dynamic_obs);
+      if (dynamic_obs)
+      {
+        fcl::collide(robot_objs[robot_id], dyn_objs[other_robot_id], request, result);
+      }
+      else
+      {
+        fcl::collide(robot_objs[robot_id], robot_objs[other_robot_id], request, result);
+      }
 
       if (result.isCollision())
       {
@@ -252,6 +294,41 @@ bool db_PIBT::is_motion_valid_env_collision(size_t /*robot_id*/ i,
   {
     std::cout << "collision with the env" << std::endl;
     return false;
+  }
+  return true;
+}
+
+bool db_PIBT::is_motion_valid_dyn_obstacles(size_t i, int start_index, dynobench::Trajectory &traj)
+{
+  for (size_t d = 0; d < dyn_obstacles.trajectories.size(); d++)
+  {
+    const auto &obs_states = dyn_obstacles.trajectories[d].states;
+    size_t obs_len = obs_states.size();
+    dynobench::Trajectory tmp_traj;
+    tmp_traj.states.reserve(traj.states.size());
+
+    for (size_t i = 0; i < traj.states.size(); ++i)
+    {
+      size_t obs_idx = start_index + i;
+
+      if (obs_idx < obs_len)
+      {
+        tmp_traj.states.push_back(obs_states[obs_idx]);
+      }
+      else
+      {
+        // If obstacle trajectory ended, repeat the last state
+        tmp_traj.states.push_back(obs_states.back());
+      }
+    }
+
+    // Check collisions for this aligned chunk
+    if (has_inter_robot_collision(traj, /*robot id*/ i, tmp_traj, /*other robot*/ d, /*lazy*/ false, /*dynamic obstacles*/ true))
+    {
+      std::cout << "collision with dynamic obstacle" << std::endl;
+      std::cout << "robot: " << i << ", other robot: " << d << std::endl;
+      return false;
+    }
   }
   return true;
 }

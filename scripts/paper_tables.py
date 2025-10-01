@@ -41,9 +41,9 @@ def write_table_2d(trials, timelimit):
     'gen_p10_n2_*_unicycle_sphere': "rand sphere(N=2)",
     'gen_p10_n4_*_unicycle_sphere': "rand sphere(N=4)",
     'gen_p10_n8_*_unicycle_sphere': "rand sphere(N=8)",
-    'gen_p10_n2_*_hetero': "rand (N=2)",
-    'gen_p10_n4_*_hetero': "rand (N=4)",
-    'gen_p10_n8_*_hetero': "rand (N=8)",
+    'gen_p10_n2_*_unicycle': "rand (N=2)",
+    'gen_p10_n4_*_unicycle': "rand (N=4)",
+    'gen_p10_n8_*_unicycle': "rand (N=8)",
     
   }
 

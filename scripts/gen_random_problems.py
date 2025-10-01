@@ -34,6 +34,7 @@ def check_problem(cfg):
         out = subprocess.run(["./run_dblacam",
                     "-i", tmpdirname + "/env.yaml",
                     "-o", "../results/result.yaml",
+                    "--stats", "../result/test_stats.yaml",
                     "--cfg", "../example/algorithms.yaml",
                     "-t" , str(1e6)])
         return out.returncode == 0
@@ -123,13 +124,13 @@ def gen_env(min, max, obs_density, N, filename):
 
 def main():
     min = np.array([0,0])
-    max = np.array([10,10])
-    obs_density = 10 # percent
+    max = np.array([20,20])
+    obs_density = 1 # percent
     K = 1 # num instances
 
-    for N in [10]: # 4, 8, 12
+    for N in [20]: # 4, 8, 12
         for k in range(K):
-            filename = "../example/gen_p{}_n{}_{}_unicycle.yaml".format(obs_density, N, k)
+            filename = "../example/test_p{}_n{}_{}_unicycle.yaml".format(obs_density, N, k)
             gen_env(min, max, obs_density / 100.0, N, filename)
 
 if __name__ == '__main__':

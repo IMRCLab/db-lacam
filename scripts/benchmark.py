@@ -125,7 +125,7 @@ def main():
       for k in range(10):
         instances.append("gen_p10_n{}_{}_{}".format(n,k, kind))
 
-  instances_3d = ["forest4", "wall4", "corridor4", "circle6", "circle7_swap"] 
+  instances_n = ["test_n10_0_unicycle", "test_n20_0_unicycle", "test_n30_0_unicycle", "test_n40_0_unicycle", "test_n50_0_unicycle"] 
 
   algs = [
     "db-cbs",
@@ -135,12 +135,12 @@ def main():
   ]
   trials = 1 * 5
   timelimit_2d = 1 * 60 
-  timelimit_3d = 1 * 60 
+  timelimit_n = 5 * 60 # scalability 
   timelimit_max = 0 # plot needs higher timelimit
   tasks = []
   for instance in instances:
-    if instance in instances_3d:
-        timelimit = timelimit_3d
+    if instance in instances_n:
+        timelimit = timelimit_n
     else:
         timelimit = timelimit_2d
     timelimit_max = max(timelimit_max, timelimit)

@@ -286,7 +286,7 @@ class Report:
 
     # Collect data
     for (exp_name_stats, algo), costs in self.stats.items():
-        if exp_name_stats not in exp_names:
+        if exp_name_stats not in exp_names or not exp_name_stats.startswith("test_n"): # for only test problem
             continue
 
         n_agents = int(exp_name_stats.split("_")[1].replace("n", ""))

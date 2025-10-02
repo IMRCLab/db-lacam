@@ -162,7 +162,7 @@ def main():
   write_table(instances, algs, Path("../results"), "table.pdf", trials, timelimit_max)
   paper_tables.write_table_2d(trials, timelimit)
   paper_tables.write_table_3d(trials, timelimit)
-  paper_tables.write_table_scalability(trials, timelimit)
+  # paper_tables.write_table_scalability(trials, timelimit)
 
 
 if __name__ == '__main__':

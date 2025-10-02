@@ -10,18 +10,13 @@ def write_table_2d(trials, timelimit):
     "circle4_unicycle",
     "circle8_unicycle",
     "circle10_unicycle",
-
-    "<<HLINE>>",
-
-    "gen_p10_n2_*_unicycle_sphere",
-    "gen_p10_n4_*_unicycle_sphere",
     "gen_p10_n8_*_unicycle_sphere",
-
-    "<<HLINE>>",
-
-    "gen_p10_n2_*_unicycle",
-    "gen_p10_n4_*_unicycle",
     "gen_p10_n8_*_unicycle",
+    "test_n10_0_unicycle",
+    "test_n20_0_unicycle",
+    "test_n30_0_unicycle",
+    "test_n40_0_unicycle",
+    "test_n50_0_unicycle",
   ]
 
   algs = [
@@ -37,14 +32,15 @@ def write_table_2d(trials, timelimit):
     'circle2_unicycle': "circle (N=2)",
     'circle4_unicycle': "circle (N=4)",
     'circle8_unicycle': "circle (N=8)",
-    'circle10_unicycle': "circle (N=8)",
-    'gen_p10_n2_*_unicycle_sphere': "rand sphere(N=2)",
-    'gen_p10_n4_*_unicycle_sphere': "rand sphere(N=4)",
-    'gen_p10_n8_*_unicycle_sphere': "rand sphere(N=8)",
-    'gen_p10_n2_*_unicycle': "rand (N=2)",
-    'gen_p10_n4_*_unicycle': "rand (N=4)",
-    'gen_p10_n8_*_unicycle': "rand (N=8)",
-    
+    'circle10_unicycle': "circle (N=10)",
+    'gen_p10_n8_4_unicycle_sphere': "rand sphere (N=8)",
+    'gen_p10_n8_3_unicycle': "rand (N=8)",
+    'test_n10_0_unicycle': "rand (N=10)",
+    'test_n20_0_unicycle': "rand (N=20)",
+    'test_n30_0_unicycle': "rand (N=30)",
+    'test_n40_0_unicycle': "rand (N=40)",
+    'test_n50_0_unicycle': "rand (N=50)",
+
   }
 
   alg_names = {

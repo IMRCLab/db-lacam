@@ -274,6 +274,65 @@ class Report:
     ax[0,0].set_ylabel("Cost for first solution [s]")
     ax[1,0].set_ylabel("Time for first solution [s]")
 
+  def plot_initial_time_vs_robot_numbers(self, exp_names):
+    # Hard-coded agent numbers you want on the x-axis
+    agent_numbers = [10, 20, 30, 40, 50]
+
+    self._add_page()
+    self.fig, self.ax = plt.subplots()
+
+    algo_data = {algo: {"agents": [], "times": []}
+                 for (_, algo) in self.stats.keys()}  # include all algos
+
+    # Collect data
+    for (exp_name_stats, algo), costs in self.stats.items():
+        if exp_name_stats not in exp_names:
+            continue
+
+        n_agents = int(exp_name_stats.split("_")[1].replace("n", ""))
+
+        initial_times = []
+        for k in range(costs.shape[0]):
+            mask = np.isfinite(costs[k])
+            if np.any(mask):
+                initial_time = self.times[mask][0]
+                initial_times.append(initial_time)
+
+        if len(initial_times) > 0:
+            avg_initial_time = np.mean(initial_times)
+            algo_data[algo]["agents"].append(n_agents)
+            algo_data[algo]["times"].append(avg_initial_time)
+
+    marker_dict = {
+    "db-cbs": "o",   # circle
+    "db-ecbs": "s",   # square
+    "db-pibt": "^",   # triangle up
+    "db-lacam": "D"} # diamond
+
+    for algo, data in algo_data.items():
+        marker = marker_dict.get(algo, "o")  # default to circle if not in dict
+        color = self.color_dict.get(algo, "gray")
+
+        if len(data["agents"]) > 0:
+            # Sort for consistent line plotting
+            agents_sorted, times_sorted = zip(*sorted(zip(data["agents"], data["times"])))
+
+            self.ax.scatter(agents_sorted, times_sorted,
+                            color=color, label=algo, marker=marker)
+
+            self.ax.plot(agents_sorted, times_sorted,
+                         linestyle="--", marker=marker, color=color)
+        else:
+            # No solutions found → still add empty label
+            self.ax.scatter([], [], color=color, label=algo, marker=marker)
+
+
+    self.ax.set_xticks(agent_numbers)
+    self.ax.set_xlabel("Number of Robots")
+    self.ax.set_ylabel("Runtime [s]")
+    self.ax.legend()
+    self.ax.grid(True, linestyle="--", alpha=0.6)
+    self.fig.tight_layout()
 
   def close(self):
     self._add_page()

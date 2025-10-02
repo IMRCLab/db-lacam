@@ -25,18 +25,23 @@ def run_benchmark_stats(instances, algs, trials, T):
     # # report.add_success_rate_plot(instance)
     # report.add_boxplot_initial_time_plot(instance)
     # report.add_boxplot_initial_cost_plot([instance])
-
+  report.plot_initial_time_vs_robot_numbers(instances)
   report.close()
 
 def main():
-    instances = ["circle2_unicycle", "circle4_unicycle"]
+    instances = ["test_n10_0_unicycle",
+                "test_n20_0_unicycle",
+                "test_n30_0_unicycle",
+                "test_n40_0_unicycle",
+                "test_n50_0_unicycle",
+                ]
     algs = [
     "db-cbs",
     "db-ecbs",
     "db-pibt",
     "db-lacam",
   ]
-    trials = 1
+    trials = 1 * 5
     timelimit = 1*60
 
     run_benchmark_stats(instances, algs, trials, timelimit)

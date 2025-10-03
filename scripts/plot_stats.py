@@ -275,7 +275,7 @@ class Report:
     ax[1,0].set_ylabel("Time for first solution [s]")
 
   def plot_initial_time_vs_robot_numbers(self, exp_names):
-    # Hard-coded agent numbers you want on the x-axis
+    # Hard-coded agent numbers for x-axis
     agent_numbers = [10, 20, 30, 40, 50]
 
     self._add_page()
@@ -286,7 +286,7 @@ class Report:
 
     # Collect data
     for (exp_name_stats, algo), costs in self.stats.items():
-        if exp_name_stats not in exp_names or not exp_name_stats.startswith("test_n"): # for only test problem
+        if exp_name_stats not in exp_names or not exp_name_stats.startswith("test_n"):
             continue
 
         n_agents = int(exp_name_stats.split("_")[1].replace("n", ""))
@@ -299,33 +299,38 @@ class Report:
                 initial_times.append(initial_time)
 
         if len(initial_times) > 0:
-            avg_initial_time = np.mean(initial_times)
             algo_data[algo]["agents"].append(n_agents)
-            algo_data[algo]["times"].append(avg_initial_time)
+            algo_data[algo]["times"].append(initial_times)  # store all times for std
 
     marker_dict = {
-    "db-cbs": "o",   # circle
-    "db-ecbs": "s",   # square
-    "db-pibt": "^",   # triangle up
-    "db-lacam": "D"} # diamond
+        "db-cbs": "o",  
+        "db-ecbs": "s",  
+        "db-pibt": "^",  
+        "db-lacam": "D"
+    }
 
     for algo, data in algo_data.items():
-        marker = marker_dict.get(algo, "o")  # default to circle if not in dict
+        marker = marker_dict.get(algo, "o")
         color = self.color_dict.get(algo, "gray")
 
         if len(data["agents"]) > 0:
-            # Sort for consistent line plotting
-            agents_sorted, times_sorted = zip(*sorted(zip(data["agents"], data["times"])))
+            # Sort for consistent plotting
+            agents_sorted, times_list_sorted = zip(*sorted(zip(data["agents"], data["times"])))
 
-            self.ax.scatter(agents_sorted, times_sorted,
-                            color=color, label=algo, marker=marker)
+            means = [np.mean(t) for t in times_list_sorted]
+            stds = [np.std(t) for t in times_list_sorted]
 
-            self.ax.plot(agents_sorted, times_sorted,
-                         linestyle="--", marker=marker, color=color)
+            # Plot mean line
+            self.ax.plot(agents_sorted, means, linestyle="--", marker=marker, color=color, label=algo)
+            # Plot shadow for std
+            self.ax.fill_between(agents_sorted,
+                                 np.array(means) - np.array(stds),
+                                 np.array(means) + np.array(stds),
+                                 color=color, alpha=0.2)
+
         else:
             # No solutions found → still add empty label
             self.ax.scatter([], [], color=color, label=algo, marker=marker)
-
 
     self.ax.set_xticks(agent_numbers)
     self.ax.set_xlabel("Number of Robots")
@@ -333,6 +338,7 @@ class Report:
     self.ax.legend()
     self.ax.grid(True, linestyle="--", alpha=0.6)
     self.fig.tight_layout()
+
 
   def close(self):
     self._add_page()

@@ -32,10 +32,12 @@ struct db_PIBT
   std::vector<std::shared_ptr<dynobench::Model_robot>> robots;
   std::vector<fcl::CollisionObjectd *> robot_objs;
   const int N; // number of robots
+  Time_planner &time_planner;
 
   // Constructor with robots argument
-  db_PIBT(std::vector<std::shared_ptr<dynobench::Model_robot>> _robots)
+  db_PIBT(std::vector<std::shared_ptr<dynobench::Model_robot>> _robots, Time_planner &_time_planner)
       : robots(std::move(_robots)),
+        time_planner(_time_planner),
         N(robots.size())
   {
     for (const auto &robot : robots)
@@ -73,4 +75,7 @@ struct db_PIBT
   bool is_motion_valid(size_t robot_id,
                        const dynobench::Trajectory &traj,
                        const std::vector<dynobench::Trajectory> &M_to);
+
+  bool is_motion_valid_env_collision(size_t robot_id,
+                                     dynobench::Trajectory &traj);
 };

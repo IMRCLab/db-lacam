@@ -243,20 +243,23 @@ void get_applicable_trajs_precise(Expander &expander,
                                   dynobench::TrajWrapper tmp_traj_wrapper,
                                   std::shared_ptr<AStarNode> db_node,
                                   RobotData &robot_data, size_t robot_id,
-                                  double cluster_range, size_t cluster_n)
+                                  double cluster_range, size_t cluster_n,
+                                  Time_planner &time_planner)
 {
   // clear
   std::vector<dynoplan::LazyTraj> tmp_lazy_trajs;
   std::vector<dynobench::TrajWrapper> tmp_traj_wrappers;
   robot_data.clear();
   // i. expand applicable motions
-  expander.expand_lazy(db_node->state_eig, tmp_lazy_trajs);
+  time_planner.time_lazy_expand += timed_fun_void([&]
+                                                  { expander.expand_lazy(db_node->state_eig, tmp_lazy_trajs); });
   auto ff = validity_checker(robots[robot_id]);
   int num_valid_states = -1;
   double gScore = 0;
   double min_h = std::numeric_limits<double>::max();
   double max_h = std::numeric_limits<double>::lowest();
-
+  time_planner.time_lazy_sort += timed_fun_void([&]
+                                                {
   for (size_t j = 0; j < tmp_lazy_trajs.size(); j++)
   {
     auto &lazy_traj = tmp_lazy_trajs[j];
@@ -277,7 +280,7 @@ void get_applicable_trajs_precise(Expander &expander,
     gScore = db_node->gScore + cost_motion;
     tmp_traj_wrapper.last_state_g = gScore;
     tmp_traj_wrappers.push_back(tmp_traj_wrapper);
-  }
+  } });
   // ii. rollout trajs - env collision free
   RobotData tmp_data;
   double last_state_h = 0;
@@ -289,8 +292,9 @@ void get_applicable_trajs_precise(Expander &expander,
     std::vector<Eigen::VectorXd> xs(us.size() + 1,
                                     Eigen::VectorXd::Zero(robots[robot_id]->nx));
     int num_valid_states = -1;
-    robots[robot_id]->rollout(x0, us, xs, &ff,
-                              &num_valid_states);
+    time_planner.time_rollout += timed_fun_void([&]
+                                                { robots[robot_id]->rollout(x0, us, xs, &ff,
+                                                                            &num_valid_states); });
     if (num_valid_states && num_valid_states < xs.size())
     {
       // std::cout << "rollout, state violations" << std::endl;
@@ -306,16 +310,18 @@ void get_applicable_trajs_precise(Expander &expander,
     // check for collision with the env
     Motion motion;
     traj_to_motion(traj, *(robots[robot_id]), motion, /*compute collision*/ true);
-    assert(motion.collision_manager);
-    assert(robots[robot_id]->env.get());
     fcl::DefaultCollisionData<double> collision_data;
-    motion.collision_manager->collide(robots[robot_id]->env.get(), &collision_data,
-                                      fcl::DefaultCollisionFunction<double>);
+    time_planner.time_collisions += timed_fun_void([&]
+                                                   { 
+      assert(motion.collision_manager);
+      assert(robots[robot_id]->env.get());
+      motion.collision_manager->collide(robots[robot_id]->env.get(), &collision_data, fcl::DefaultCollisionFunction<double>); });
     if (collision_data.result.isCollision())
       continue;
     tmp_data.trajectories.push_back(traj);
     tmp_data.last_state_g.push_back(traj_wrap.last_state_g);
-    last_state_h = h_funs[robot_id]->h(traj.goal);
+    time_planner.time_hfun += timed_fun_void([&]
+                                             { last_state_h = h_funs[robot_id]->h(traj.goal); });
     tmp_data.last_state_h.push_back(last_state_h);
     if (last_state_h < min_h)
       min_h = last_state_h;
@@ -323,7 +329,8 @@ void get_applicable_trajs_precise(Expander &expander,
       max_h = last_state_h;
   }
   // h_value-based clustering, needs finetuning, that's why don't like it
-  robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ cluster_range, min_h, max_h, cluster_n, /*shuffle*/ false); // range 0.1-0.5 for sparseness, N=1 for alcove, atgoal, circle_uni. 0.05 for forest, wall
+  time_planner.time_clustering += timed_fun_void([&]
+                                                 { robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ cluster_range, min_h, max_h, cluster_n, /*shuffle*/ false); });
   // based on distance between last states of rolled-out-trajs, min_distance is the threshould for filtering, distance is computed with robot->distance function
   // robot_data = GetFilteredUniqueTopByH(tmp_data, /*min_distance*/ 0.5, robots, robot_id);
 }

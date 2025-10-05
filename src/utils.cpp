@@ -111,3 +111,37 @@ bool ConfigEqual::operator()(const std::vector<Eigen::VectorXd> &a,
   }
   return true;
 }
+
+double action_seq_distance(const std::vector<Eigen::VectorXd> &A, const std::vector<Eigen::VectorXd> &B)
+{
+  size_t T = A.size();
+  double sum = 0.0;
+  for (size_t t = 0; t < T; t++)
+  {
+    sum += (A[t] - B[t]).norm();
+  }
+  return sum / static_cast<double>(T);
+}
+
+std::vector<std::vector<Eigen::VectorXd>> filter_diverse(const std::vector<std::vector<Eigen::VectorXd>> &candidates,
+                                                         double eps)
+{
+  std::vector<std::vector<Eigen::VectorXd>> diverse;
+  for (const auto &cand : candidates)
+  {
+    bool is_unique = true;
+    for (const auto &kept : diverse)
+    {
+      if (action_seq_distance(cand, kept) < eps)
+      {
+        is_unique = false;
+        break;
+      }
+    }
+    if (is_unique)
+    {
+      diverse.push_back(cand);
+    }
+  }
+  return diverse;
+}

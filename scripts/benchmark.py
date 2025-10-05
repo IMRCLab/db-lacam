@@ -99,28 +99,28 @@ def main():
     # "circle6_integrator",
     # "circle8_integrator",
     # "circle10_integrator",
-    "circle2_unicycle",
-    "circle4_unicycle",
-    "circle6_unicycle",
-    "circle8_unicycle",
-    "circle10_unicycle",
-    "alcove_unicycle",
-    "atgoal_unicycle",
+    # "circle2_unicycle",
+    # "circle4_unicycle",
+    # "circle6_unicycle",
+    # "circle8_unicycle",
+    # "circle10_unicycle",
+    # "alcove_unicycle",
+    # "atgoal_unicycle",
     # 3D case
-    "forest4",
-    "corridor4",
-    "circle6",
-    "circle7_swap",
-    "passage6",
+    # "forest4",
+    # "corridor4",
+    # "circle6",
+    # "circle7_swap",
+    # "passage6",
     # "passage10",
     # scalability test
-    "test_n10_0_unicycle",
-    "test_n20_0_unicycle",
-    "test_n30_0_unicycle",
-    "test_n40_0_unicycle",
-    "test_n50_0_unicycle",
+    # "test_n10_0_unicycle",
+    # "test_n20_0_unicycle",
+    # "test_n30_0_unicycle",
+    # "test_n40_0_unicycle",
+    # "test_n50_0_unicycle",
   ]
-  for kind in ["unicycle","unicycle_sphere"]: 
+  for kind in ["unicycle_sphere"]: #"unicycle",
     for n in [8]:
       for k in range(10):
         instances.append("gen_p10_n{}_{}_{}".format(n,k, kind))
@@ -128,9 +128,9 @@ def main():
   instances_n = ["test_n10_0_unicycle", "test_n20_0_unicycle", "test_n30_0_unicycle", "test_n40_0_unicycle", "test_n50_0_unicycle"] 
 
   algs = [
-    "db-cbs",
-    "db-ecbs",
-    "db-pibt",
+    # "db-cbs",
+    # "db-ecbs",
+    # "db-pibt",
     "db-lacam",
   ]
   trials = 1 * 5

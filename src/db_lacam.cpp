@@ -184,7 +184,7 @@ MultiRobotTrajectory LaCAM::solve()
       livelock = false;
       if (H->livelock && std::find(H->unguided.begin(), H->unguided.end(), r) != H->unguided.end())
         livelock = true;
-      get_applicable_trajs_precise_exhaustive(H->dbN[r], rolled_robot_data[r], r, livelock);
+      get_applicable_trajs_precise_exhaustive(H->dbN[r], rolled_robot_data[r], r, /*livelock*/ false);
       // if no applicable motions for the current state, then remove the node
       if (!rolled_robot_data[r].trajectories.size())
       {

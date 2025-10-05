@@ -40,7 +40,7 @@ jobs:
         cd ${{github.workspace}}/build
         python3 ../scripts/benchmark.py
 
-    - uses: actions/upload-artifact@v4
-      with:
-        name: results
-        path: results/
+    # - uses: actions/upload-artifact@v4
+    #   with:
+    #     name: results
+    #     path: results/

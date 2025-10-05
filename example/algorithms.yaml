@@ -1,6 +1,7 @@
 db-cbs:
   default:
     delta_0: 0.5
+    goal_delta: 0.75
     delta_rate: 0.9
     num_primitives_0: 200
     num_primitives_rate: 1.5
@@ -9,7 +10,6 @@ db-cbs:
     heuristic1: "reverse-search"
     heuristic1_delta: 0.9
     heuristic1_num_primitives_0: 200
-    goal_delta: 0.5
   '*_integrator':
     delta_0: 0.5
     num_primitives_0: 200 
@@ -18,12 +18,6 @@ db-cbs:
   '*_unicycle_sphere':
     delta_0: 0.9
   '*alcove_unicycle':
-    delta_0: 0.5
-    num_primitives_0: 200
-    heuristic1_delta: 0.9
-    heuristic1_num_primitives_0: 200
-    goal_delta: 0.5 
-  '*alcove3_unicycle':
     delta_0: 0.5
     num_primitives_0: 200
     heuristic1_delta: 0.9
@@ -48,6 +42,7 @@ db-cbs:
 db-ecbs:
   default:
     delta_0: 0.5 
+    goal_delta: 0.75
     delta_rate: 0.9
     num_primitives_0: 200
     num_primitives_rate: 1.5
@@ -73,74 +68,100 @@ db-pibt:
     num_primitives_0: 200
     alpha: 0.5 # 0.01 for grid
     filter_duplicates: True
-    heuristic1: "reverse-search" # none for grid
-    heuristic1_delta: 0.9 # 0.01 for grid
+    heuristic1: "reverse-search" 
+    heuristic1_delta: 0.9
     heuristic1_num_primitives_0: 200 
-    goal_delta: 0.5 # 1.0
-    cluster_range: 0.1
+    goal_delta: 0.5
+    cluster_range: 0.05
     cluster_n: 1
+    merged_aabb: false
   '*_integrator':
     delta_0: 0.5
     num_primitives_0: 200 
     heuristic1_delta: 0.5
     heuristic1_num_primitives_0: 100
   '*_unicycle_sphere':
-    delta_0: 0.5 
+    delta_0: 0.5
     num_primitives_0: 200
-    filter_duplicates: True
-    heuristic1_delta: 0.9 
+    heuristic1_delta: 0.9
     heuristic1_num_primitives_0: 200 
     cluster_range: 0.05
     cluster_n: 8
   '*alcove_unicycle':
     delta_0: 0.5
-    alpha: 0.5
-    num_primitives_0: 200
-    heuristic1_delta: 0.9 
-    heuristic1_num_primitives_0: 200 
-    goal_delta: 0.5 
-    cluster_range: 0.1
-    cluster_n: 1
-  '*alcove3_unicycle':
-    delta_0: 0.5
-    num_primitives_0: 200
+    num_primitives_0: 200 
     heuristic1_delta: 0.9
     heuristic1_num_primitives_0: 200
-    goal_delta: 0.5 
+    goal_delta: 0.75
+    cluster_range: 0.05
+    cluster_n: 8
+    merged_aabb: false
   '*atgoal_unicycle':
     delta_0: 0.5
     num_primitives_0: 200 
     heuristic1_delta: 0.9
     heuristic1_num_primitives_0: 200 
-    goal_delta: 0.5
-    cluster_range: 0.1
-    cluster_n: 1
-  '*forest4':
-    delta_0: 0.3
-    num_primitives_0: 300 
-    heuristic1_delta: 0.5
-    heuristic1_num_primitives_0: 100 
+    goal_delta: 0.75
     cluster_range: 0.05
-    cluster_n: 1
+    cluster_n: 8
+    merged_aabb: false
+  '*forest4':
+    delta_0: 0.5
+    goal_delta: 0.75
+    num_primitives_0: 200 
+    heuristic1_delta: 0.9
+    heuristic1_num_primitives_0: 300 
+    cluster_range: 0.05
+    cluster_n: 8
   '*wall4':
     delta_0: 0.3
     num_primitives_0: 300 
     heuristic1_delta: 0.9
     heuristic1_num_primitives_0: 200 
+    cluster_range: 0.05
+    cluster_n: 8
+  '*corridor4':
+    delta_0: 0.3
+    goal_delta: 0.5
+    num_primitives_0: 300 
+    heuristic1_delta: 0.9
+    heuristic1_num_primitives_0: 300 
+    cluster_range: 0.05
+    cluster_n: 2
+  '*circle6':
+    delta_0: 0.3 
+    num_primitives_0: 300
+    alpha: 0.5
+    heuristic1_delta: 0.9
+    heuristic1_num_primitives_0: 300 
+    goal_delta: 0.5
+    cluster_range: 0.05
+    cluster_n: 4
+  '*circle7_swap':
+    delta_0: 0.3 
+    num_primitives_0: 300
+    alpha: 0.5
+    heuristic1_delta: 0.9
+    heuristic1_num_primitives_0: 300 
+    goal_delta: 0.5
     cluster_range: 0.05
     cluster_n: 1
 db-lacam:
   default:
     delta_0: 0.5 # 0.01 for grid
-    num_primitives_0: 200
+    goal_delta: 0.5
+    num_primitives_0: 500 
     alpha: 0.5 # 0.01 for grid
     filter_duplicates: True
     heuristic1: "reverse-search" 
     heuristic1_delta: 0.9
-    heuristic1_num_primitives_0: 200 
-    goal_delta: 0.5 
-    cluster_range: 0.1
+    heuristic1_num_primitives_0: 500 
+    cluster_range: 0.05
+    cluster_distance: 1.0
     cluster_n: 1
+    cluster_shuffle: false
+    refine_solution: True
+    merged_aabb: false
   '*_integrator':
     delta_0: 0.5
     num_primitives_0: 200 
@@ -148,46 +169,92 @@ db-lacam:
     heuristic1_num_primitives_0: 100
   '*_unicycle_sphere':
     delta_0: 0.5
-    num_primitives_0: 200
+    goal_delta: 0.5
+    num_primitives_0: 500
     heuristic1_delta: 0.9
-    heuristic1_num_primitives_0: 200 
-    cluster_range: 0.05
-    cluster_n: 8
+    heuristic1_num_primitives_0: 500 
+    cluster_range: 0.02 
+    cluster_distance: 1.0
+    cluster_n: 1
   '*alcove_unicycle':
     delta_0: 0.5
     num_primitives_0: 200 
-    heuristic1_delta: 0.5  # 0.9
-    heuristic1_num_primitives_0: 160 # 200
-    goal_delta: 0.5
-    cluster_range: 0.05 # 0.1
-    cluster_n: 1
-  '*alcove3_unicycle':
-    delta_0: 0.5
-    num_primitives_0: 200
     heuristic1_delta: 0.9
     heuristic1_num_primitives_0: 200
-    goal_delta: 0.5 
+    goal_delta: 0.75
+    cluster_range: 0.02 # 0.05
+    cluster_n: 2 # or 8
+    merged_aabb: false
+    cluster_shuffle: True
   '*atgoal_unicycle':
     delta_0: 0.5
-    num_primitives_0: 200 
-    heuristic1_delta: 0.5 # 0.9
-    heuristic1_num_primitives_0: 200 
-    goal_delta: 0.5
-    cluster_range: 0.05 # 0.1
-    cluster_n: 1
-  '*forest4':
-    delta_0: 0.3
-    num_primitives_0: 300 
+    num_primitives_0: 500 
     heuristic1_delta: 0.5
-    heuristic1_num_primitives_0: 100 
+    heuristic1_num_primitives_0: 500 
+    goal_delta: 0.5
+    cluster_range: 0.02 
+    cluster_n: 1
+    cluster_distance: 0.5
+    merged_aabb: false
+  '*forest4':
+    delta_0: 0.5
+    goal_delta: 0.75
+    num_primitives_0: 200 # 300 
+    heuristic1_delta: 0.9
+    heuristic1_num_primitives_0: 200 # 300
     cluster_range: 0.05
     cluster_n: 1
-  '*wall4':
-    delta_0: 0.3
+  '*corridor4':
+    delta_0: 0.5
+    goal_delta: 0.9
     num_primitives_0: 300 
     heuristic1_delta: 0.9
-    heuristic1_num_primitives_0: 200 
+    heuristic1_num_primitives_0: 300 
     cluster_range: 0.05
     cluster_n: 1
+  '*circle6':
+    delta_0: 0.5 
+    num_primitives_0: 300
+    alpha: 0.5
+    heuristic1_delta: 0.9
+    heuristic1_num_primitives_0: 300 
+    goal_delta: 0.5
+    cluster_range: 0.1
+    cluster_n: 1
+  '*circle7_swap':
+    delta_0: 0.5 
+    num_primitives_0: 300
+    alpha: 0.5
+    heuristic1_delta: 0.9
+    heuristic1_num_primitives_0: 300 
+    goal_delta: 0.5
+    cluster_range: 0.1
+    cluster_n: 1
+  '*passage':
+    delta_0: 0.5 
+    num_primitives_0: 300
+    alpha: 0.5
+    heuristic1_delta: 0.9
+    heuristic1_num_primitives_0: 300 
+    goal_delta: 0.5
+    cluster_range: 0.1
+    cluster_n: 1
+  '*gen_p10_n8_1_unicycle':
+    cluster_range: 0.02
+    cluster_distance: 0.5
+  '*gen_p10_n8_5_unicycle':
+    cluster_range: 0.02
+    cluster_distance: 0.5
+  '*gen_p10_n8_0_unicycle_sphere':
+    cluster_distance: 0.5
+  '*gen_p10_n8_1_unicycle_sphere':
+    cluster_distance: 0.5
+  '*gen_p10_n8_2_unicycle_sphere':
+    cluster_distance: 0.75
+  '*gen_p10_n8_5_unicycle_sphere':
+    cluster_range: 0.05
+  '*gen_p10_n8_9_unicycle_sphere':
+    cluster_range: 0.05 
+    cluster_distance: 0.5
 
   

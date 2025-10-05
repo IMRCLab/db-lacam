@@ -107,8 +107,8 @@ std::ostream &operator<<(std::ostream &os, const std::set<int> &arr)
     os << ele << ",";
   return os;
 }
-bool is_close_config(std::vector<Eigen::VectorXd> Q1, std::vector<Eigen::VectorXd> Q2,
-                     std::shared_ptr<dynobench::Model_robot> robot, double threshold);
+// bool is_close_config(std::vector<Eigen::VectorXd> Q1, std::vector<Eigen::VectorXd> Q2,
+//  std::shared_ptr<dynobench::Model_robot> robot, double threshold);
 
 struct Node
 {
@@ -173,6 +173,36 @@ struct RobotData
     last_state_g = std::move(shuffled_g);
     last_state_h = std::move(shuffled_h);
   }
+  // bad motions leading to livelock
+  bool remove_motion(const dynobench::Trajectory &traj)
+  {
+    auto same_states = [](const std::vector<Eigen::VectorXd> &a,
+                          const std::vector<Eigen::VectorXd> &b)
+    {
+      if (a.size() != b.size())
+        return false;
+      for (size_t i = 0; i < a.size(); i++)
+      {
+        if (!a[i].isApprox(b[i]))
+          return false;
+      }
+      return true;
+    };
+
+    for (size_t i = 0; i < trajectories.size(); i++)
+    {
+      if (same_states(trajectories[i].states, traj.states))
+      {
+        // erase corresponding elements
+        trajectories.erase(trajectories.begin() + i);
+        last_state_g.erase(last_state_g.begin() + i);
+        last_state_h.erase(last_state_h.begin() + i);
+        return true; // found and removed
+      }
+    }
+    return false; // not found
+  }
+
   void sort_by_h()
   {
     size_t N = last_state_h.size();
@@ -265,15 +295,15 @@ struct Time_planner
     std::cout << " time_sort_order: " << time_sort_order << "\n";
     std::cout << " time_grow_search_tree: " << time_grow_search_tree << "\n";
     std::cout << " time_get_trajs: " << time_get_trajs << "\n";
-    std::cout << " time_lazy_expand: " << time_lazy_expand << "\n";
-    std::cout << " time_lazy_sort: " << time_lazy_sort << "\n";
-    std::cout << " time_get_actions: " << time_get_actions << "\n";
+    // std::cout << " time_lazy_expand: " << time_lazy_expand << "\n";
+    // std::cout << " time_lazy_sort: " << time_lazy_sort << "\n";
+    // std::cout << " time_get_actions: " << time_get_actions << "\n";
     std::cout << " time_traj_to_motion: " << time_traj_to_motion << "\n";
     std::cout << " time_rollout: " << time_rollout << "\n";
     std::cout << " time_collisions (mixed): " << time_collisions << "\n";
-    std::cout << " time_collision_with_env: " << time_collision_with_env << "\n";
+    // std::cout << " time_collision_with_env: " << time_collision_with_env << "\n";
 
-    std::cout << " time_clustering: " << time_clustering << "\n";
+    // std::cout << " time_clustering: " << time_clustering << "\n";
     std::cout << " time_hfun: " << time_hfun << "\n";
     std::cout << " time_collision_with_unplanned: " << time_collision_with_unplanned << "\n";
     std::cout << " time_collision_with_planned: " << time_collision_with_planned << "\n";
@@ -285,3 +315,5 @@ struct Time_planner
 double action_seq_distance(const std::vector<Eigen::VectorXd> &A, const std::vector<Eigen::VectorXd> &B);
 std::vector<std::vector<Eigen::VectorXd>> filter_diverse(const std::vector<std::vector<Eigen::VectorXd>> &candidates,
                                                          double eps);
+std::vector<int> pick_subset_robots(
+    const std::vector<double> &ratios, int N, std::mt19937 &gen);

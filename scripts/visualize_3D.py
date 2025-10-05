@@ -24,10 +24,56 @@ def visualize(env_file, result_file, filename_video=None):
     
     vis["/Cameras/default/rotated/<object>"].set_transform(
         tf.translation_matrix([1, 0, 0]))
-
-
     with open(env_file) as f:
         data = yaml.load(f, Loader=yaml.FullLoader)
+
+    add_walls = False
+    if(add_walls):
+        # Define boundaries, my 3D problem
+      min_dim = data["environment"]["min"]
+      max_dim = data["environment"]["max"]
+
+      min_bounds = np.array([min_dim[0], min_dim[1], min_dim[2]])
+      max_bounds = np.array([max_dim[0], max_dim[1], max_dim[2]])
+
+      size = max_bounds - min_bounds
+      floor_size = [size[0], size[1], 0.1]  # Thin floor
+      wall_thickness = 0.1  # Thin walls
+
+      # Add floor
+      vis["floor"].set_object(g.Box(floor_size), g.MeshLambertMaterial(color=0x888888))
+      vis["floor"].set_transform(
+          meshcat.transformations.translation_matrix([(min_bounds[0] + max_bounds[0]) / 2,
+                                                      (min_bounds[1] + max_bounds[1]) / 2,
+                                                      min_bounds[2] - 0.05])  # Slightly below min z
+      )
+
+      # Add first wall (along x-axis)
+      wall_x_size = [wall_thickness, size[1], size[2]]
+      vis["wall_x"].set_object(g.Box(wall_x_size), g.MeshLambertMaterial(opacity=0.6, color=0xC0C0C0))
+      vis["wall_x"].set_transform(
+          meshcat.transformations.translation_matrix([min_bounds[0] - wall_thickness / 2,
+                                                      (min_bounds[1] + max_bounds[1]) / 2,
+                                                      min_bounds[2] + size[2] / 2])
+      )
+
+      # Add second wall (along y-axis)
+      wall_y_size = [size[0], wall_thickness, size[2]]
+      vis["wall_y"].set_object(g.Box(wall_y_size), g.MeshLambertMaterial(opacity=0.6, color=0xC0C0C0))
+      vis["wall_y"].set_transform(
+          meshcat.transformations.translation_matrix([(min_bounds[0] + max_bounds[0]) / 2,
+                                                max_bounds[1] + wall_thickness / 2,
+                                                min_bounds[2] + size[2] / 2])
+      )
+
+     # Add second wall (along x-axis)
+      wall_x_size = [wall_thickness, size[1], size[2]]
+      vis["wall_x"].set_object(g.Box(wall_x_size), g.MeshLambertMaterial(opacity=0.6, color=0xC0C0C0))
+      vis["wall_x"].set_transform(
+          meshcat.transformations.translation_matrix([max_bounds[0] - wall_thickness / 2,
+                                                      (min_bounds[1] + max_bounds[1]) / 2,
+                                                      min_bounds[2] + size[2] / 2])
+      )
     obstacles = data["environment"]["obstacles"]
     for k, obs in enumerate(obstacles):
       center = obs["center"]
@@ -48,7 +94,7 @@ def visualize(env_file, result_file, filename_video=None):
     name_robot = 0
     max_k = 0
     # start, goal states
-    start_goal = True
+    start_goal = False
     if(start_goal):
       robots = data["robots"]
       for r in range (len(robots)):
@@ -72,22 +118,20 @@ def visualize(env_file, result_file, filename_video=None):
           vis["Quadrotor" + str(name_robot)].set_object(g.StlMeshGeometry.from_file('../meshes/cf2_assembly.stl'), g.MeshLambertMaterial(color=0xFF0000)) # red
         else: 
           vis["Quadrotor" + str(name_robot)].set_object(g.StlMeshGeometry.from_file('../meshes/cf2_assembly.stl'), g.MeshLambertMaterial(color=0x0000FF)) # blue
-        vis["trajectory" + str(name_robot)].set_object(g.Line(g.PointsGeometry(position), g.LineBasicMaterial(color=0x000000))) # green - 0x00FF00 
+        vis["trajectory" + str(name_robot)].set_object(g.Line(g.PointsGeometry(position), g.LineBasicMaterial(color=0x006400))) # green - 0x00FF00 
         # Initialize marker spheres at every 13th state
-        for k in range(0, len(state), 13):
-          marker_name = f"marker_{name_robot}_{k}"
-          # Compute opacity: closer to the end → lighter (lower opacity)
-          # linear fade from 0.9 (start) to 0.2 (end)
-          fade_ratio = k / len(state)
-          opacity = 0.9 * (1 - fade_ratio) + 0.2 * fade_ratio  # linear blend
+        # for k in range(0, len(state), 6):
+        #   marker_name = f"marker_{name_robot}_{k}"
+        #   fade_ratio = k / len(state)
+        #   opacity = 0.9 * (1 - fade_ratio) + 0.2 * fade_ratio  # linear blend
 
-          vis[marker_name].set_object(
-              g.Mesh(
-                  g.Sphere(0.02),
-                  g.MeshLambertMaterial(opacity=opacity, color=0xFF0000, transparent=True)
-              )
-          )
-          vis[marker_name].set_transform(tf.translation_matrix(state[k][0:3]))
+        #   vis[marker_name].set_object(
+        #       g.Mesh(
+        #           g.Sphere(0.02),
+        #           g.MeshLambertMaterial(opacity=opacity, color=0xFF0000, transparent=True)
+        #       )
+        #   )
+        #   vis[marker_name].set_transform(tf.translation_matrix(state[k][0:3]))
 
         name_robot+=1
     for k in range(max_k):

@@ -40,6 +40,7 @@
 #include "utils.hpp"
 #include "dbpibt_utils.hpp"
 #include "dbpibt_options.hpp"
+#include "est_planner.hpp"
 
 namespace fs = std::filesystem;
 #define DYNOBENCH_BASE "../dynoplan/dynobench/"
@@ -87,7 +88,7 @@ int main(int argc, char *argv[])
   }
   auto start_time = std::chrono::steady_clock::now();
   YAML::Node cfg = YAML::LoadFile(cfgFile);
-  cfg = cfg["db-pibt"]["default"];
+  // cfg = cfg["db-pibt"]["default"];
   // setup dblacam options
   Planner_options planner_options;
   planner_options.delta = cfg["delta_0"].as<float>();
@@ -152,6 +153,7 @@ int main(int argc, char *argv[])
                   tdb_options.max_motions, motions);
 
   tdb_options.motions_ptr = &motions;
+  planner_options.motions_ptr = &motions;
   std::vector<ompl::NearestNeighbors<std::shared_ptr<AStarNode>> *> heuristics(
       robots.size(), nullptr);
   if (cfg["heuristic1"].as<std::string>() == "reverse-search")
@@ -284,7 +286,8 @@ int main(int argc, char *argv[])
     }
     return false;
   };
-  db_PIBT dbpibt(robots, time_planner);
+  MultiRobotTrajectory dynamic_obstacles;
+  db_PIBT dbpibt(robots, time_planner, dynamic_obstacles);
   std::shared_ptr<AStarNode> best_node;
   // store the output
   MultiRobotTrajectory solution;
@@ -317,6 +320,8 @@ int main(int argc, char *argv[])
       best_node->is_in_open = false;
       double distance_to_goal =
           robots[i]->distance(best_node->state_eig, problem.goals[i]);
+      std::cout << "robot " << i << " distance to goal: " << distance_to_goal << std::endl;
+
       if (distance_to_goal <= planner_options.goal_delta)
       {
         reached_goal++;
@@ -327,11 +332,11 @@ int main(int argc, char *argv[])
       M_to[i].states.clear();
       M_to[i].actions.clear();
       time_planner.time_get_trajs += timed_fun_void([&]
-                                                    { get_applicable_trajs_precise(expander,
-                                                                                   robot_hfuns, robots,
-                                                                                   traj_wrapper,
-                                                                                   best_node, rolled_robot_data[i], /*id*/ i,
-                                                                                   planner_options.cluster_range, planner_options.cluster_n, time_planner); });
+                                                    { get_applicable_trajs_precise_exhaustive(expander,
+                                                                                              robot_hfuns, robots,
+                                                                                              traj_wrapper,
+                                                                                              best_node, rolled_robot_data[i], /*id*/ i,
+                                                                                              time_planner, planner_options); });
     }
     if (reached_goal == robots.size())
     {
@@ -350,6 +355,7 @@ int main(int argc, char *argv[])
     Q_to.clear();
     // call pibt
     success = dbpibt.set_new_config(Q_from, Q_to, dbNode_from, dbNode_to, M_to, order, rolled_robot_data);
+    std::cout << "set new config: " << success << std::endl;
     if (!success)
     {
       std::cout << "dbPIBT failed!" << std::endl;

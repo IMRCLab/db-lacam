@@ -11,6 +11,8 @@ from main_dbcbs import run_dbcbs
 from main_dbecbs import run_dbecbs
 from main_dblacam import run_dblacam
 from benchmark_table import write_table
+from benchmark_stats import run_benchmark_stats
+import paper_tables
 
 @dataclass
 class ExecutionTask:
@@ -63,6 +65,13 @@ def execute_task(task: ExecutionTask):
     mycfg_instance = cfg[task.alg][Path(task.instance).name]
     mycfg = {**mycfg, **mycfg_instance} # merge two dictionaries
 
+  for k, v in cfg[task.alg].items():
+      if "*" in k and fnmatch.fnmatch(Path(task.instance), k):
+          mycfg |= v  
+
+  if Path(task.instance) in cfg[task.alg]:
+      mycfg |= cfg[task.alg][Path(task.instance)]
+
   print("Using configurations ", mycfg)
 
   if task.alg == "db-pibt":
@@ -99,29 +108,39 @@ def main():
     "atgoal_unicycle",
     # 3D case
     "forest4",
-    "wall4",
+    "corridor4",
+    "circle6",
+    "circle7_swap",
+    "passage6",
+    # "passage10",
+    # scalability test
+    "test_n10_0_unicycle",
+    "test_n20_0_unicycle",
+    "test_n30_0_unicycle",
+    "test_n40_0_unicycle",
+    "test_n50_0_unicycle",
   ]
   for kind in ["unicycle","unicycle_sphere"]: 
     for n in [8]:
       for k in range(10):
         instances.append("gen_p10_n{}_{}_{}".format(n,k, kind))
 
-  instances_3d = ["forest4", "wall4"]
+  instances_n = ["test_n10_0_unicycle", "test_n20_0_unicycle", "test_n30_0_unicycle", "test_n40_0_unicycle", "test_n50_0_unicycle"] 
 
   algs = [
-    # "db-cbs",
-    # "db-ecbs",
-    # "db-pibt",
+    "db-cbs",
+    "db-ecbs",
+    "db-pibt",
     "db-lacam",
   ]
-  trials = 1 * 1
+  trials = 1 * 5
   timelimit_2d = 1 * 60 
-  timelimit_3d = 5 * 60 
+  timelimit_n = 5 * 60 # scalability 
   timelimit_max = 0 # plot needs higher timelimit
   tasks = []
   for instance in instances:
-    if instance in instances_3d:
-        timelimit = timelimit_3d
+    if instance in instances_n:
+        timelimit = timelimit_n
     else:
         timelimit = timelimit_2d
     timelimit_max = max(timelimit_max, timelimit)
@@ -139,6 +158,12 @@ def main():
     for task in tasks:
       execute_task(task)
 
+  run_benchmark_stats(instances, algs, trials, timelimit_max)
   write_table(instances, algs, Path("../results"), "table.pdf", trials, timelimit_max)
+  # paper_tables.write_table_2d(trials, timelimit)
+  # paper_tables.write_table_3d(trials, timelimit)
+  # paper_tables.write_table_scalability(trials, timelimit)
+
+
 if __name__ == '__main__':
   main()

@@ -326,3 +326,107 @@ void export_solutions(const std::vector<LowLevelPlan<dynobench::Trajectory>> &so
     }
   }
 }
+
+void extract_motion_primitives(dynobench::Problem &problem,
+                               MultiRobotTrajectory &multi_robot_opt_out,
+                               std::map<std::string, std::vector<dynoplan::Motion>> &robot_motions,
+                               const std::vector<std::shared_ptr<dynobench::Model_robot>> &all_robots,
+                               int len)
+{
+
+  size_t robot_idx = 0;
+  for (auto robot_trajectory : multi_robot_opt_out.trajectories)
+  {
+    int idx = 0;
+    int total_actions = robot_trajectory.actions.size();
+    while (idx < total_actions)
+    {
+      int num_actions = rand() % 11 + len; // without len it's < 10
+      num_actions = std::min(num_actions, (total_actions - idx));
+      // make sure the left motion primitive has >= 5 length
+      if ((total_actions - (idx + num_actions)) < 5 && idx + num_actions < total_actions)
+      {
+        num_actions = total_actions - idx;
+      }
+      dynobench::Trajectory new_trajectory;
+      std::vector action_vector(robot_trajectory.actions.begin() + idx, robot_trajectory.actions.begin() + idx + num_actions);
+      new_trajectory.actions = action_vector;
+
+      std::vector state_vector(robot_trajectory.states.begin() + idx, robot_trajectory.states.begin() + idx + num_actions + 1);
+      // rebase
+      Eigen::VectorXd first_state = state_vector[0];
+      for (auto &state : state_vector)
+      {
+        state[0] -= first_state[0];
+        state[1] -= first_state[1];
+        if (!all_robots[robot_idx]->is_2d)
+          state[2] -= first_state[2];
+      }
+      new_trajectory.states = state_vector;
+      dynoplan::Motion new_motion;
+      traj_to_motion(new_trajectory, *all_robots[robot_idx], new_motion, /*check collision*/ true);
+      new_motion.traj = new_trajectory;
+      new_motion.idx = robot_motions[problem.robotTypes[robot_idx]].size();
+      robot_motions[problem.robotTypes[robot_idx]].push_back(std::move(new_motion));
+      idx += num_actions;
+    }
+    robot_motions[problem.robotTypes[robot_idx]].shrink_to_fit();
+    robot_idx++;
+  }
+}
+
+bool sanity_check(
+    const dynobench::Trajectory &sol1,
+    const dynobench::Trajectory &sol2,
+    double robot_size = 0.4)
+{
+  using CollisionGeometry = fcl::CollisionGeometryd;
+  using CollisionObject = fcl::CollisionObjectd;
+
+  // --- Create robot shapes depending on type ---
+  std::shared_ptr<CollisionGeometry> geom1;
+  std::shared_ptr<CollisionGeometry> geom2;
+
+  geom1 = std::make_shared<fcl::Sphered>(robot_size);
+  geom2 = std::make_shared<fcl::Sphered>(robot_size);
+
+  CollisionObject obj1(geom1);
+  CollisionObject obj2(geom2);
+
+  fcl::CollisionRequestd request;
+  fcl::CollisionResultd result;
+
+  size_t max_t = std::max(sol1.states.size() - 1, sol2.states.size() - 1);
+
+  for (size_t t = 0; t <= max_t; ++t)
+  {
+    Eigen::VectorXd state1 = (t < sol1.states.size()) ? sol1.states[t] : sol1.states.back();
+    Eigen::VectorXd state2 = (t < sol2.states.size()) ? sol2.states[t] : sol2.states.back();
+
+    fcl::Vector3d p1, p2;
+    if (state1.size() >= 3 && state2.size() >= 3)
+    {
+      p1 = fcl::Vector3d(state1[0], state1[1], state1[2]);
+      p2 = fcl::Vector3d(state2[0], state2[1], state2[2]);
+    }
+    else
+    {
+      p1 = fcl::Vector3d(state1[0], state1[1], 0.0);
+      p2 = fcl::Vector3d(state2[0], state2[1], 0.0);
+    }
+
+    obj1.setTranslation(p1);
+    obj2.setTranslation(p2);
+
+    result.clear();
+    fcl::collide(&obj1, &obj2, request, result);
+
+    if (result.isCollision())
+    {
+      std::cout << "collision at timestep " << t << std::endl;
+      return false; // sanity check failed, they collide
+    }
+  }
+
+  return true; // no collisions detected
+}

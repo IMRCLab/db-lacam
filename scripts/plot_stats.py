@@ -277,9 +277,8 @@ class Report:
   def plot_initial_time_vs_robot_numbers(self, exp_names):
     # Hard-coded agent numbers for x-axis
     agent_numbers = [10, 20, 30, 40, 50]
-
     self._add_page()
-    self.fig, self.ax = plt.subplots()
+    self.fig, self.ax = plt.subplots(figsize=(9, 4))
 
     algo_data = {algo: {"agents": [], "times": []}
                  for (_, algo) in self.stats.keys()}  # include all algos
@@ -302,16 +301,15 @@ class Report:
             algo_data[algo]["agents"].append(n_agents)
             algo_data[algo]["times"].append(initial_times)  # store all times for std
 
-    marker_dict = {
-        "db-cbs": "o",  
-        "db-ecbs": "s",  
-        "db-pibt": "^",  
-        "db-lacam": "D"
+    color_dict = {
+        "db-cbs": "#88CCEE",   
+        "db-ecbs": "#009988",  
+        "db-pibt": "#E7B503",  
+        "db-lacam": "#993404"     
     }
 
     for algo, data in algo_data.items():
-        marker = marker_dict.get(algo, "o")
-        color = self.color_dict.get(algo, "gray")
+        color = color_dict.get(algo, "gray")
 
         if len(data["agents"]) > 0:
             # Sort for consistent plotting
@@ -321,7 +319,7 @@ class Report:
             stds = [np.std(t) for t in times_list_sorted]
 
             # Plot mean line
-            self.ax.plot(agents_sorted, means, linestyle="--", marker=marker, color=color, label=algo)
+            self.ax.plot(agents_sorted, means, linestyle="--", color=color, label=algo)
             # Plot shadow for std
             self.ax.fill_between(agents_sorted,
                                  np.array(means) - np.array(stds),
@@ -330,15 +328,18 @@ class Report:
 
         else:
             # No solutions found → still add empty label
-            self.ax.scatter([], [], color=color, label=algo, marker=marker)
+            self.ax.plot([], [], color=color, label=algo, linestyle="--")
 
+    fontsize = 20
     self.ax.set_xticks(agent_numbers)
-    self.ax.set_xlabel("Number of Robots")
-    self.ax.set_ylabel("Runtime [s]")
-    self.ax.legend()
+    self.ax.set_xlabel("Number of Robots", fontsize=fontsize)
+    self.ax.set_ylabel("Runtime [s]", fontsize=fontsize)
+    self.ax.tick_params(axis='both', which='major', labelsize=fontsize)
+    self.ax.legend(fontsize=fontsize)
     self.ax.grid(True, linestyle="--", alpha=0.6)
     self.fig.tight_layout()
-
+    plt.savefig("../results/scalability.pdf", bbox_inches='tight')  # keeps spacing tight
+    plt.close()
 
   def close(self):
     self._add_page()

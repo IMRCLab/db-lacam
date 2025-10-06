@@ -202,6 +202,26 @@ int main(int argc, char *argv[])
     problem.starts = problem_original.starts;
     problem.goals = problem_original.goals;
   }
+  bool heuristic_analysis = true;
+  if (heuristic_analysis)
+  {
+    auto space6 = std::string(6, ' ');
+    for (size_t i = 0; i < heuristics_rev.size(); ++i)
+    {
+      std::string filename = "node_expansion_est_" + std::to_string(i) + ".yaml";
+      std::ofstream out(filename);
+      out << "states:" << std::endl;
+      auto *nn = heuristics_rev[i];
+      std::vector<std::shared_ptr<AStarNode>> nodes;
+      nn->list(nodes);
+      std::cout << "writing " << nodes.size() << " nodes for robot " << i << std::endl;
+      for (auto &node : nodes)
+      {
+        const Eigen::VectorXd &state = node->state_eig;
+        out << space6 << "  - " << state.format(dynobench::FMT) << std::endl;
+      }
+    }
+  }
   ompl::NearestNeighbors<Motion *> *T_m = nullptr;
   T_m = nigh_factory_t<Motion *>(problem.robotTypes[0], robots[0], // homogeneous case
                                  /*reverse_search*/ false);

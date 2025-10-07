@@ -160,7 +160,7 @@ db-lacam:
     cluster_distance: 1.0
     cluster_n: 1
     cluster_shuffle: false
-    refine_solution: True
+    refine_solution: false # True
     merged_aabb: false
   '*_integrator':
     delta_0: 0.5

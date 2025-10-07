@@ -104,8 +104,8 @@ def main():
     "circle6_unicycle",
     "circle8_unicycle",
     "circle10_unicycle",
-    "alcove_unicycle",
-    "atgoal_unicycle",
+    # "alcove_unicycle",
+    # "atgoal_unicycle",
     # 3D case
     # "forest4",
     # "corridor4",

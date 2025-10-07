@@ -481,8 +481,8 @@ void LaCAM::get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> d
     m_time_planner.time_traj_to_motion += timed_fun_void([&]
                                                          { traj_to_motion(traj, *(robots[robot_id]), motion, /*compute collision*/ true, planner_options.merged_aabb); });
     fcl::DefaultCollisionData<double> collision_data;
-    m_time_planner.time_collisions += timed_fun_void([&]
-                                                     {
+    m_time_planner.time_collision_with_env += timed_fun_void([&]
+                                                             {
     assert(motion.collision_manager);
     assert(robots[robot_id]->env.get());
     motion.collision_manager->collide(robots[robot_id]->env.get(), &collision_data,
@@ -491,13 +491,14 @@ void LaCAM::get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> d
       continue;
     tmp_data.trajectories.push_back(traj);
     tmp_data.last_state_g.push_back(traj_wrap.last_state_g);
-    // m_time_planner.time_hfun += timed_fun_void([&]
-    //                                            { last_state_h = h_funs[robot_id]->h(traj.goal); });
-    last_state_h = h_funs[robot_id]->h(traj.goal);
+    m_time_planner.time_hfun += timed_fun_void([&]
+                                               { last_state_h = h_funs[robot_id]->h(traj.goal); });
+    // last_state_h = h_funs[robot_id]->h(traj.goal);
     if (last_state_h == -1.0)
     {
-      est(traj.goal, problem, planner_options, robots[robot_id], robot_id, last_state_h,
-          heuristics_nn[robot_id], nullptr, *heuristics[robot_id], /*reverse search*/ false);
+      m_time_planner.reverse_search += timed_fun_void([&]
+                                                      { est(traj.goal, problem, planner_options, robots[robot_id], robot_id, last_state_h,
+                                                            heuristics_nn[robot_id], nullptr, *heuristics[robot_id], /*reverse search*/ false); });
       if (last_state_h == -1.0)
       {
         continue;
@@ -509,12 +510,15 @@ void LaCAM::get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> d
     if (last_state_h > max_h)
       max_h = last_state_h;
   }
+
   if (livelock)
   {
-    robot_data = GetTopNPerClusterByRelativeDistance(tmp_data, 1, /*threshold*/ planner_options.cluster_distance);
+    m_time_planner.time_clustering += timed_fun_void([&]
+                                                     { robot_data = GetTopNPerClusterByRelativeDistance(tmp_data, 1, /*threshold*/ planner_options.cluster_distance); });
   }
   else
-    robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ planner_options.cluster_range, min_h, max_h, planner_options.cluster_n, /*shuffle*/ planner_options.cluster_shuffle);
+    m_time_planner.time_clustering += timed_fun_void([&]
+                                                     { robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ planner_options.cluster_range, min_h, max_h, planner_options.cluster_n, /*shuffle*/ planner_options.cluster_shuffle); });
 }
 // OPTION 3: sort actions based on epsilon
 void LaCAM::get_applicable_trajs_precise_sort_actions(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id)

@@ -269,6 +269,11 @@ int main(int argc, char *argv[])
   std::cout << "Time taken (total): " << first_run_time.count() * 1000 << " ms" << std::endl;
   double cost = solution.get_cost();
   time_planner.print();
+  // save time statistics
+  fs::path output_path(outputFile);
+  std::string output_folder = output_path.parent_path().string();
+  std::string time_stats_file = output_folder + "/time_search.yaml";
+  time_planner.writeYAML(time_stats_file);
   solution.to_yaml_format(outputFile.c_str()); // save just in case
   // save stats
   stats << "stats: " << "\n";

@@ -6,6 +6,24 @@ import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 import matplotlib.patches as mpatches
 
+def read_time_stats(file_path):
+    # Read and parse the YAML file
+    with open(file_path, 'r') as file:
+        data = yaml.safe_load(file)
+    # time_nearestMotion 
+    # time_hfun 
+    try:
+        return {
+            "time_collision_heuristic": data['data']['time_collision_heuristic'],
+            "time_collisions": data['data']['time_collisions'],
+            "time_nearestNode": data['data']['time_nearestNode'],
+            "time_rebuild_focal_set": data['data']['time_rebuild_focal_set'],
+            # "time_search": data['data']['time_search'],
+        }
+    except KeyError as e:
+        print(f"Error: Missing expected key {e} in the YAML data.")
+        return None
+
 # global normalization - max cost per instance
 def plot_results(instances, num_trials, normalize_cost=False):
    
@@ -282,10 +300,61 @@ def plot_results_runtime(instances, num_trials, font_size=18):
     plt.savefig("../results/results_runtime.pdf", format="pdf", bbox_inches="tight")
     plt.show()
 
-
+# compares time for main components of the planner, focus on h-estimation (dbA* vs. EST)
+def time_analysis_plot(data_iterations):
+    instance_names = [  # small, big delta order for each problem
+    "2-dbA*", 
+    "2-EST",
+    #
+    "4-dbA*",
+    "4-EST", 
+    #
+    "8-dbA*",
+    "8-EST"
+    ]
+    # Data for plotting
+    categories = {
+        'h-Estimation': 'reverse_search',
+        'Motion Rollout': 'time_rollout',
+        'Motion Clustering': 'time_clustering',
+        'Collision (env)': 'time_collision_with_env',
+        'Collision (robots)': 'time_collision_with_planned',
+        'Collision (potential)': 'time_collision_with_unplanned',
+    }
+   
+    colors = ['#4477AA', '#66CCEE', '#CCBB44', '#664477' '#AA3377', '#BBBBB'] # blue, cyan, yellow, red, purple, grey
+    labels = instance_names 
+    # Initialize plot
+    fig, ax = plt.subplots()
+    width = 0.35 # Bar width
+    x_positions = range(len(data_iterations))  # Positions for each bar
+    # Create stacked bars for each iteration
+    for category_index, (category, key) in enumerate(categories.items()):
+        bottoms = [sum(data[categories[c]] for c in list(categories.keys())[:category_index]) for data in data_iterations]
+        values = [data[key] for data in data_iterations]
+        ax.bar(x_positions, 
+               values, 
+               width, 
+               label=category,
+               alpha=0.9, 
+               color=colors[category_index], 
+               bottom=bottoms,
+               edgecolor='black')
+    
+    ax.grid(which='both', axis='x', linestyle='dashed')
+    ax.grid(which='major', axis='y', linestyle='dashed')
+    ax.set_ylabel("Runtime [ms]")
+    ax.set_xticks(x_positions)
+    ax.set_xticklabels(labels, rotation=45, ha='right')
+    ax.legend(loc='upper left')
+    plt.tight_layout()
+    plt.grid(True)
+    plt.show()
 
 if __name__ == "__main__":
-  instances = [
+
+# 1. results plot
+#   instances = [
 #   "alcove_unicycle",
 #   "atgoal_unicycle",
 #   "circle2_unicycle",
@@ -293,13 +362,12 @@ if __name__ == "__main__":
 #   "circle6_unicycle",
 #   "circle8_unicycle",
 #   "circle10_unicycle",
-  # scalability test
-  "test_n10_0_unicycle",
-  "test_n20_0_unicycle",
-  "test_n30_0_unicycle",
-  "test_n40_0_unicycle",
-  "test_n50_0_unicycle",
-  ]
+#   "test_n10_0_unicycle",
+#   "test_n20_0_unicycle",
+#   "test_n30_0_unicycle",
+#   "test_n40_0_unicycle",
+#   "test_n50_0_unicycle",
+#   ]
 #   for kind in ["unicycle","unicycle_sphere"]: 
 #     for n in [8]:
 #       for k in range(10):
@@ -310,8 +378,34 @@ if __name__ == "__main__":
 #   instances.append("circle7_swap")
 #   instances.append("passage6")
                    
-  num_trials = 5  # max number of trials per instance
+#   num_trials = 5  # max number of trials per instance
 #   plot_results(instances, num_trials, True)
-  plot_results_runtime(instances, num_trials)
+#   plot_results_runtime(instances, num_trials)
+
+# 2. time analysis on planner's main components
+    path = "/home/akmarak-laptop/IMRC/db-CBS/ICAPS26/time/"
+    instances = ["circle2", "circle4", "circle8", "circle10"]
+    folder = [
+        "dbastar",
+        "est"
+    ]
+    file_name = "time_search.yaml"
+    file_paths = []
+    # Generate paths by combining the base path, instance, and algorithm
+    for instance in instances:
+        for f in folder:
+            file_paths.append(path + f + "/" + instance + "/db-lacam/000/" + file_name)
+    # Read data from each YAML file
+    data_iterations = []
+    for file_path in file_paths:
+        if os.path.exists(file_path):
+            data = read_time_stats(file_path)
+            if data:
+                data_iterations.append(data)
+            else:
+                print(file_path)
+        else: 
+            print(file_path)
+    time_analysis_plot(data_iterations)
 
 

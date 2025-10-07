@@ -266,13 +266,11 @@ struct Time_planner
   double time_hfun = 0.0;                    // get h-value from the reverse search
   double time_collision_with_unplanned = 0.; // collision with motions of others (potentail)
   double time_collision_with_planned = 0;    // with motions of already-reserved-robots
+  double time_collision_with_env = 0.;       // collision with the env
   int expands = 0;                           // node expansion
   double time_traj_to_motion = 0.;           // convert traj to motion
-  double time_get_actions = 0.;              // get actions from traj_wrap
-  double time_collision_with_env = 0.;       // collision with the env
 
   double check_bounds = 0.0;
-  double build_heuristic = 0.0;
   double time_transform_primitive = 0.0;
   double time_queue = 0.0;
   double time_nearestNode = 0.0;
@@ -292,23 +290,34 @@ struct Time_planner
     std::cout << "*** Time stats for the planner ***" << std::endl;
     std::cout << " reverse_search: " << reverse_search << "\n";
     std::cout << " time_nearestMotion: " << time_nearestMotion << "\n";
-    std::cout << " time_sort_order: " << time_sort_order << "\n";
     std::cout << " time_grow_search_tree: " << time_grow_search_tree << "\n";
     std::cout << " time_get_trajs: " << time_get_trajs << "\n";
-    // std::cout << " time_lazy_expand: " << time_lazy_expand << "\n";
-    // std::cout << " time_lazy_sort: " << time_lazy_sort << "\n";
-    // std::cout << " time_get_actions: " << time_get_actions << "\n";
     std::cout << " time_traj_to_motion: " << time_traj_to_motion << "\n";
     std::cout << " time_rollout: " << time_rollout << "\n";
-    std::cout << " time_collisions (mixed): " << time_collisions << "\n";
-    // std::cout << " time_collision_with_env: " << time_collision_with_env << "\n";
-
-    // std::cout << " time_clustering: " << time_clustering << "\n";
     std::cout << " time_hfun: " << time_hfun << "\n";
     std::cout << " time_collision_with_unplanned: " << time_collision_with_unplanned << "\n";
     std::cout << " time_collision_with_planned: " << time_collision_with_planned << "\n";
-    // std::cout << " expands: " << expands << "\n";
     std::cout << "***" << std::endl;
+  }
+  void writeYAML(const std::string &filename) const
+  {
+    std::ofstream fout(filename);
+    if (!fout.is_open())
+    {
+      std::cerr << "Error: Could not open file " << filename << " for writing.\n";
+      return;
+    }
+
+    fout << "data:\n";
+    fout << "  reverse_search: " << reverse_search << "\n";
+    fout << "  time_grow_search_tree: " << time_grow_search_tree << "\n";
+    fout << "  time_rollout: " << time_rollout << "\n";
+    fout << "  time_hfun: " << time_hfun << "\n";
+    fout << "  time_clustering: " << time_clustering << "\n";
+    fout << "  time_collision_with_env: " << time_collision_with_env << "\n";
+    fout << "  time_collision_with_unplanned: " << time_collision_with_unplanned << "\n";
+    fout << "  time_collision_with_planned: " << time_collision_with_planned << "\n";
+    fout.close();
   }
 };
 

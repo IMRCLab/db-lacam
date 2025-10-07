@@ -204,6 +204,14 @@ db-lacam:
     heuristic1_num_primitives_0: 200 # 300
     cluster_range: 0.05
     cluster_n: 1
+  '*forest10':
+    delta_0: 0.5
+    goal_delta: 0.75
+    num_primitives_0: 500 
+    heuristic1_delta: 0.9
+    heuristic1_num_primitives_0: 500
+    cluster_range: 0.05
+    cluster_n: 1
   '*corridor4':
     delta_0: 0.5
     goal_delta: 0.9

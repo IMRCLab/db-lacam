@@ -1,0 +1,75 @@
+environment:
+  max: [2.0, 3.0, 1.5]
+  min: [-2.0, -3.0, 0.0]
+  obstacles:
+    - center: [2.0, -0.5, 0.5]   # 0
+      size: [0.25, 0.25, 1.0]
+      type: box
+    - center: [-0.5, -0.5, 0.5]  # 1
+      size: [0.25, 0.25, 1.0]
+      type: box
+    - center: [-2.0, -0.5, 0.5]  # 2
+      size: [0.25, 0.25, 1.0]
+      type: box
+    - center: [1.7, 1.0, 0.5]    # 3
+      size: [0.25, 0.25, 1.0]
+      type: box
+    - center: [0.7, 0.5, 0.5]    # 4
+      size: [0.25, 0.25, 1.0]
+      type: box
+    - center: [-1.5, 1.0, 0.5]   # 5
+      size: [0.25, 0.25, 1.0]
+      type: box
+    - center: [1.0, 2.5, 0.5]    # 6
+      size: [0.25, 0.25, 1.0]
+      type: box
+    - center: [0.0, 2.0, 0.5]    # 7
+      size: [0.25, 0.25, 1.0]
+      type: box
+    - center: [-1.0, 2.0, 0.5]   # 8
+      size: [0.25, 0.25, 1.0]
+      type: box
+    - center: [0.5, -2.5, 0.5]   # 9 (new)
+      size: [0.25, 0.25, 1.0]
+      type: box
+
+robots:
+  - type: integrator2_3d_v0 # 0
+    start: [0.0, -2.8, 0.5, 0, 0, 0]
+    goal: [0.0, 2.8, 1.0, 0, 0, 0]
+
+  - type: integrator2_3d_v0 # 1
+    start: [1.0, -2.8, 0.6, 0, 0, 0]
+    goal: [-1.0, 2.8, 0.9, 0, 0, 0]
+
+  - type: integrator2_3d_v0 # 2
+    start: [-1.0, -2.8, 0.7, 0, 0, 0]
+    goal: [1.0, 2.8, 1.0, 0, 0, 0]
+
+  - type: integrator2_3d_v0 # 3
+    start: [1.5, -2.5, 0.4, 0, 0, 0]
+    goal: [-1.5, 2.5, 0.8, 0, 0, 0]
+
+  - type: integrator2_3d_v0 # 4
+    start: [1.2, 1.5, 0.6, 0, 0, 0]
+    goal: [-1.2, -1.5, 1.0, 0, 0, 0]
+
+  - type: integrator2_3d_v0  # 5 (straight)
+    start: [1.2, 1.0, 0.5, 0, 0, 0]
+    goal:  [1.2, -2.0, 0.5, 0, 0, 0]
+
+  - type: integrator2_3d_v0 # 6
+    start: [-0.5, -2.0, 0.4, 0, 0, 0]
+    goal: [0.5, 2.0, 1.1, 0, 0, 0]
+
+  - type: integrator2_3d_v0 # 7
+    start: [1.0, -1.0, 0.5, 0, 0, 0]
+    goal: [-1.0, 1.5, 0.9, 0, 0, 0]
+
+  - type: integrator2_3d_v0 # 8
+    start: [-1.0, -1.0, 0.6, 0, 0, 0]
+    goal: [1.0, 1.5, 1.0, 0, 0, 0]
+
+  - type: integrator2_3d_v0 # 9
+    start: [0.0, -0.5, 0.5, 0, 0, 0]
+    goal: [0.0, 0.5, 1.0, 0, 0, 0]

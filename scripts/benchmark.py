@@ -108,6 +108,7 @@ def main():
     "atgoal_unicycle",
     # 3D case
     "forest4",
+    "forest10",
     "corridor4",
     "circle6",
     "circle7_swap",

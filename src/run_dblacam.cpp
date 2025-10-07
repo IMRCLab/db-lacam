@@ -285,7 +285,9 @@ int main(int argc, char *argv[])
       // Option 1: randomly choose 2 distinct IDs
       std::iota(all_ids.begin(), all_ids.end(), 0);
       std::shuffle(all_ids.begin(), all_ids.end(), gen);
-      std::vector<int> ids_tmp(all_ids.begin(), all_ids.begin() + 2);
+      std::uniform_int_distribution<size_t> dist(1, all_ids.size() - 1);
+      size_t rand_len = dist(gen);
+      std::vector<int> ids_tmp(all_ids.begin(), all_ids.begin() + rand_len);
 
       // Option 2: pick based on ratio = actual_cost / lower_bound_cost
       // for (size_t j = 0; j < robots.size(); j++)

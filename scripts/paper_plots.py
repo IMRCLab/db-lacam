@@ -6,24 +6,6 @@ import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 import matplotlib.patches as mpatches
 
-def read_time_stats(file_path):
-    # Read and parse the YAML file
-    with open(file_path, 'r') as file:
-        data = yaml.safe_load(file)
-    # time_nearestMotion 
-    # time_hfun 
-    try:
-        return {
-            "time_collision_heuristic": data['data']['time_collision_heuristic'],
-            "time_collisions": data['data']['time_collisions'],
-            "time_nearestNode": data['data']['time_nearestNode'],
-            "time_rebuild_focal_set": data['data']['time_rebuild_focal_set'],
-            # "time_search": data['data']['time_search'],
-        }
-    except KeyError as e:
-        print(f"Error: Missing expected key {e} in the YAML data.")
-        return None
-
 # global normalization - max cost per instance
 def plot_results(instances, num_trials, normalize_cost=False):
    
@@ -236,8 +218,8 @@ def plot_results_runtime(instances, num_trials, font_size=18):
     fig, ax_time = plt.subplots(figsize=(7, 4))
 
     # vertical separators between instances
-    for i in range(len(instances) - 1):
-        ax_time.axvline(x=i + 0.5, color="gray", linestyle="--", linewidth=0.7, alpha=0.6)
+    # for i in range(len(instances) - 1):
+    #     ax_time.axvline(x=i, color="gray", linestyle="--", linewidth=0.7, alpha=0.6)
 
     # plot each planner with mean ± std as shaded area
     for planner, style in planners.items():
@@ -267,6 +249,8 @@ def plot_results_runtime(instances, num_trials, font_size=18):
     ax_time.set_xticks(x)
     ax_time.set_xticklabels(plot_instances, fontsize=font_size)
     ax_time.tick_params(axis='both', labelsize=font_size-2)
+    ax_time.grid(which='major', axis='y', linestyle='dashed',alpha=0.6)
+    ax_time.grid(which='major', axis='x', linestyle='dashed',alpha=0.6)
 
     # legend
     # ax_time.legend(handles=legend_patches, fontsize=font_size-2, loc="best", frameon=True)
@@ -300,56 +284,8 @@ def plot_results_runtime(instances, num_trials, font_size=18):
     plt.savefig("../results/results_runtime.pdf", format="pdf", bbox_inches="tight")
     plt.show()
 
-# compares time for main components of the planner, focus on h-estimation (dbA* vs. EST)
-def time_analysis_plot(data_iterations):
-    instance_names = [  # small, big delta order for each problem
-    "2-dbA*", 
-    "2-EST",
-    #
-    "4-dbA*",
-    "4-EST", 
-    #
-    "8-dbA*",
-    "8-EST"
-    ]
-    # Data for plotting
-    categories = {
-        'h-Estimation': 'reverse_search',
-        'Motion Rollout': 'time_rollout',
-        'Motion Clustering': 'time_clustering',
-        'Collision (env)': 'time_collision_with_env',
-        'Collision (robots)': 'time_collision_with_planned',
-        'Collision (potential)': 'time_collision_with_unplanned',
-    }
-   
-    colors = ['#4477AA', '#66CCEE', '#CCBB44', '#664477' '#AA3377', '#BBBBB'] # blue, cyan, yellow, red, purple, grey
-    labels = instance_names 
-    # Initialize plot
-    fig, ax = plt.subplots()
-    width = 0.35 # Bar width
-    x_positions = range(len(data_iterations))  # Positions for each bar
-    # Create stacked bars for each iteration
-    for category_index, (category, key) in enumerate(categories.items()):
-        bottoms = [sum(data[categories[c]] for c in list(categories.keys())[:category_index]) for data in data_iterations]
-        values = [data[key] for data in data_iterations]
-        ax.bar(x_positions, 
-               values, 
-               width, 
-               label=category,
-               alpha=0.9, 
-               color=colors[category_index], 
-               bottom=bottoms,
-               edgecolor='black')
-    
-    ax.grid(which='both', axis='x', linestyle='dashed')
-    ax.grid(which='major', axis='y', linestyle='dashed')
-    ax.set_ylabel("Runtime [ms]")
-    ax.set_xticks(x_positions)
-    ax.set_xticklabels(labels, rotation=45, ha='right')
-    ax.legend(loc='upper left')
-    plt.tight_layout()
-    plt.grid(True)
-    plt.show()
+
+
 
 if __name__ == "__main__":
 
@@ -380,32 +316,17 @@ if __name__ == "__main__":
                    
 #   num_trials = 5  # max number of trials per instance
 #   plot_results(instances, num_trials, True)
-#   plot_results_runtime(instances, num_trials)
 
-# 2. time analysis on planner's main components
-    path = "/home/akmarak-laptop/IMRC/db-CBS/ICAPS26/time/"
-    instances = ["circle2", "circle4", "circle8", "circle10"]
-    folder = [
-        "dbastar",
-        "est"
-    ]
-    file_name = "time_search.yaml"
-    file_paths = []
-    # Generate paths by combining the base path, instance, and algorithm
-    for instance in instances:
-        for f in folder:
-            file_paths.append(path + f + "/" + instance + "/db-lacam/000/" + file_name)
-    # Read data from each YAML file
-    data_iterations = []
-    for file_path in file_paths:
-        if os.path.exists(file_path):
-            data = read_time_stats(file_path)
-            if data:
-                data_iterations.append(data)
-            else:
-                print(file_path)
-        else: 
-            print(file_path)
-    time_analysis_plot(data_iterations)
+# 2. scalability plot - time vs. number of robots
+  instances = [
+  "test_n10_0_unicycle",
+  "test_n20_0_unicycle",
+  "test_n30_0_unicycle",
+  "test_n40_0_unicycle",
+  "test_n50_0_unicycle",
+  ]
+  num_trials = 5  # max number of trials per instance
+  plot_results_runtime(instances, num_trials)
+
 
 

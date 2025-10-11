@@ -13,7 +13,7 @@ def plot_results(instances, num_trials, normalize_cost=False):
     planners = {
         "db-cbs": {"marker": "1", "color": "#88CCEE"},   
         "db-ecbs": {"marker": "2", "color": "#009988"},  
-        "db-pibt": {"marker": "|", "color": "#E7B503"},  
+        "db-pibt": {"marker": "3", "color": "#E7B503"},  
         "db-lacam": {"marker": "+", "color": "#993404"}     
     }
     name_map = {
@@ -23,18 +23,17 @@ def plot_results(instances, num_trials, normalize_cost=False):
         "db-lacam": "db-LaCAM"
         }
     instance_map = {
+    # a
     "alcove_unicycle":"alcove-u",
+    # b
     "atgoal_unicycle":"atgoal-u",
+    # c
     "circle2_unicycle":"circle-u-n2",
     "circle4_unicycle":"circle-u-n4",
     "circle6_unicycle":"circle-u-n6",
     "circle8_unicycle":"circle-u-n8",
     "circle10_unicycle":"circle-u-n10",
-    "forest4":"forest-n4-3D",
-    "corridor4":"corridor-n4-3D",
-    "circle6":"circle-n6-3D",
-    "circle7_swap":"circle-n7-3D",
-    "passage6":"passage-n6-3D",
+    # d
     'gen_p10_n8_0_unicycle_sphere': "random-n8-u\u209B",
     'gen_p10_n8_1_unicycle_sphere': "random-n8-u\u209B",
     'gen_p10_n8_2_unicycle_sphere': "random-n8-u\u209B",
@@ -45,6 +44,7 @@ def plot_results(instances, num_trials, normalize_cost=False):
     'gen_p10_n8_7_unicycle_sphere': "random-n8-u\u209B",
     'gen_p10_n8_8_unicycle_sphere': "random-n8-u\u209B",
     'gen_p10_n8_9_unicycle_sphere': "random-n8-u\u209B",
+    # e 
     'gen_p10_n8_0_unicycle': "random-n8-u",
     'gen_p10_n8_1_unicycle': "random-n8-u",
     'gen_p10_n8_2_unicycle': "random-n8-u",
@@ -54,7 +54,17 @@ def plot_results(instances, num_trials, normalize_cost=False):
     'gen_p10_n8_6_unicycle': "random-n8-u",
     'gen_p10_n8_7_unicycle': "random-n8-u",
     'gen_p10_n8_8_unicycle': "random-n8-u",
-    'gen_p10_n8_9_unicycle': "random-n8-u"}
+    'gen_p10_n8_9_unicycle': "random-n8-u",
+    # f
+    "forest4":"forest-n4-3D",
+    # g
+    "corridor4":"corridor-n4-3D",
+    # h
+    "circle6":"circle-n6-3D",
+    # i
+    "circle7_swap":"circle-n7-3D",
+    # j
+    "passage6":"passage-n6-3D"}
 
     data = {p: {inst: {"time": [], "cost": [], "fail": 0} for inst in instances} for p in planners}
 
@@ -86,30 +96,27 @@ def plot_results(instances, num_trials, normalize_cost=False):
     # Normalize cost per instance if requested
     if normalize_cost:
         for inst in instances:
-            # Use db-lacam cost as max for this instance
             ref_costs = data["db-lacam"][inst]["cost"]
             max_cost = max(ref_costs) if ref_costs else 1
-            # divide each planner's cost for this instance by db-lacam's max
             for p in planners:
                 data[p][inst]["cost"] = [c / max_cost for c in data[p][inst]["cost"]]
 
-    # Map instances
-    plot_instances = [instance_map.get(inst, inst) for inst in instances]
+    group_names = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]
+    group_sizes = [1,    1,   5,   10,   10,   1,   1,   1,   1, 1] 
+    assert sum(group_sizes) == len(instances), "Group sizes must sum to total instances"
 
-    # Plot
-    fig, axes = plt.subplots(3, 1, sharex=True, figsize=(9, 4),
-                             gridspec_kw={'height_ratios':[0.25, 1, 1], 'hspace': 0})
+   # === Plot setup ===
+    fig, axes = plt.subplots(
+        3, 1, sharex=True, figsize=(9, 4),
+        gridspec_kw={'height_ratios': [0.25, 1, 1], 'hspace': 0}
+    )
     ax_fail, ax_time, ax_cost = axes
     x = np.arange(len(instances))
-
-    # Vertical dashed lines
-    for ax in axes:
-        for i in range(len(instances)):
-            ax.axvline(i - 0.5, color="gray", linestyle="--", linewidth=0.7, alpha=0.6)
 
     num_planners = len(planners)
     planner_indices = {p: i for i, p in enumerate(planners)}
 
+    # === Plot all data ===
     for planner, style in planners.items():
         planner_idx = planner_indices[planner]
         for idx, inst in enumerate(instances):
@@ -121,51 +128,80 @@ def plot_results(instances, num_trials, normalize_cost=False):
             if fail_count > 0:
                 x_offsets = np.linspace(-0.2, 0.2, fail_count)
                 x_positions = idx + x_offsets
-                y_position = planner_idx*0.5 + 1 
-                ax_fail.scatter(x_positions, [y_position]*fail_count,
+                y_position = planner_idx * 0.5 + 1
+                ax_fail.scatter(x_positions, [y_position] * fail_count,
                                 marker=style["marker"], color=style["color"], s=80)
             # Runtime
             if times:
-                ax_time.scatter([idx]*len(times), times, marker=style["marker"],
-                                color=style["color"], s=80)
+                ax_time.scatter([idx] * len(times), times,
+                                marker=style["marker"], color=style["color"], s=80)
             # Cost
             if costs:
-                ax_cost.scatter([idx]*len(costs), costs, marker=style["marker"],
-                                color=style["color"], s=80)
+                ax_cost.scatter([idx] * len(costs), costs,
+                                marker=style["marker"], color=style["color"], s=80)
 
-    # Labels
-    ax_fail.set_ylabel("Failure")
+    # === Add grouped background shading and labels ===
+    start = 0
+    for gname, gsize in zip(group_names, group_sizes):
+        end = start + gsize
+        mid = (start + end - 1) / 2
+
+        for ax in axes:
+            # light shading for alternating groups
+            if group_names.index(gname) % 2 == 0:
+                ax.axvspan(start - 0.5, end - 0.5, color='gray', alpha=0.08, zorder=0)
+            # vertical group boundary
+            ax.axvline(end - 0.5, color='gray', linestyle='--', alpha=0.5, linewidth=0.8)
+
+        # group label under x-axis
+        ax_cost.text(
+            mid, -0.15, gname, ha='center', va='top',
+            transform=ax_cost.get_xaxis_transform(),
+            fontsize=10)
+        start = end
+
+    # === Add horizontal dashed grid lines for all subplots ===
+    for ax in axes:
+        ax.yaxis.grid(True, linestyle='--', alpha=0.5)
+        ax.set_axisbelow(True)
+
+    # === Axis labels and scales ===
+    ax_fail.set_ylabel("Failures")
     ax_fail.set_yticks([])
     ax_fail.set_ylim(0, num_planners * 0.5 + 1)
+
     ax_time.set_ylabel("Runtime [s]")
     ax_cost.set_ylabel("Normalized Cost [s]" if normalize_cost else "Cost [s]")
-    ax_cost.set_xticks(x)
-    ax_cost.set_xticklabels(plot_instances, rotation=45, ha='right')
 
-    # Legend
+    # Hide per-instance labels to save space
+    ax_cost.set_xticks([])
+
+    # remove the free space before the first label
+    for ax in axes:
+        ax.set_xlim(-0.5, len(instances) - 0.5)
+    # === Legend ===
+    import matplotlib.lines as mlines
     legend_handles = []
     for planner, style in planners.items():
         handle = mlines.Line2D(
-            [], [], 
-            color=style["color"], 
-            marker=style.get("marker", "o"),  # fallback if marker not defined
-            linestyle='None', 
-            markersize=8, 
-            label=name_map.get(planner, planner)  # use mapped name
+            [], [], color=style["color"],
+            marker=style.get("marker", "o"),
+            linestyle='None', markersize=8,
+            label=name_map.get(planner, planner)
         )
         legend_handles.append(handle)
 
     fig.legend(
-        handles=legend_handles, 
+        handles=legend_handles,
         ncol=len(planners),
-        loc='upper center', 
-        bbox_to_anchor=(0.5, 0.98),  # adjust vertical position
-        frameon=False,                # no rectangle
-        fontsize=9
+        loc='upper center',
+        bbox_to_anchor=(0.5, 0.98),
+        frameon=False,
+        fontsize=10
     )
 
-    # Adjust top margin
-    plt.subplots_adjust(top=0.90)
+    # === Layout tweaks ===
+    plt.subplots_adjust(top=0.90, bottom=0.18)
     plt.savefig("../results/results_plot_markers_normalized.pdf", format="pdf", bbox_inches="tight") if normalize_cost else plt.savefig("../results/results_plot_markers.pdf", format="pdf", bbox_inches="tight")
     plt.show()
 
@@ -286,32 +322,32 @@ def plot_results_runtime(instances, num_trials, font_size=18):
 
 if __name__ == "__main__":
   instances = [
-#   "alcove_unicycle",
-#   "atgoal_unicycle",
-#   "circle2_unicycle",
-#   "circle4_unicycle",
-#   "circle6_unicycle",
-#   "circle8_unicycle",
-#   "circle10_unicycle",
+  "alcove_unicycle",
+  "atgoal_unicycle",
+  "circle2_unicycle",
+  "circle4_unicycle",
+  "circle6_unicycle",
+  "circle8_unicycle",
+  "circle10_unicycle",
   # scalability test
-  "test_n10_0_unicycle",
-  "test_n20_0_unicycle",
-  "test_n30_0_unicycle",
-  "test_n40_0_unicycle",
-  "test_n50_0_unicycle",
+#   "test_n10_0_unicycle",
+#   "test_n20_0_unicycle",
+#   "test_n30_0_unicycle",
+#   "test_n40_0_unicycle",
+#   "test_n50_0_unicycle",
   ]
-#   for kind in ["unicycle","unicycle_sphere"]: 
-#     for n in [8]:
-#       for k in range(10):
-#         instances.append("gen_p10_n{}_{}_{}".format(n,k, kind))
-#   instances.append("forest4")
-#   instances.append("corridor4")
-#   instances.append("circle6")
-#   instances.append("circle7_swap")
-#   instances.append("passage6")
+  for kind in ["unicycle","unicycle_sphere"]: 
+    for n in [8]:
+      for k in range(10):
+        instances.append("gen_p10_n{}_{}_{}".format(n,k, kind))
+  instances.append("forest4")
+  instances.append("corridor4")
+  instances.append("circle6")
+  instances.append("circle7_swap")
+  instances.append("passage6")
                    
   num_trials = 5  # max number of trials per instance
-#   plot_results(instances, num_trials, True)
-  plot_results_runtime(instances, num_trials)
+  plot_results(instances, num_trials, True)
+#   plot_results_runtime(instances, num_trials)
 
 

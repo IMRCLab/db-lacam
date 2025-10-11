@@ -12,16 +12,16 @@ def clustering_analysis(a, i, itr):
     colors = ['#4477AA', '#CCBB44']
     labels = ['GOC', 'SC-GOC']
     i_map = {
-          'gen_p10_n8_0_unicycle_sphere': "rand-n8-u\u209B-1",
-          'gen_p10_n8_1_unicycle_sphere': "rand-n8-u\u209B-2",
-          'gen_p10_n8_2_unicycle_sphere': "rand-n8-u\u209B-3",
-          'gen_p10_n8_3_unicycle_sphere': "rand-n8-u\u209B-4",
-          'gen_p10_n8_4_unicycle_sphere': "rand-n8-u\u209B-5",
-          'gen_p10_n8_5_unicycle_sphere': "rand-n8-u\u209B-6",
-          'gen_p10_n8_6_unicycle_sphere': "rand-n8-u\u209B-7",
-          'gen_p10_n8_7_unicycle_sphere': "rand-n8-u\u209B-8",
-          'gen_p10_n8_8_unicycle_sphere': "rand-n8-u\u209B-9",
-          'gen_p10_n8_9_unicycle_sphere': "rand-n8-u\u209B-10",
+          'gen_p10_n8_0_unicycle_sphere': "1",
+          'gen_p10_n8_1_unicycle_sphere': "2",
+          'gen_p10_n8_2_unicycle_sphere': "3",
+          'gen_p10_n8_3_unicycle_sphere': "4",
+          'gen_p10_n8_4_unicycle_sphere': "5",
+          'gen_p10_n8_5_unicycle_sphere': "6",
+          'gen_p10_n8_6_unicycle_sphere': "7",
+          'gen_p10_n8_7_unicycle_sphere': "8",
+          'gen_p10_n8_8_unicycle_sphere': "9",
+          'gen_p10_n8_9_unicycle_sphere': "10",
       }
     x = np.arange(len(i))  # one x per instance
 
@@ -60,6 +60,7 @@ def clustering_analysis(a, i, itr):
                 values[algo], 
                 width=bar_width, 
                 color=colors[j], 
+                edgecolor=(0, 0, 0, 0.5),
                 alpha=0.8, 
                 label=labels[j] if idx == 0 else None  # legend only once
             )
@@ -70,7 +71,7 @@ def clustering_analysis(a, i, itr):
 
     ax[0].legend(fontsize = font_size-7)
     ax[-1].set_xticks(x + bar_width / 2)
-    ax[-1].set_xticklabels([i_map[key] for key in i], rotation=45, ha="right", fontsize=font_size)
+    ax[-1].set_xticklabels([i_map[key] for key in i], fontsize=font_size)
     ax[0].tick_params(axis='both', labelsize=font_size-2)
     ax[1].tick_params(axis='both', labelsize=font_size-2)
 
@@ -159,15 +160,17 @@ def read_time_stats(file_path):
         return None
     
 # compares time for main components of the planner, focus on h-estimation (dbA* vs. EST)
+import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
+
 def time_analysis_plot(data_iterations):
     instance_names = [
-        # "2-dbA*", "2-EST",
+        "2-dbA*", "2-EST",
         "4-dbA*", "4-EST",
         "8-dbA*", "8-EST",
         "10-dbA*", "10-EST",
     ]
 
-    # Bottom subplot categories (exclude h-Estimation)
     categories_bottom = {
         'Motion Rollout': 'time_rollout',
         'Motion Cluster': 'time_clustering',
@@ -176,12 +179,15 @@ def time_analysis_plot(data_iterations):
         'Collision-Pot.': 'time_collision_with_unplanned',
     }
 
-    # Original color set
     colors_bars = ['#66CCEE', '#CCBB44', '#664477', '#AA3377', '#BBBBBB']
     h_est_color = '#4477AA'
-    width = 0.4
-    font_size= 22
-    x_positions = list(range(len(instance_names)))
+    width = 0.35
+    font_size = 22
+
+    # Group positions (4, 8, 10)
+    groups = [4, 6, 8, 10]
+    x_positions = list(range(len(groups)))
+    offset = width / 2
 
     fig, (ax_top, ax_bottom) = plt.subplots(
         2, 1, figsize=(9, 7), sharex=True,
@@ -189,74 +195,101 @@ def time_analysis_plot(data_iterations):
     )
 
     # ----------------------------
-    # Top subplot: h-Estimation / reverse_search
+    # TOP subplot: all components + h-Estimation + legend
     # ----------------------------
-    reverse_values = [data['reverse_search'] for data in data_iterations]
-    for i, val in enumerate(reverse_values):
-        hatch = '//' if 'dbA*' in instance_names[i] else None
-        ax_top.bar(x_positions[i], val, color=h_est_color, hatch=hatch, linewidth=1, width=width)
+    for group_idx, group in enumerate(groups):
+        for j, algo in enumerate(["dbA*", "EST"]):
+            data_idx = 2 * group_idx + j
+            shift = -offset if algo == "dbA*" else offset
+            x = x_positions[group_idx] + shift
 
-    # ax_top.set_ylabel("h-Estimation [ms]",fontsize=font_size)
+            # h-Estimation (reverse_search)
+            val_h = data_iterations[data_idx]['reverse_search']
+            hatch = '//' if algo == 'dbA*' else None
+            ax_top.bar(x, val_h, width=width, color=h_est_color, edgecolor=(0, 0, 0, 0.5), hatch=hatch, linewidth=1, label='h-Estimation' if group_idx == 0 and j == 0 else None)
+
+            # Stacked runtime breakdown
+            bottom_val = val_h
+            for k, (category, key) in enumerate(categories_bottom.items()):
+                val = data_iterations[data_idx][key]
+                color = colors_bars[k % len(colors_bars)]
+                label = category if group_idx == 0 and j == 0 else None
+                ax_top.bar(x, val, width=width, bottom=bottom_val, color=color, hatch=hatch, label=label)
+                bottom_val += val
+
+    ax_top.set_ylabel("Runtime [ms]", fontsize=font_size)
     ax_top.grid(axis='y', linestyle='dashed', alpha=0.6)
     ax_top.grid(axis='x', linestyle='dashed', alpha=0.6)
-    ax_top.tick_params(axis='both', labelsize=font_size-2)
+    ax_top.tick_params(axis='both', labelsize=font_size - 2)
 
+    # BOTTOM subplot: runtime breakdown only (no h-Estimation, no legend)
     # ----------------------------
-    # Bottom subplot: stacked bars (exclude h-Estimation)
-    # ----------------------------
-    for category_index, (category, key) in enumerate(categories_bottom.items()):
-        bottoms = [sum(data[categories_bottom[c]] for c in list(categories_bottom.keys())[:category_index])
-                   for data in data_iterations]
-        values = [data[key] for data in data_iterations]
-        for i, val in enumerate(values):
-            hatch = '//' if 'dbA*' in instance_names[i] else None
-            color = colors_bars[category_index % len(colors_bars)]
-            label = category if i == 0 else None  # label only once per category
-            ax_bottom.bar(x_positions[i],
-                          val,
-                          width=width,
-                          bottom=bottoms[i],
-                          color=color,
-                          hatch=hatch,
-                          label=label)
+    for group_idx, group in enumerate(groups):
+        for j, algo in enumerate(["dbA*", "EST"]):
+            data_idx = 2 * group_idx + j
+            shift = -offset if algo == "dbA*" else offset
+            x = x_positions[group_idx] + shift
 
-    # ----------------------------
-    # Add h-Estimation to bottom legend (dummy bar, no stripes)
-    # ----------------------------
-    ax_bottom.grid(which='major', axis='y', linestyle='dashed')
+            bottom_val = 0
+            hatch = '//' if algo == 'dbA*' else None
+            for k, (category, key) in enumerate(categories_bottom.items()):
+                val = data_iterations[data_idx][key]
+                color = colors_bars[k % len(colors_bars)]
+                ax_bottom.bar(x, val, width=width, bottom=bottom_val, color=color, edgecolor=(0, 0, 0, 0.5), hatch=hatch)
+                bottom_val += val
+
+    legend_elements_main = [
+    Patch(facecolor=h_est_color, label='h-Estimation')
+    ]
+    for idx, (category, _) in enumerate(categories_bottom.items()):
+        legend_elements_main.append(Patch(facecolor=colors_bars[idx % len(colors_bars)], label=category))
+
+    # ----- Secondary legend: planner type (hatching explanation) -----
+    legend_elements_hatch = [
+        Patch(facecolor='white', edgecolor='black', label='EST'),
+        Patch(facecolor='white', edgecolor='black', hatch='//', label='dbA*')
+    ]
+
+    # Combine both in the bottom subplot
+    main_legend = ax_bottom.legend(handles=legend_elements_main,
+                                   fontsize=font_size - 5,
+                                   ncol=2,
+                                   loc='upper left')
+    ax_bottom.add_artist(main_legend)
+    ax_bottom.legend(handles=legend_elements_hatch,
+                 fontsize=font_size - 5,
+                 ncol=2,
+                 bbox_to_anchor=(0.43, 0.72),
+                 frameon=False)
+    
     ax_bottom.set_ylabel("Runtime [ms]", fontsize=font_size)
     ax_bottom.set_xticks(x_positions)
-    ax_bottom.set_xticklabels(instance_names, rotation=45, ha='right')
-    ax_bottom.tick_params(axis='both', labelsize=font_size-2)
-    legend_elements = [Patch(facecolor=h_est_color,  label='h-Estimation')]
-    for idx, category in enumerate(categories_bottom.keys()):
-        legend_elements.append(Patch(facecolor=colors_bars[idx % len(colors_bars)],
-                                    label=category))
-
-    ax_bottom.legend(handles=legend_elements, loc='upper left', fontsize=font_size-4)
+    ax_bottom.set_xticklabels([str(g) for g in groups], fontsize=font_size)
     ax_bottom.grid(axis='y', linestyle='dashed', alpha=0.6)
     ax_bottom.grid(axis='x', linestyle='dashed', alpha=0.6)
-    ax_bottom.tick_params(axis='both', labelsize=font_size-2)
+    ax_bottom.tick_params(axis='both', labelsize=font_size - 2)
+    ax_bottom.set_xlabel("Number of Robots", fontsize=font_size)
+
     plt.tight_layout()
-    plt.savefig("../results/results_time_analysis.pdf", format="pdf", bbox_inches="tight")
+    plt.savefig("../results/ICAPS26/results_time_analysis.pdf", format="pdf", bbox_inches="tight")
     plt.show()
 
 def main():
 # 1. clustering methods h-based vs. state-based
-  a = ["h-based", "state-based"]
-  i = [
-    'gen_p10_n8_0_unicycle_sphere',
-    'gen_p10_n8_1_unicycle_sphere',
-    'gen_p10_n8_2_unicycle_sphere',
-    'gen_p10_n8_3_unicycle_sphere',
-    'gen_p10_n8_4_unicycle_sphere',
-    'gen_p10_n8_5_unicycle_sphere',
-    'gen_p10_n8_6_unicycle_sphere',
-    'gen_p10_n8_7_unicycle_sphere',
-    'gen_p10_n8_8_unicycle_sphere',
-    'gen_p10_n8_9_unicycle_sphere',
-  ]
-  clustering_analysis(a, i, 5)
+#   a = ["h-based", "state-based"]
+#   i = [
+#     'gen_p10_n8_0_unicycle_sphere',
+#     'gen_p10_n8_1_unicycle_sphere',
+#     'gen_p10_n8_2_unicycle_sphere',
+#     'gen_p10_n8_3_unicycle_sphere',
+#     'gen_p10_n8_4_unicycle_sphere',
+#     'gen_p10_n8_5_unicycle_sphere',
+#     'gen_p10_n8_6_unicycle_sphere',
+#     'gen_p10_n8_7_unicycle_sphere',
+#     'gen_p10_n8_8_unicycle_sphere',
+#     'gen_p10_n8_9_unicycle_sphere',
+#   ]
+#   clustering_analysis(a, i, 5)
 # 2. heuristic estimation using db-A* and EST on demand
     # a = ["reverse-search", "est"]
     # i = [
@@ -268,30 +301,30 @@ def main():
     # ]
     # heuristic_estimation_analysis(a, i, 5)
 # 3. time analysis on planner's main components
-    # path = "/home/akmarak-laptop/IMRC/db-lacam/results/ICAPS26/time/"
-    # instances = ["circle4_unicycle", "circle8_unicycle", "circle10_unicycle"]
-    # folder = [
-    #     "dbastar",
-    #     "est"
-    # ]
-    # file_name = "time_search.yaml"
-    # file_paths = []
-    # # Generate paths by combining the base path, instance, and algorithm
-    # for instance in instances:
-    #     for f in folder:
-    #         file_paths.append(path + f + "/" + instance + "/db-lacam/000/" + file_name)
-    # # Read data from each YAML file
-    # data_iterations = []
-    # for file_path in file_paths:
-    #     if os.path.exists(file_path):
-    #         data = read_time_stats(file_path)
-    #         if data:
-    #             data_iterations.append(data)
-    #         else:
-    #             print(file_path)
-    #     else: 
-    #         print(file_path)
-    # time_analysis_plot(data_iterations)
+    path = "/home/akmarak-laptop/IMRC/db-lacam/results/ICAPS26/time/"
+    instances = ["circle4_unicycle", "circle6_unicycle", "circle8_unicycle", "circle10_unicycle"]
+    folder = [
+        "dbastar",
+        "est"
+    ]
+    file_name = "time_search.yaml"
+    file_paths = []
+    # Generate paths by combining the base path, instance, and algorithm
+    for instance in instances:
+        for f in folder:
+            file_paths.append(path + f + "/" + instance + "/db-lacam/000/" + file_name)
+    # Read data from each YAML file
+    data_iterations = []
+    for file_path in file_paths:
+        if os.path.exists(file_path):
+            data = read_time_stats(file_path)
+            if data:
+                data_iterations.append(data)
+            else:
+                print(file_path)
+        else: 
+            print(file_path)
+    time_analysis_plot(data_iterations)
 
 if __name__ == "__main__":
   main()

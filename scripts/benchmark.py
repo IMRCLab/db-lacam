@@ -115,11 +115,11 @@ def main():
     "passage6",
     # "passage10",
     # scalability test
-    "test_n10_0_unicycle",
-    "test_n20_0_unicycle",
-    "test_n30_0_unicycle",
-    "test_n40_0_unicycle",
-    "test_n50_0_unicycle",
+    # "test_n10_0_unicycle",
+    # "test_n20_0_unicycle",
+    # "test_n30_0_unicycle",
+    # "test_n40_0_unicycle",
+    # "test_n50_0_unicycle",
   ]
   for kind in ["unicycle","unicycle_sphere"]: 
     for n in [8]:
@@ -134,7 +134,7 @@ def main():
     "db-pibt",
     "db-lacam",
   ]
-  trials = 1 * 5
+  trials = 1 * 10
   timelimit_2d = 1 * 60 
   timelimit_n = 5 * 60 # scalability 
   timelimit_max = 0 # plot needs higher timelimit

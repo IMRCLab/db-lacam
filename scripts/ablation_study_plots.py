@@ -206,7 +206,7 @@ def time_analysis_plot(data_iterations):
             # h-Estimation (reverse_search)
             val_h = data_iterations[data_idx]['reverse_search']
             hatch = '//' if algo == 'dbA*' else None
-            ax_top.bar(x, val_h, width=width, color=h_est_color, edgecolor=(0, 0, 0, 0.5), hatch=hatch, linewidth=1, label='h-Estimation' if group_idx == 0 and j == 0 else None)
+            ax_top.bar(x, val_h, width=width, color=h_est_color, edgecolor=(0, 0, 0, 0.5), alpha=0.8, hatch=hatch, linewidth=1, label='h-Estimation' if group_idx == 0 and j == 0 else None)
 
             # Stacked runtime breakdown
             bottom_val = val_h
@@ -214,7 +214,7 @@ def time_analysis_plot(data_iterations):
                 val = data_iterations[data_idx][key]
                 color = colors_bars[k % len(colors_bars)]
                 label = category if group_idx == 0 and j == 0 else None
-                ax_top.bar(x, val, width=width, bottom=bottom_val, color=color, hatch=hatch, label=label)
+                ax_top.bar(x, val, width=width, bottom=bottom_val, color=color, alpha=0.8, hatch=hatch, label=label)
                 bottom_val += val
 
     ax_top.set_ylabel("Runtime [ms]", fontsize=font_size)
@@ -235,7 +235,7 @@ def time_analysis_plot(data_iterations):
             for k, (category, key) in enumerate(categories_bottom.items()):
                 val = data_iterations[data_idx][key]
                 color = colors_bars[k % len(colors_bars)]
-                ax_bottom.bar(x, val, width=width, bottom=bottom_val, color=color, edgecolor=(0, 0, 0, 0.5), hatch=hatch)
+                ax_bottom.bar(x, val, width=width, bottom=bottom_val, color=color, edgecolor=(0, 0, 0, 0.5), alpha=0.8, hatch=hatch)
                 bottom_val += val
 
     legend_elements_main = [

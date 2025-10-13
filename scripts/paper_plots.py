@@ -9,7 +9,7 @@ import matplotlib.patches as mpatches
 # global normalization - max cost per instance
 def plot_results(instances, num_trials, normalize_cost=False):
    
-    results_path = "../results_test"
+    results_path = "../results_10"
     planners = {
         "db-cbs": {"marker": "1", "color": "#88CCEE"},   
         "db-ecbs": {"marker": "2", "color": "#009988"},  
@@ -56,7 +56,7 @@ def plot_results(instances, num_trials, normalize_cost=False):
     'gen_p10_n8_8_unicycle': "random-n8-u",
     'gen_p10_n8_9_unicycle': "random-n8-u",
     # f
-    "forest4":"forest-n4-3D",
+    "passage6":"passage-n6-3D",
     # g
     "corridor4":"corridor-n4-3D",
     # h
@@ -64,7 +64,9 @@ def plot_results(instances, num_trials, normalize_cost=False):
     # i
     "circle7_swap":"circle-n7-3D",
     # j
-    "passage6":"passage-n6-3D"}
+    "forest10":"forest-n10-3D",
+    "forest4":"forest-n4-3D"
+    }
 
     data = {p: {inst: {"time": [], "cost": [], "fail": 0} for inst in instances} for p in planners}
 
@@ -102,7 +104,7 @@ def plot_results(instances, num_trials, normalize_cost=False):
                 data[p][inst]["cost"] = [c / max_cost for c in data[p][inst]["cost"]]
 
     group_names = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]
-    group_sizes = [1,    1,   5,   10,   10,   1,   1,   1,   1, 1] 
+    group_sizes = [1,    1,   5,   10,   10,   1,   1,   1,   1, 2] 
     assert sum(group_sizes) == len(instances), "Group sizes must sum to total instances"
 
    # === Plot setup ===
@@ -166,7 +168,7 @@ def plot_results(instances, num_trials, normalize_cost=False):
         ax.set_axisbelow(True)
 
     # === Axis labels and scales ===
-    ax_fail.set_ylabel("Failures")
+    ax_fail.set_ylabel("Fail")
     ax_fail.set_yticks([])
     ax_fail.set_ylim(0, num_planners * 0.5 + 1)
 
@@ -186,18 +188,20 @@ def plot_results(instances, num_trials, normalize_cost=False):
         handle = mlines.Line2D(
             [], [], color=style["color"],
             marker=style.get("marker", "o"),
-            linestyle='None', markersize=8,
+            linestyle='None', markersize=9,
             label=name_map.get(planner, planner)
         )
         legend_handles.append(handle)
 
     fig.legend(
         handles=legend_handles,
-        ncol=len(planners),
-        loc='upper center',
-        bbox_to_anchor=(0.5, 0.98),
-        frameon=False,
-        fontsize=10
+        ncol=2,  # stack vertically (or change to >1 if you prefer multiple columns)
+        loc='upper left',
+        bbox_to_anchor=(0.12, 0.83),  # position inside figure
+        frameon=True,
+        facecolor="white",  # background color for contrast
+        edgecolor='black',  # optional: border for better visibility
+        fontsize=9
     )
 
     # === Layout tweaks ===
@@ -340,13 +344,15 @@ if __name__ == "__main__":
     for n in [8]:
       for k in range(10):
         instances.append("gen_p10_n{}_{}_{}".format(n,k, kind))
-  instances.append("forest4")
+  instances.append("passage6")
   instances.append("corridor4")
   instances.append("circle6")
   instances.append("circle7_swap")
-  instances.append("passage6")
+  instances.append("forest4")
+  instances.append("forest10")
+
                    
-  num_trials = 5  # max number of trials per instance
+  num_trials = 10  # max number of trials per instance
   plot_results(instances, num_trials, True)
 #   plot_results_runtime(instances, num_trials)
 

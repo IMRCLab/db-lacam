@@ -37,7 +37,7 @@ def visualize(env_file, result_file, filename_video=None):
       max_bounds = np.array([max_dim[0], max_dim[1], max_dim[2]])
 
       size = max_bounds - min_bounds
-      floor_size = [size[0], size[1], 0.1]  # Thin floor
+      floor_size = [size[0], size[1], 0.01]  # Thin floor
       wall_thickness = 0.1  # Thin walls
 
       # Add floor
@@ -81,29 +81,41 @@ def visualize(env_file, result_file, filename_video=None):
       obs_type = obs["type"]
       if (obs_type == 'octomap'):
          octomap_stl = obs["octomap_stl"]
-         vis[f"Obstacle{k}"].set_object(g.StlMeshGeometry.from_file(octomap_stl), g.MeshLambertMaterial(opacity=0.8, color=0xFFFFFF)) 
+         vis[f"Obstacle{k}"].set_object(g.StlMeshGeometry.from_file(octomap_stl), g.MeshLambertMaterial(opacity=1.0, color=0xFFFFFF)) 
       elif (obs_type == 'box'):
         vis[f"Obstacle{k}"].set_object(g.Mesh(g.Box(size)))
         vis[f"Obstacle{k}"].set_transform(tf.translation_matrix(center))
       else:
          print("Unknown Obstacle type!")
 
+    trajectory_colors = [
+      0xFF0000,  # red
+      0x0000FF,  # blue
+      0x00FF00,  # green
+      0xFFA500,  # orange
+      0x800080,  # purple
+      0x00CED1,  # turquoise
+      0xFFD700,  # gold
+      0x8B4513,  # brown
+      0xFF1493,  # deep pink
+      0x808000,  # olive
+  ]
     with open(result_file) as res_file:
         result = yaml.load(res_file, Loader=yaml.FullLoader)
     states = []
     name_robot = 0
     max_k = 0
     # start, goal states
-    start_goal = False
+    start_goal = True
     if(start_goal):
       robots = data["robots"]
       for r in range (len(robots)):
         start = robots[r]["start"][:3]
         goal = robots[r]["goal"][:3]
-        vis["sphere" + str(r*2)].set_object(g.Mesh(g.Sphere(0.03), g.MeshLambertMaterial(opacity=0.4,color=0xFF0000))) 
+        vis["sphere" + str(r*2)].set_object(g.Mesh(g.Sphere(0.04), g.MeshLambertMaterial(opacity=0.4,color=0xFF0000))) 
         vis["sphere" + str(r*2)].set_transform(tf.translation_matrix(start))
-        vis["box" + str(r*2 + 1)].set_object(g.Box([0.05, 0.05, 0.05]), g.MeshLambertMaterial(opacity=0.4, color=00000000))
-        vis["box" + str(r*2 + 1)].set_transform(tf.translation_matrix(goal))
+        # vis["box" + str(r*2 + 1)].set_object(g.Box([0.05, 0.05, 0.05]), g.MeshLambertMaterial(opacity=0.4, color=00000000))
+        # vis["box" + str(r*2 + 1)].set_transform(tf.translation_matrix(goal))
     
     for i in range(len(result["result"])):
         state = []
@@ -118,21 +130,16 @@ def visualize(env_file, result_file, filename_video=None):
           vis["Quadrotor" + str(name_robot)].set_object(g.StlMeshGeometry.from_file('../meshes/cf2_assembly.stl'), g.MeshLambertMaterial(color=0xFF0000)) # red
         else: 
           vis["Quadrotor" + str(name_robot)].set_object(g.StlMeshGeometry.from_file('../meshes/cf2_assembly.stl'), g.MeshLambertMaterial(color=0x0000FF)) # blue
-        vis["trajectory" + str(name_robot)].set_object(g.Line(g.PointsGeometry(position), g.LineBasicMaterial(color=0x006400))) # green - 0x00FF00 
-        # Initialize marker spheres at every 13th state
-        # for k in range(0, len(state), 6):
-        #   marker_name = f"marker_{name_robot}_{k}"
-        #   fade_ratio = k / len(state)
-        #   opacity = 0.9 * (1 - fade_ratio) + 0.2 * fade_ratio  # linear blend
-
-        #   vis[marker_name].set_object(
-        #       g.Mesh(
-        #           g.Sphere(0.02),
-        #           g.MeshLambertMaterial(opacity=opacity, color=0xFF0000, transparent=True)
-        #       )
-        #   )
-        #   vis[marker_name].set_transform(tf.translation_matrix(state[k][0:3]))
-
+        traj_color = trajectory_colors[name_robot % len(trajectory_colors)]
+        # Thicker line (linewidth in pixels)
+        vis["trajectory" + str(name_robot)].set_object(
+            g.Line(
+                g.PointsGeometry(position),
+                g.LineBasicMaterial(color=traj_color, linewidth=4)
+            )
+        )
+        # vis["trajectory" + str(name_robot)].set_object(g.Line(g.PointsGeometry(position), g.LineBasicMaterial(color=0x006400))) # green - 0x00FF00 
+       
         name_robot+=1
     for k in range(max_k):
       for l in range(len(states)): # for each robot

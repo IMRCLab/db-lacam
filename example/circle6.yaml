@@ -1,5 +1,5 @@
 environment:
-  min: [0, 0, 0]
+  min: [0, 0, 0.05]
   max: [6, 5, 2]
   obstacles: []
     # - type: box # 1

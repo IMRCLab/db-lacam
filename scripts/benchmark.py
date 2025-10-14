@@ -131,8 +131,8 @@ def main():
   algs = [
     "db-cbs",
     "db-ecbs",
-    # "db-pibt",
-    # "db-lacam",
+    "db-pibt",
+    "db-lacam",
   ]
   trials = 1 * 5
   timelimit_2d = 1 * 60 

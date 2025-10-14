@@ -170,7 +170,7 @@ int main(int argc, char *argv[])
       options_tdbastar.motionsFile = all_motionsFile[i];
       load_motion_primitives_new(options_tdbastar.motionsFile, *robot, robot_motions[problem.robotTypes[i]],
                                  /*options_tdbastar.max_motions*/ 1e6,
-                                 options_tdbastar.cut_actions, /*shuffle*/ true, options_tdbastar.check_cols);
+                                 options_tdbastar.cut_actions, /*shuffle*/ false, options_tdbastar.check_cols);
       // get the needed submotions for the search part
       motion_to_motion(robot_motions[problem.robotTypes[i]], sub_motions[problem.robotTypes[i]], *robot, options_tdbastar.max_motions);
     }
@@ -219,7 +219,7 @@ int main(int argc, char *argv[])
       }
       // start to inf for the reverse search
       LowLevelPlan<dynobench::Trajectory> tmp_solution;
-      problem.starts[robot_id].head(robot->translation_invariance).setConstant(std::sqrt(std::numeric_limits<double>::max()));
+      // problem.starts[robot_id].head(robot->translation_invariance).setConstant(std::sqrt(std::numeric_limits<double>::max()));
       Eigen::VectorXd tmp_state = problem.starts[robot_id];
       problem.starts[robot_id] = problem.goals[robot_id];
       problem.goals[robot_id] = tmp_state;

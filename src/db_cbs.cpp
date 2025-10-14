@@ -172,7 +172,7 @@ int main(int argc, char *argv[])
       options_tdbastar.motionsFile = all_motionsFile[i];
       load_motion_primitives_new(options_tdbastar.motionsFile, *robot, robot_motions[problem.robotTypes[i]],
                                  options_tdbastar.max_motions,
-                                 options_tdbastar.cut_actions, /*shuffle*/ true, options_tdbastar.check_cols);
+                                 options_tdbastar.cut_actions, /*shuffle*/ false, options_tdbastar.check_cols);
     }
     if (robot->name == "car_with_trailers")
     {
@@ -196,7 +196,6 @@ int main(int argc, char *argv[])
     options_tdbastar.delta = cfg["heuristic1_delta"].as<float>();
     options_tdbastar.max_motions = cfg["heuristic1_num_primitives_0"].as<size_t>();
     std::cout << "Running the reverse search" << std::endl;
-    options_tdbastar.delta = cfg["heuristic1_delta"].as<float>();
     options_tdbastar.search_timelimit = 1e5; // in ms
     for (const auto &robot : robots)
     {
@@ -208,7 +207,7 @@ int main(int argc, char *argv[])
                                    options_tdbastar.cut_actions, /*shuffle*/ false, options_tdbastar.check_cols);
       }
       // start to inf for the reverse search
-      problem.starts[robot_id].head(robot->translation_invariance).setConstant(std::sqrt(std::numeric_limits<double>::max()));
+      // problem.starts[robot_id].head(robot->translation_invariance).setConstant(std::sqrt(std::numeric_limits<double>::max()));
       Eigen::VectorXd tmp_state = problem.starts[robot_id];
       problem.starts[robot_id] = problem.goals[robot_id];
       problem.goals[robot_id] = tmp_state;

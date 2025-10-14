@@ -99,21 +99,20 @@ def main():
     # "circle6_integrator",
     # "circle8_integrator",
     # "circle10_integrator",
-    # "circle2_unicycle",
-    # "circle4_unicycle",
-    # "circle6_unicycle",
-    # "circle8_unicycle",
-    # "circle10_unicycle",
-    # "alcove_unicycle",
-    # "atgoal_unicycle",
+    "circle2_unicycle",
+    "circle4_unicycle",
+    "circle6_unicycle",
+    "circle8_unicycle",
+    "circle10_unicycle",
+    "alcove_unicycle",
+    "atgoal_unicycle",
     # 3D case
-    # "forest4",
-    # "forest10",
-    # "corridor4",
-    # "circle6",
-    # "circle7_swap",
-    # "passage6",
-    # "passage10",
+    "forest4",
+    "forest10",
+    "corridor4",
+    "circle6",
+    "circle7_swap",
+    "passage6",
     # scalability test
     "test_n10_0_unicycle",
     "test_n20_0_unicycle",
@@ -121,10 +120,10 @@ def main():
     "test_n40_0_unicycle",
     "test_n50_0_unicycle",
   ]
-  # for kind in ["unicycle","unicycle_sphere"]: 
-  #   for n in [8]:
-  #     for k in range(10):
-  #       instances.append("gen_p10_n{}_{}_{}".format(n,k, kind))
+  for kind in ["unicycle","unicycle_sphere"]: 
+    for n in [8]:
+      for k in range(10):
+        instances.append("gen_p10_n{}_{}_{}".format(n,k, kind))
 
   instances_n = ["test_n10_0_unicycle", "test_n20_0_unicycle", "test_n30_0_unicycle", "test_n40_0_unicycle", "test_n50_0_unicycle"] 
 
@@ -134,7 +133,7 @@ def main():
     "db-pibt",
     "db-lacam",
   ]
-  trials = 1 * 5
+  trials = 1 * 10
   timelimit_2d = 1 * 60 
   timelimit_n = 5 * 60 # scalability 
   timelimit_max = 0 # plot needs higher timelimit

@@ -225,7 +225,7 @@ def time_analysis_plot(data_iterations):
     # BOTTOM subplot: runtime breakdown only (no h-Estimation, no legend)
     # ----------------------------
     for group_idx, group in enumerate(groups):
-        for j, algo in enumerate(["dbA*", "EST"]):
+        for j, algo in enumerate(["EST"]): # "dbA*" 
             data_idx = 2 * group_idx + j
             shift = -offset if algo == "dbA*" else offset
             x = x_positions[group_idx] + shift
@@ -235,7 +235,7 @@ def time_analysis_plot(data_iterations):
             for k, (category, key) in enumerate(categories_bottom.items()):
                 val = data_iterations[data_idx][key]
                 color = colors_bars[k % len(colors_bars)]
-                ax_bottom.bar(x, val, width=width, bottom=bottom_val, color=color, edgecolor=(0, 0, 0, 0.5), alpha=0.8, hatch=hatch)
+                ax_bottom.bar(x-width/2, val, width=width, bottom=bottom_val, color=color, edgecolor=(0, 0, 0, 0.5), alpha=0.8, hatch=hatch)
                 bottom_val += val
 
     legend_elements_main = [
@@ -253,13 +253,14 @@ def time_analysis_plot(data_iterations):
     # Combine both in the bottom subplot
     main_legend = ax_bottom.legend(handles=legend_elements_main,
                                    fontsize=font_size - 5,
-                                   ncol=2,
-                                   loc='upper left')
+                                   bbox_to_anchor= (0.37, 0.37),
+                                   ncol=1)
     ax_bottom.add_artist(main_legend)
-    ax_bottom.legend(handles=legend_elements_hatch,
+    # move to the top
+    ax_top.legend(handles=legend_elements_hatch,
                  fontsize=font_size - 5,
                  ncol=2,
-                 bbox_to_anchor=(0.43, 0.72),
+                 bbox_to_anchor= (0.43, 0.72), # (0.43, 0.72),
                  frameon=False)
     
     ax_bottom.set_ylabel("Runtime [ms]", fontsize=font_size)
@@ -270,6 +271,7 @@ def time_analysis_plot(data_iterations):
     ax_bottom.tick_params(axis='both', labelsize=font_size - 2)
     ax_bottom.set_xlabel("Number of Robots", fontsize=font_size)
 
+    fig.align_ylabels([ax_top, ax_bottom]) 
     plt.tight_layout()
     plt.savefig("../results/ICAPS26/results_time_analysis.pdf", format="pdf", bbox_inches="tight")
     plt.show()

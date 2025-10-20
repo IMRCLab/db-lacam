@@ -1,5 +1,5 @@
 environment:
-  min: [0, 0, 0.05]
+  min: [0, 0, 0]
   max: [6, 5, 2]
   obstacles: []
 robots:

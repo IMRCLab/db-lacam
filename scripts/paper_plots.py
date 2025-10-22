@@ -157,7 +157,7 @@ def plot_results(instances, num_trials, normalize_cost=False):
 
         # group label under x-axis
         ax_cost.text(
-            mid, -0.05, gname, ha='center', va='top',
+            mid, -0.02, gname, ha='center', va='top',
             transform=ax_cost.get_xaxis_transform(),
             fontsize=10)
         start = end

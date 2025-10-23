@@ -264,7 +264,7 @@ db-lacam:
   '*gen_p10_n8_9_unicycle_sphere':
     cluster_range: 0.05 
     cluster_distance: 0.5
-  'swap8_hetero':
+  '*_hetero':
     delta_0: 0.5 
     goal_delta: 0.5
     num_primitives_0: 500 
@@ -273,4 +273,4 @@ db-lacam:
     cluster_range: 0.02
     cluster_distance: 1.0
     cluster_n: 1
-  
+    refine_solution: false

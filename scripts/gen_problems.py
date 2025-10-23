@@ -1,55 +1,59 @@
 import yaml
 import numpy as np
-# does not run the planner to check if the problem is valid/feasible
-def gen_env(min, max, N, filename):
-    """Generate environment with N robots and no obstacles."""
-    r = dict()
-    r["environment"] = {
-        "min": min.tolist(),
-        "max": max.tolist(),
-        "obstacles": []  # no obstacles
+import random
+
+def gen_env(min_bounds, max_bounds, N, robot_types, filename):
+    """Generate environment with N heterogeneous robots and no obstacles."""
+    r = {
+        "environment": {
+            "min": min_bounds.tolist(),
+            "max": max_bounds.tolist(),
+            "obstacles": []
+        },
+        "robots": []
     }
-    r["robots"] = []
 
-    while len(r["robots"]) < N:
-        type = "unicycle1_v0"
+    # Randomly assign how many robots of each type (sum = N)
+    counts = np.random.multinomial(N, [1/len(robot_types)] * len(robot_types))
+    print(f"Distribution: {dict(zip(robot_types, counts))}")
 
-        for _ in range(100):  # try up to 100 times to place robot
-            start = np.random.uniform(
-                [min[0] + 0.5, min[1] + 0.5, -np.pi],
-                [max[0] - 0.5, max[1] - 0.5, np.pi]
-            )
-            goal = np.random.uniform(
-                [min[0] + 0.5, min[1] + 0.5, -np.pi],
-                [max[0] - 0.5, max[1] - 0.5, np.pi]
-            )
+    for robot_type, count in zip(robot_types, counts):
+        for _ in range(count):
+            for _ in range(100):  # try up to 100 times to place robot
+                if robot_type == "unicycle1_3d_v0":
+                    start = np.random.uniform([min_bounds[0]+0.5, min_bounds[1]+0.5, 0, -np.pi], [max_bounds[0]-0.5, max_bounds[1]-0.5, 0, np.pi])
+                    goal = np.random.uniform([min_bounds[0]+0.5, min_bounds[1]+0.5, 0, -np.pi], [max_bounds[0]-0.5, max_bounds[1]-0.5, 0, np.pi])
+                    if np.linalg.norm(start[:3] - goal[:3]) < 2:
+                        continue
+                if robot_type == "integrator2_3d_v0":
+                    start = np.random.uniform([min_bounds[0]+0.5, min_bounds[1]+0.5, min_bounds[2]+0.5, 0, 0, 0], [max_bounds[0]-0.5, max_bounds[1]-0.5, max_bounds[2]-0.5, 0, 0, 0])
+                    goal = np.random.uniform([min_bounds[0]+0.5, min_bounds[1]+0.5, min_bounds[2]+0.5, 0, 0, 0], [max_bounds[0]-0.5, max_bounds[1]-0.5, max_bounds[2]-0.5, 0, 0, 0])
 
-            # require that goal is not too close to start
-            if np.linalg.norm(start[:2] - goal[:2]) < 2:
-                continue
-
-            r["robots"].append({
-                "type": type,
-                "start": start.tolist(),
-                "goal": goal.tolist()
-            })
-            break
-        else:
-            print(f"Could not place robot {len(r['robots'])} after 100 tries")
+                r["robots"].append({
+                    "type": robot_type,
+                    "start": start.tolist(),
+                    "goal": goal.tolist()
+                })
+                break
+            else:
+                print(f"Could not place {robot_type} after 100 tries")
 
     with open(filename, "w") as f:
-        yaml.dump(r, f)
+        yaml.dump(r, f, sort_keys=False)
 
 
 def main():
-    min = np.array([0,0])
-    max = np.array([20,20])
+    min_bounds = np.array([0, 0, 0])
+    max_bounds = np.array([5, 5, 1])
     K = 1   # number of instances
     N = 10  # number of robots
 
+    # Provide your list of heterogeneous robot dynamics here:
+    robot_types = ["unicycle1_3d_v0", "integrator2_3d_v0"]
+
     for k in range(K):
-        filename = f"../example/test_n{N}_{k}_unicycle.yaml"
-        gen_env(min, max, N, filename)
+        filename = f"../example/test_n{N}_{k}_hetero.yaml"
+        gen_env(min_bounds, max_bounds, N, robot_types, filename)
 
 
 if __name__ == '__main__':

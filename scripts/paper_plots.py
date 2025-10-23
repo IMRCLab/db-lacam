@@ -9,7 +9,7 @@ import matplotlib.patches as mpatches
 # global normalization - max cost per instance
 def plot_results(instances, num_trials, normalize_cost=False):
    
-    results_path = "../results_10"
+    results_path = "../results_paper"
     planners = {
         "db-cbs": {"marker": "1", "color": "#88CCEE"},   
         "db-ecbs": {"marker": "2", "color": "#009988"},  
@@ -58,14 +58,17 @@ def plot_results(instances, num_trials, normalize_cost=False):
     # f
     "passage6":"passage-n6-3D",
     # g
-    "corridor4":"corridor-n4-3D",
+    "door4":"door-n4-3D",
     # h
-    "circle6":"circle-n6-3D",
-    # i
-    "circle7_swap":"circle-n7-3D",
-    # j
+    "forest4":"forest-n4-3D",
     "forest10":"forest-n10-3D",
-    "forest4":"forest-n4-3D"
+    # i
+    "swap8_hetero":"swap-n8-hetero",
+    # i
+    "random10_0_hetero":"random-n10-hetero",
+    "random10_1_hetero":"random-n10-hetero",
+    "random10_2_hetero":"random-n10-hetero",
+    "random10_3_hetero":"random-n10-hetero"
     }
 
     data = {p: {inst: {"time": [], "cost": [], "fail": 0} for inst in instances} for p in planners}
@@ -104,7 +107,7 @@ def plot_results(instances, num_trials, normalize_cost=False):
                 data[p][inst]["cost"] = [c / max_cost for c in data[p][inst]["cost"]]
 
     group_names = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]
-    group_sizes = [1,    1,   5,   10,   10,   1,   1,   1,   1, 2] 
+    group_sizes = [1,    1,   5,   10,   10, 1,   1,   2,   1,   4] 
     assert sum(group_sizes) == len(instances), "Group sizes must sum to total instances"
 
    # === Plot setup ===
@@ -350,14 +353,17 @@ if __name__ == "__main__":
       for k in range(10):
         instances.append("gen_p10_n{}_{}_{}".format(n,k, kind))
   instances.append("passage6")
-  instances.append("corridor4")
-  instances.append("circle6")
-  instances.append("circle7_swap")
+  instances.append("door4")
   instances.append("forest4")
   instances.append("forest10")
-
+  instances.append("swap8_hetero")
+  instances.append("random10_0_hetero")
+  instances.append("random10_1_hetero")
+  instances.append("random10_2_hetero")
+  instances.append("random10_3_hetero")
+  
                    
-  num_trials = 10  # max number of trials per instance
+  num_trials = 5  # max number of trials per instance
   plot_results(instances, num_trials, True)
 #   plot_results_runtime(instances, num_trials)
 

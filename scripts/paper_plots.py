@@ -13,13 +13,13 @@ def plot_results(instances, num_trials, normalize_cost=False):
     planners = {
         "db-cbs": {"marker": "1", "color": "#88CCEE"},   
         "db-ecbs": {"marker": "2", "color": "#009988"},  
-        "db-pibt": {"marker": "3", "color": "#E7B503"},  
+        # "db-pibt": {"marker": "3", "color": "#E7B503"},  
         "db-lacam": {"marker": "+", "color": "#993404"}     
     }
     name_map = {
         "db-cbs": "db-CBS",
         "db-ecbs": "db-ECBS",
-        "db-pibt": "db-PIBT",
+        # "db-pibt": "db-PIBT",
         "db-lacam": "db-LaCAM"
         }
     instance_map = {
@@ -168,12 +168,12 @@ def plot_results(instances, num_trials, normalize_cost=False):
         ax.set_axisbelow(True)
 
     # === Axis labels and scales ===
-    ax_fail.set_ylabel("Failure")
+    ax_fail.set_ylabel("Fail")
     ax_fail.set_yticks([])
     ax_fail.set_ylim(0, num_planners * 0.5 + 1)
 
     ax_time.set_ylabel("Runtime [s]")
-    ax_cost.set_ylabel("Normalized Cost [s]" if normalize_cost else "Cost [s]")
+    ax_cost.set_ylabel("Normalized Cost" if normalize_cost else "Cost [s]")
 
     fig.align_ylabels([ax_fail, ax_time, ax_cost])  
 
@@ -197,7 +197,7 @@ def plot_results(instances, num_trials, normalize_cost=False):
 
     fig.legend(
         handles=legend_handles,
-        ncol=2,  # stack vertically (or change to >1 if you prefer multiple columns)
+        # ncol=2,  # stack vertically (or change to >1 if you prefer multiple columns)
         loc='upper left',
         bbox_to_anchor=(0.12, 0.83),  # position inside figure
         frameon=True,

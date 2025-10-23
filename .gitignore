@@ -1,6 +1,8 @@
 buildRelease/
 new_format_motions/
 results/
+results_test/
+results_10/
 .vscode/
 buildDebug/
 deps/

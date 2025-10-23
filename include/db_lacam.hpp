@@ -83,7 +83,8 @@ struct LaCAM
   const Deadline *timelimit;
   const int verbose;
   // search utils
-  Expander &expander;
+  // Expander &expander;
+  std::vector<Expander> &expanders;
   // std::vector<std::shared_ptr<dynoplan::Heu_fun>> h_funs;
   std::vector<std::shared_ptr<HeuRoadmapBwdNearestR<std::shared_ptr<AStarNode>, AStarNode>>> h_funs;
   std::vector<ompl::NearestNeighbors<std::shared_ptr<AStarNode>> *> heuristics;
@@ -98,6 +99,7 @@ struct LaCAM
   // tmp params
   std::vector<dynoplan::LazyTraj> tmp_lazy_trajs;
   dynobench::TrajWrapper tmp_traj_wrapper;
+  std::vector<dynobench::TrajWrapper> fake_traj_wrappers; // hetero has different state dim.
   std::vector<dynobench::TrajWrapper> tmp_traj_wrappers;
   MultiRobotTrajectory solution;
   MultiRobotTrajectory dynamic_obstacles; // used for the refinement stage
@@ -117,7 +119,8 @@ struct LaCAM
 
   LaCAM(const dynobench::Problem _problem,
         std::vector<std::shared_ptr<AStarNode>> _dbNodes,
-        Expander &_expander,
+        // Expander &_expander,
+        std::vector<Expander> &_expanders,
         std::vector<ompl::NearestNeighbors<std::shared_ptr<AStarNode>> *> &_heuristics_reverse,
         Planner_options _planner_options,
         std::vector<std::shared_ptr<dynobench::Model_robot>> _robots,
@@ -134,15 +137,10 @@ struct LaCAM
                       // std::map<size_t, std::vector<dynobench::Trajectory>> valid_trajs
                       std::map<size_t, RobotData> valid_trajs);
 
-  void get_applicable_trajs(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id);
-  void get_applicable_trajs_precise_no_clustering(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id);
   void get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id, bool livelock);
-  void get_applicable_trajs_precise_sort_actions(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id);
 
   RobotData GetTopNPerClusterByH(const RobotData &input, double range, double min_h, double max_h, size_t N, bool shuffle);
   RobotData GetTopNPerClusterByRelativeDistance(const RobotData &input, size_t N, double threshold);
-  RobotData GetFilteredUniqueTopByH(const RobotData &input, double min_distance, size_t robot_id);
-  bool check_and_add(const double h_value);
   // DEBUG
   void export_node_expansion();
   bool is_close_config(HNode *S, std::vector<Eigen::VectorXd> Q2, double threshold);

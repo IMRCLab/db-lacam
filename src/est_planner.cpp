@@ -44,7 +44,8 @@ void est(const Eigen::VectorXd &state,
   if (!reverse_search)
     planner_options.max_expands = 5000; // limit the expansion for the forward search
 
-  std::vector<Motion> &motions = *planner_options.motions_ptr;
+  // std::vector<Motion> &motions = *planner_options.motions_ptr;
+  std::vector<Motion> &motions = *planner_options.motions_ptrs[robot_id];
   auto check_motions = [&]
   {
     for (size_t idx = 0; idx < motions.size(); ++idx)

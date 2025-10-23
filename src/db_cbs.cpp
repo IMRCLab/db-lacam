@@ -137,6 +137,10 @@ int main(int argc, char *argv[])
     {
       motionsFile = "../new_format_motions/unicycle1_v0/spread/unicycle1_v0.bin.im.bin.sp.bin";
     }
+    else if (robotType == "unicycle1_3d_v0") // hetero test with 3D robot
+    {
+      motionsFile = "../new_format_motions/unicycle1_3d_v0/unicycle1_3d_v0.bin.im.bin.sp.bin";
+    }
     else if (robotType == "integrator1_2d_v0")
     {
       motionsFile = "../new_format_motions/integrator1_2d_v0/unit_length2/integrator1_2d_v0.bin.im.bin.sp.bin";

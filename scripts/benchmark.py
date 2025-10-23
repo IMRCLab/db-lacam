@@ -113,6 +113,8 @@ def main():
     "circle6",
     "circle7_swap",
     "passage6",
+    # heterogeneous test
+    "swap8_hetero",
     # scalability test
     "test_n10_0_unicycle",
     "test_n20_0_unicycle",

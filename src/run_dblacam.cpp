@@ -115,61 +115,56 @@ int main(int argc, char *argv[])
   YAML::Node env = YAML::LoadFile(inputFile);
   // create robots
   std::vector<std::shared_ptr<dynobench::Model_robot>> robots;
-  for (size_t k = 0; k < problem.robotTypes.size(); k++)
+  // read motions
+  std::vector<std::string> all_motionsFile;
+  std::string motionsFile;
+  for (auto &robotType : problem.robotTypes)
   {
     std::shared_ptr<dynobench::Model_robot> robot = dynobench::robot_factory(
-        (problem.models_base_path + problem.robotTypes[k] + ".yaml").c_str(), problem.p_lb,
-        problem.p_ub);
+        (problem.models_base_path + robotType + ".yaml").c_str(), problem.p_lb, problem.p_ub);
     robots.push_back(robot);
-    load_env(*(robots[k]), problem); // env enable, smarter needed
-  }
-  // read motions
-  std::string motionsFile;
-  if (problem.robotTypes[0] == "unicycle1_v0" || problem.robotTypes[0] == "unicycle1_sphere_v0")
-  {
-    motionsFile = "../new_format_motions/unicycle1_v0/spread/unicycle1_v0.bin.im.bin.sp.bin";
-    // motionsFile = "../new_format_motions/unicycle1_v0/spread/unicycle1_v0_1000.bin.im.bin.sp.bin";
-  }
-  else if (problem.robotTypes[0] == "integrator1_2d_v0")
-  {
-    motionsFile = "../new_format_motions/integrator1_2d_v0/unit_length2/integrator1_2d_v0.bin.im.bin.sp.bin";
-    // motionsFile = "../new_format_motions/integrator1_2d_v0/my_motions2.bin"; // handcrafted for debugging
-  }
-  else if (problem.robotTypes[0] == "integrator2_3d_v0")
-  {
-    // motionsFile = "../new_format_motions/integrator2_3d_v0/spread/integrator2_3d_v0.bin.im.bin.sp.bin";
-    motionsFile = "../new_format_motions/integrator2_3d_v0/short/integrator2_3d_v0.bin.im.bin.sp.bin";
-    use_nn = true;
-  }
-  else
-  {
-    throw std::runtime_error("Unknown motion filename for this robottype!");
-  }
-  std::vector<Motion> motions;
-  planner_options.motionsFile = motionsFile;
-  // read and filter duplicates
-  load_motion_primitives_new(planner_options.motionsFile, *(robots[0]), motions,
-                             planner_options.max_motions, /*cut_actions*/ false,
-                             /*shuffle*/ false,
-                             /*check_cols*/ true);
-
-  disable_motions(robots[0], problem.robotTypes[0], planner_options.delta, /*filter duplicates*/ true, /*alpha*/ 0.5,
-                  planner_options.max_motions, motions);
-
-  planner_options.motions_ptr = &motions;
-  // check motions
-  auto check_motions = [&]
-  {
-    for (size_t idx = 0; idx < motions.size(); ++idx)
+    if (robotType == "unicycle1_v0" || robotType == "unicycle1_sphere_v0")
     {
-      if (motions[idx].idx != idx)
-      {
-        return false;
-      }
+      motionsFile = "../new_format_motions/unicycle1_v0/spread/unicycle1_v0.bin.im.bin.sp.bin";
     }
-    return true;
-  };
-  assert(check_motions());
+    else if (robotType == "unicycle1_3d_v0") // hetero test with 3D robot
+    {
+      motionsFile = "../new_format_motions/unicycle1_3d_v0/unicycle1_3d_v0.bin.im.bin.sp.bin";
+    }
+    else if (robotType == "integrator1_2d_v0")
+    {
+      motionsFile = "../new_format_motions/integrator1_2d_v0/unit_length2/integrator1_2d_v0.bin.im.bin.sp.bin";
+    }
+    else if (robotType == "integrator2_3d_v0")
+    {
+      motionsFile = "../new_format_motions/integrator2_3d_v0/short/integrator2_3d_v0.bin.im.bin.sp.bin";
+    }
+    else
+    {
+      throw std::runtime_error("Unknown motion filename for this robottype!");
+    }
+    all_motionsFile.push_back(motionsFile);
+  }
+  std::map<std::string, std::vector<Motion>> robot_motions;
+  planner_options.motions_ptrs.resize(robots.size());
+  for (size_t i = 0; i < robots.size(); ++i)
+  {
+    auto &robot = robots[i];
+    auto &type = problem.robotTypes[i];
+    load_env(*robot, problem); // env enable, smarter needed
+    // Load motions only once per robot type
+    if (robot_motions.find(type) == robot_motions.end())
+    {
+      planner_options.motionsFile = all_motionsFile[i];
+      load_motion_primitives_new(planner_options.motionsFile, *robot, robot_motions[type],
+                                 planner_options.max_motions, /*cut_actions*/ false,
+                                 /*shuffle*/ false,
+                                 /*check_cols*/ true);
+      disable_motions(robot, type, planner_options.delta, /*filter duplicates*/ true,
+                      /*alpha*/ 0.5, planner_options.max_motions, robot_motions[type]);
+    }
+    planner_options.motions_ptrs[i] = &robot_motions[type];
+  }
   std::vector<ompl::NearestNeighbors<std::shared_ptr<AStarNode>> *> heuristics_rev(
       robots.size(), nullptr);
   if (cfg["heuristic1"].as<std::string>() == "reverse-search")
@@ -186,6 +181,7 @@ int main(int argc, char *argv[])
       size_t robot_id = 0;
       for (const auto &robot : robots)
       {
+        planner_options_rev.motions_ptr = &robot_motions[problem.robotTypes[robot_id]];
         Eigen::VectorXd tmp_state = problem.starts[robot_id];
         problem.starts[robot_id] = problem.goals[robot_id];
         problem.goals[robot_id] = tmp_state;
@@ -202,24 +198,26 @@ int main(int argc, char *argv[])
     problem.starts = problem_original.starts;
     problem.goals = problem_original.goals;
   }
-  ompl::NearestNeighbors<Motion *> *T_m = nullptr;
-  T_m = nigh_factory_t<Motion *>(problem.robotTypes[0], robots[0], // homogeneous case
-                                 /*reverse_search*/ false);
-  // add all motions to Tm
-  time_planner.time_nearestMotion += timed_fun_void([&]
-                                                    {
-  for (size_t i = 0; i < std::min(motions.size(), planner_options.max_motions);
-       ++i)
-  {
-    T_m->add(&motions.at(i));
-  } });
-  Expander expander(robots[0].get(), T_m, planner_options.alpha * planner_options.delta, /*add static motion*/ true); // false for integrator1
   // for LaCam
   std::vector<std::shared_ptr<AStarNode>> dbN_start;
   std::vector<double> lower_bound_costs;
   std::vector<double> ratios;
+  std::vector<Expander> expanders;
   for (size_t i = 0; i < robots.size(); i++)
   {
+    // prepare motion expander for each robot
+    ompl::NearestNeighbors<Motion *> *T_m = nullptr;
+    T_m = nigh_factory_t<Motion *>(problem.robotTypes[i], robots[i],
+                                   /*reverse_search*/ false);
+    auto &motions = robot_motions[problem.robotTypes[i]];
+    time_planner.time_nearestMotion += timed_fun_void([&]
+                                                      {
+        for (size_t j = 0; j < std::min(motions.size(), planner_options.max_motions);
+            ++j)
+        {
+          T_m->add(&motions.at(j));
+        } });
+    expanders.emplace_back(robots[i].get(), T_m, planner_options.alpha * planner_options.delta, true);
     dbN_start.push_back(std::make_shared<AStarNode>());
     auto node = dbN_start.back();
     node->gScore = 0;
@@ -230,14 +228,14 @@ int main(int argc, char *argv[])
     node->is_in_open = true;
     node->reaches_goal =
         (robots[i]->distance(problem.starts[i], problem.goals[i]) <=
-         planner_options.goal_delta); // don't change distance weights!
+         planner_options.goal_delta);
     lower_bound_costs.push_back(node->hScore);
     DYNO_CHECK_GEQ(node->hScore, 0, "hScore should be positive");
     DYNO_CHECK_LEQ(node->hScore, 1e5, "hScore should be bounded");
   }
   const auto deadline = Deadline(timelimit);
   MultiRobotTrajectory dynamic_obstacles;
-  LaCAM lacam(problem, dbN_start, expander, heuristics_rev, planner_options, robots, time_planner, dynamic_obstacles, /*verbose*/ 1, &deadline);
+  LaCAM lacam(problem, dbN_start, expanders, heuristics_rev, planner_options, robots, time_planner, dynamic_obstacles, /*verbose*/ 1, &deadline);
   MultiRobotTrajectory solution = lacam.solve();
   if (solution.is_empty())
   {
@@ -315,7 +313,7 @@ int main(int argc, char *argv[])
         else
           dynamic_obstacles.trajectories.push_back(solution.trajectories[i]);
       }
-      LaCAM lacam_tmp(problem_tmp, dbN_start_tmp, expander, heuristics_rev_tmp, planner_options, robots_tmp, time_planner_tmp, dynamic_obstacles, /*verbose*/ 1, &deadline_tmp);
+      LaCAM lacam_tmp(problem_tmp, dbN_start_tmp, expanders, heuristics_rev_tmp, planner_options, robots_tmp, time_planner_tmp, dynamic_obstacles, /*verbose*/ 1, &deadline_tmp);
       // save stats
       MultiRobotTrajectory tmp_solution = lacam_tmp.solve();
       if (!tmp_solution.is_empty())

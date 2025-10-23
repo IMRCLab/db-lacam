@@ -17,9 +17,10 @@ struct Planner_options
   std::string outFile =
       "/tmp/dynoplan/out_db.yaml"; // output file to write some results
   float maxCost =
-      std::numeric_limits<float>::infinity();           // Cost bound during search
-  std::vector<dynoplan::Motion> *motions_ptr = nullptr; // Pointer to loaded motions
-  size_t max_expands = 5 * 1e4;                         // 1e3
+      std::numeric_limits<float>::infinity();                // Cost bound during search
+  std::vector<dynoplan::Motion> *motions_ptr = nullptr;      // Pointer to loaded motions
+  std::vector<std::vector<dynoplan::Motion> *> motions_ptrs; // set of pointers to loaded motions
+  size_t max_expands = 5 * 1e4;                              // 1e3
   bool debug = false;
   int limit_branching_factor =
       20;                        // Limit on branching factor to encourage more deep search

@@ -109,7 +109,7 @@ def main():
     # 3D case
     "forest4",
     "forest10",
-    "corridor4",
+    "door4",
     "circle6",
     "circle7_swap",
     "passage6",

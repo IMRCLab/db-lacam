@@ -186,6 +186,9 @@ def plot_results(instances, num_trials, normalize_cost=False):
     # remove the free space before the first label
     for ax in axes:
         ax.set_xlim(-0.5, len(instances) - 0.5)
+        ymin, ymax = ax.get_ylim()
+        ymargin = 0.04 * (ymax - ymin)
+        ax.set_ylim(ymin - ymargin, ymax + ymargin)
     # === Legend ===
     import matplotlib.lines as mlines
     legend_handles = []
@@ -211,16 +214,16 @@ def plot_results(instances, num_trials, normalize_cost=False):
 
     # === Layout tweaks ===
     plt.subplots_adjust(top=0.90, bottom=0.18)
-    plt.savefig("../results/ICAPS26/results_plot_markers_normalized.pdf", format="pdf", bbox_inches="tight") if normalize_cost else plt.savefig("../results/results_plot_markers.pdf", format="pdf", bbox_inches="tight")
+    # plt.savefig("../results/ICAPS26/results_plot_markers_normalized.pdf", format="pdf", bbox_inches="tight") if normalize_cost else plt.savefig("../results/results_plot_markers.pdf", format="pdf", bbox_inches="tight")
     plt.show()
 
 # used for scalability plot
 def plot_results_runtime(instances, num_trials, font_size=18):
-    results_path = "../results"
+    results_path = "../results/ICAPS26/n50"
     planners = {
         "db-cbs": {"color": "#88CCEE"},   
         "db-ecbs": {"color": "#009988"},  
-        "db-pibt": {"color": "#E7B503"},  
+        # "db-pibt": {"color": "#E7B503"},  
         "db-lacam": {"color": "#993404"}     
     }
 
@@ -334,37 +337,37 @@ def plot_results_runtime(instances, num_trials, font_size=18):
 
 if __name__ == "__main__":
   instances = [
-  "alcove_unicycle",
-  "atgoal_unicycle",
-  "circle2_unicycle",
-  "circle4_unicycle",
-  "circle6_unicycle",
-  "circle8_unicycle",
-  "circle10_unicycle",
+#   "alcove_unicycle",
+#   "atgoal_unicycle",
+#   "circle2_unicycle",
+#   "circle4_unicycle",
+#   "circle6_unicycle",
+#   "circle8_unicycle",
+#   "circle10_unicycle",
   # scalability test
-#   "test_n10_0_unicycle",
-#   "test_n20_0_unicycle",
-#   "test_n30_0_unicycle",
-#   "test_n40_0_unicycle",
-#   "test_n50_0_unicycle",
+  "test_n10_0_unicycle",
+  "test_n20_0_unicycle",
+  "test_n30_0_unicycle",
+  "test_n40_0_unicycle",
+  "test_n50_0_unicycle",
   ]
-  for kind in ["unicycle","unicycle_sphere"]: 
-    for n in [8]:
-      for k in range(10):
-        instances.append("gen_p10_n{}_{}_{}".format(n,k, kind))
-  instances.append("passage6")
-  instances.append("door4")
-  instances.append("forest4")
-  instances.append("forest10")
-  instances.append("swap8_hetero")
-  instances.append("random10_0_hetero")
-  instances.append("random10_1_hetero")
-  instances.append("random10_2_hetero")
-  instances.append("random10_3_hetero")
+#   for kind in ["unicycle","unicycle_sphere"]: 
+#     for n in [8]:
+#       for k in range(10):
+#         instances.append("gen_p10_n{}_{}_{}".format(n,k, kind))
+#   instances.append("passage6")
+#   instances.append("door4")
+#   instances.append("forest4")
+#   instances.append("forest10")
+#   instances.append("swap8_hetero")
+#   instances.append("random10_0_hetero")
+#   instances.append("random10_1_hetero")
+#   instances.append("random10_2_hetero")
+#   instances.append("random10_3_hetero")
   
                    
   num_trials = 5  # max number of trials per instance
-  plot_results(instances, num_trials, True)
-#   plot_results_runtime(instances, num_trials)
+#   plot_results(instances, num_trials, True)
+  plot_results_runtime(instances, num_trials)
 
 

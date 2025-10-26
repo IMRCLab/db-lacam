@@ -25,7 +25,7 @@ def run_benchmark_stats(instances, algs, trials, T):
     # # report.add_success_rate_plot(instance)
     # report.add_boxplot_initial_time_plot(instance)
     # report.add_boxplot_initial_cost_plot([instance])
-  report.plot_initial_time_vs_robot_numbers(instances)
+  # report.plot_initial_time_vs_robot_numbers(instances)
   report.close()
 
 def main():

@@ -2,6 +2,7 @@ import yaml
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
+import pandas as pd
 import os
 
 
@@ -78,6 +79,82 @@ def clustering_analysis(a, i, itr):
     plt.tight_layout()
     plt.savefig("../results/ICAPS26/clustering/clustering_analysis.pdf", format="pdf", bbox_inches="tight") 
 
+def clustering_analysis_scatter(a, list2, itr):
+    folder = "/home/akmarak-laptop/IMRC/db-lacam/results/"
+    colors = ['#4477AA', '#CCBB44']
+    labels = ['GOC', 'SC-GOC']  # display names for legend
+    font_size = 18
+
+    def collect_values(instances):
+        """Collect normalized cost (relative to the second algorithm in `a`) for each algorithm and instance."""
+        cost_values = {key: [] for key in a}
+        base_alg = a[1]  # normalize everything w.r.t SC-GOC
+        used_instances = 0
+
+        for i_instance in instances:
+            instance_costs = {}
+            for a_instance in a:
+                total_cost = 0
+                valid = False
+                for it in range(itr):
+                    yaml_file = f"{folder}{a_instance}/{i_instance}/db-lacam/00{it}/stats.yaml"
+                    try:
+                        with open(yaml_file, 'r') as file:
+                            data = yaml.safe_load(file)
+                            if data and "stats" in data and "cost" in data["stats"][0]:
+                                total_cost += data["stats"][0]['cost']
+                                valid = True
+                    except FileNotFoundError:
+                        pass
+
+                if valid:
+                    instance_costs[a_instance] = total_cost / itr
+                else:
+                    instance_costs[a_instance] = np.nan
+
+            # Only include if both have valid costs
+            if all(k in instance_costs for k in a) and not any(np.isnan(instance_costs[k]) for k in a):
+                base_cost = instance_costs[base_alg]
+                for k in instance_costs:
+                    instance_costs[k] = instance_costs[k] / base_cost  # normalize to base_alg (SC-GOC)
+                for k in instance_costs:
+                    cost_values[k].append(instance_costs[k])
+                used_instances += 1
+
+        print(f"Used {used_instances}/{len(instances)} instances (both algorithms solved).")
+        return cost_values, used_instances
+
+    # Collect normalized cost (only for instances both solved)
+    cost_values2, used_instances = collect_values(list2)
+
+    # Create dataframe
+    df = pd.DataFrame({
+        "method": np.repeat(a, len(cost_values2[a[0]])),
+        "cost": np.concatenate([cost_values2[a_i] for a_i in a]),
+        "instance": np.tile(np.arange(used_instances), len(a))
+    })
+
+    # Scatter plot
+    plt.figure(figsize=(7, 4))
+    for i, method in enumerate(a):
+        plt.scatter(
+            range(used_instances),
+            df[df['method'] == method]['cost'],
+            color=colors[i],
+            s=80,
+            label=labels[i],
+            alpha=0.7
+        )
+
+    plt.ylabel("Normalized Cost", fontsize=font_size)
+    plt.xlabel("Instances", fontsize=font_size)
+    plt.xticks([])
+    plt.yticks(fontsize=font_size)
+    plt.grid(axis='y', linestyle='dashed', alpha=0.5)
+    plt.legend(fontsize=font_size-2, frameon=True, bbox_to_anchor=(0.46, 1.03), loc='upper right')
+    plt.tight_layout()
+    plt.savefig("../results/ICAPS26/scatter_plot_clustering.pdf", format="pdf", bbox_inches="tight") 
+    plt.show()
 
 def heuristic_estimation_analysis(a, i, itr):
     folder = "/home/akmarak-laptop/IMRC/db-lacam/results/ICAPS26/heuristic-estimation/"
@@ -174,9 +251,9 @@ def time_analysis_plot(data_iterations):
     categories_bottom = {
         'Motion Rollout': 'time_rollout',
         'Motion Cluster': 'time_clustering',
-        'Collision-Env.': 'time_collision_with_env',
-        'Collision-Rob.': 'time_collision_with_planned',
-        'Collision-Pot.': 'time_collision_with_unplanned',
+        'Collision w/Environment': 'time_collision_with_env',
+        'Collision w/Robots': 'time_collision_with_planned',
+        'Collision w/Potential Motions': 'time_collision_with_unplanned',
     }
 
     colors_bars = ['#66CCEE', '#CCBB44', '#664477', '#AA3377', '#BBBBBB']
@@ -252,8 +329,8 @@ def time_analysis_plot(data_iterations):
 
     # Combine both in the bottom subplot
     main_legend = ax_bottom.legend(handles=legend_elements_main,
-                                   fontsize=font_size - 5,
-                                   bbox_to_anchor= (0.37, 0.37),
+                                   fontsize=font_size - 6,
+                                   bbox_to_anchor= (0.55, 0.38),
                                    ncol=1)
     ax_bottom.add_artist(main_legend)
     # move to the top
@@ -292,6 +369,35 @@ def main():
 #     'gen_p10_n8_9_unicycle_sphere',
 #   ]
 #   clustering_analysis(a, i, 5)
+#  1.1. clustering methods h-based vs. state-based
+  a = ["h-based2", "state-based2"]
+  i_without = [
+    'gen_p10_n8_0_unicycle_sphere',
+    'gen_p10_n8_1_unicycle_sphere',
+    'gen_p10_n8_2_unicycle_sphere',
+    'gen_p10_n8_3_unicycle_sphere',
+    'gen_p10_n8_7_unicycle_sphere',
+    'gen_p10_n8_9_unicycle_sphere',
+  ]
+  i_with = [
+    'gen_p10_n8_4_unicycle_sphere',
+    'gen_p10_n8_5_unicycle_sphere',
+    'gen_p10_n8_6_unicycle_sphere',
+    'gen_p10_n8_8_unicycle_sphere',
+    'livelock1',
+    'livelock3',
+    'livelock4',
+    'livelock5',
+    'livelock6',
+    'livelock7',
+    'livelock8',
+    'livelock9',
+  ]
+  for n in [8]:
+      for k in range(200):
+        i_with.append("livelock_n{}_{}_unicycle_sphere".format(n,k))
+  clustering_analysis_scatter(a, i_with, 1)
+
 # 2. heuristic estimation using db-A* and EST on demand
     # a = ["reverse-search", "est"]
     # i = [
@@ -303,30 +409,30 @@ def main():
     # ]
     # heuristic_estimation_analysis(a, i, 5)
 # 3. time analysis on planner's main components
-    path = "/home/akmarak-laptop/IMRC/db-lacam/results/ICAPS26/time/"
-    instances = ["circle4_unicycle", "circle6_unicycle", "circle8_unicycle", "circle10_unicycle"]
-    folder = [
-        "dbastar",
-        "est"
-    ]
-    file_name = "time_search.yaml"
-    file_paths = []
-    # Generate paths by combining the base path, instance, and algorithm
-    for instance in instances:
-        for f in folder:
-            file_paths.append(path + f + "/" + instance + "/db-lacam/000/" + file_name)
-    # Read data from each YAML file
-    data_iterations = []
-    for file_path in file_paths:
-        if os.path.exists(file_path):
-            data = read_time_stats(file_path)
-            if data:
-                data_iterations.append(data)
-            else:
-                print(file_path)
-        else: 
-            print(file_path)
-    time_analysis_plot(data_iterations)
+    # path = "/home/akmarak-laptop/IMRC/db-lacam/results/ICAPS26/time/"
+    # instances = ["circle4_unicycle", "circle6_unicycle", "circle8_unicycle", "circle10_unicycle"]
+    # folder = [
+    #     "dbastar",
+    #     "est"
+    # ]
+    # file_name = "time_search.yaml"
+    # file_paths = []
+    # # Generate paths by combining the base path, instance, and algorithm
+    # for instance in instances:
+    #     for f in folder:
+    #         file_paths.append(path + f + "/" + instance + "/db-lacam/000/" + file_name)
+    # # Read data from each YAML file
+    # data_iterations = []
+    # for file_path in file_paths:
+    #     if os.path.exists(file_path):
+    #         data = read_time_stats(file_path)
+    #         if data:
+    #             data_iterations.append(data)
+    #         else:
+    #             print(file_path)
+    #     else: 
+    #         print(file_path)
+    # time_analysis_plot(data_iterations)
 
 if __name__ == "__main__":
   main()

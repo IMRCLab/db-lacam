@@ -256,5 +256,87 @@ db-lacam:
   '*gen_p10_n8_9_unicycle_sphere':
     cluster_range: 0.05 
     cluster_distance: 0.5
-
-  
+  'livelock1':
+    delta_0: 0.5 
+    goal_delta: 0.5
+    num_primitives_0: 500 
+    alpha: 0.5
+    filter_duplicates: True
+    heuristic1: "reverse-search" 
+    heuristic1_delta: 0.9
+    heuristic1_num_primitives_0: 500 
+    cluster_range: 0.05
+    cluster_distance: 1.0
+    cluster_n: 1
+  'livelock2':
+    delta_0: 0.5 
+    goal_delta: 0.5
+    num_primitives_0: 500 
+    alpha: 0.5 
+    filter_duplicates: True
+    heuristic1: "reverse-search" 
+    heuristic1_delta: 0.5
+    heuristic1_num_primitives_0: 500 
+    cluster_range: 0.05 
+    cluster_distance: 1.2
+    cluster_n: 1
+  'livelock3':
+    delta_0: 0.5 
+    goal_delta: 0.5
+    num_primitives_0: 500 
+    alpha: 0.5 
+    filter_duplicates: True
+    heuristic1: "reverse-search" 
+    heuristic1_delta: 0.5
+    heuristic1_num_primitives_0: 500 
+    cluster_range: 0.01
+    cluster_distance: 1.0
+    cluster_n: 1
+  'livelock4':
+    delta_0: 0.5 
+    goal_delta: 0.5
+    num_primitives_0: 500 
+    alpha: 0.5 
+    filter_duplicates: True
+    heuristic1: "reverse-search" 
+    heuristic1_delta: 0.5
+    heuristic1_num_primitives_0: 500 
+    cluster_range: 0.01 
+    cluster_distance: 1.2
+    cluster_n: 1
+  'livelock5':
+    delta_0: 0.5 
+    goal_delta: 0.5
+    num_primitives_0: 500 
+    alpha: 0.5 
+    filter_duplicates: True
+    heuristic1: "reverse-search" 
+    heuristic1_delta: 0.5
+    heuristic1_num_primitives_0: 500 
+    cluster_range: 0.1
+    cluster_distance: 1.0
+    cluster_n: 1
+  'livelock7':
+    delta_0: 0.5 
+    goal_delta: 0.5
+    num_primitives_0: 500 
+    alpha: 0.5
+    filter_duplicates: True
+    heuristic1: "reverse-search" 
+    heuristic1_delta: 0.9
+    heuristic1_num_primitives_0: 500 
+    cluster_range: 0.1
+    cluster_distance: 0.5
+    cluster_n: 1
+  'livelock9':
+    delta_0: 0.5 
+    goal_delta: 0.5
+    num_primitives_0: 500 
+    alpha: 0.5 
+    filter_duplicates: True
+    heuristic1: "reverse-search" 
+    heuristic1_delta: 0.9
+    heuristic1_num_primitives_0: 500 
+    cluster_range: 0.05
+    cluster_distance: 1.0
+    cluster_n: 1

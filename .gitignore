@@ -1,6 +1,8 @@
 buildRelease/
 new_format_motions/
 results/
+results_paper/
+example/livelock/
 .vscode/
 buildDebug/
 deps/

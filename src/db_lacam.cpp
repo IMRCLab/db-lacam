@@ -184,7 +184,7 @@ MultiRobotTrajectory LaCAM::solve()
       livelock = false;
       if (H->livelock && std::find(H->unguided.begin(), H->unguided.end(), r) != H->unguided.end())
         livelock = true;
-      get_applicable_trajs_precise_exhaustive(H->dbN[r], rolled_robot_data[r], r, /*livelock*/ false);
+      get_applicable_trajs_precise_exhaustive(H->dbN[r], rolled_robot_data[r], r, /*livelock*/ livelock);
       // if no applicable motions for the current state, then remove the node
       if (!rolled_robot_data[r].trajectories.size())
       {
@@ -438,7 +438,6 @@ void LaCAM::get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> d
                       &num_valid_states);
     if (num_valid_states < 1)
     {
-      // std::cout << "num_valid_states failed" << std::endl;
       continue;
     }
     if (num_valid_states < lazy_traj.motion->traj.states.size())
@@ -466,7 +465,6 @@ void LaCAM::get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> d
                                                                               &num_valid_states); });
     if (num_valid_states && num_valid_states < xs.size())
     {
-      // std::cout << "rollout, state violations" << std::endl;
       continue;
     }
     dynobench::Trajectory traj;
@@ -514,11 +512,11 @@ void LaCAM::get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> d
   if (livelock)
   {
     m_time_planner.time_clustering += timed_fun_void([&]
-                                                     { robot_data = GetTopNPerClusterByRelativeDistance(tmp_data, 1, /*threshold*/ planner_options.cluster_distance); });
+                                                     { robot_data = GetTopNPerClusterByRelativeDistanceStochastic(tmp_data, 1, /*threshold*/ planner_options.cluster_distance); });
   }
   else
     m_time_planner.time_clustering += timed_fun_void([&]
-                                                     { robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ planner_options.cluster_range, min_h, max_h, planner_options.cluster_n, /*shuffle*/ planner_options.cluster_shuffle); });
+                                                     { robot_data = GetTopNPerClusterByHStochastic(tmp_data, /*range*/ planner_options.cluster_range, min_h, max_h, planner_options.cluster_n, /*shuffle*/ planner_options.cluster_shuffle, true); });
 }
 // OPTION 3: sort actions based on epsilon
 void LaCAM::get_applicable_trajs_precise_sort_actions(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id)
@@ -767,6 +765,127 @@ RobotData LaCAM::GetTopNPerClusterByRelativeDistance(
   return result;
 }
 
+// stochastic version
+RobotData LaCAM::GetTopNPerClusterByRelativeDistanceStochastic(
+    const RobotData &input,
+    size_t N,
+    double threshold)
+{
+  if (input.trajectories.empty())
+    return {};
+
+  struct IndexedData
+  {
+    size_t index;
+    double h;
+    double g;
+    dynobench::Trajectory traj;
+  };
+
+  std::vector<IndexedData> data;
+  data.reserve(input.trajectories.size());
+  for (size_t i = 0; i < input.trajectories.size(); ++i)
+  {
+    data.push_back({i, input.last_state_h[i], input.last_state_g[i], input.trajectories[i]});
+  }
+  // 2) min hScore
+  auto ref_it = std::min_element(data.begin(), data.end(), [](const IndexedData &a, const IndexedData &b)
+                                 { return a.h < b.h; });
+  const auto &reference = *ref_it;
+
+  // ---- 2) Compute distances to reference
+  struct WithDistance
+  {
+    IndexedData d;
+    double distance;
+  };
+
+  std::vector<WithDistance> with_dist;
+  with_dist.reserve(data.size());
+  for (auto &d : data)
+  {
+    double dist_val = robots[0]->distance(reference.traj.states.back(), d.traj.states.back());
+    with_dist.push_back({d, dist_val});
+  }
+
+  // ---- 3) Cluster based on threshold
+  std::map<int, std::vector<IndexedData>> clusters;
+  for (auto &wd : with_dist)
+  {
+    int bin = static_cast<int>(wd.distance / threshold);
+    clusters[bin].push_back(wd.d);
+  }
+
+  RobotData result;
+
+  // ---- 4) Process each cluster
+  for (auto &[bin, cluster] : clusters)
+  {
+    // sort by h
+    std::sort(cluster.begin(), cluster.end(), [](const IndexedData &a, const IndexedData &b)
+              {
+                if (a.h != b.h)
+                  return a.h < b.h;
+                return a.g < b.g; });
+
+    // top-N
+    size_t take = std::min(N, cluster.size());
+    // --- stochastic version ---
+    // 1. Compute weights proportional to h (ensure all positive)
+    double min_h = std::min_element(cluster.begin(), cluster.end(),
+                                    [](auto &a, auto &b)
+                                    { return a.h < b.h; })
+                       ->h;
+
+    std::vector<double> weights;
+    weights.reserve(cluster.size());
+    for (auto &c : cluster)
+      weights.push_back((c.h - min_h) + 1e-6);
+
+    // 2. Create discrete distribution
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::discrete_distribution<> dist(weights.begin(), weights.end());
+
+    // 3. Sample without replacement
+    std::vector<IndexedData> selected;
+    std::vector<bool> used(cluster.size(), false);
+    while (selected.size() < take)
+    {
+      size_t idx = dist(gen);
+      if (!used[idx])
+      {
+        used[idx] = true;
+        selected.push_back(cluster[idx]);
+      }
+    }
+
+    // inside-out rearrangement
+    std::vector<IndexedData> reordered;
+    reordered.reserve(selected.size());
+
+    int mid = selected.size() / 2;
+    reordered.push_back(selected[mid]);
+    for (int offset = 1; offset <= mid; ++offset)
+    {
+      if (mid - offset >= 0)
+        reordered.push_back(selected[mid - offset]);
+      if (mid + offset < (int)selected.size())
+        reordered.push_back(selected[mid + offset]);
+    }
+
+    // append
+    for (const auto &r : reordered)
+    {
+      result.trajectories.push_back(r.traj);
+      result.last_state_h.push_back(r.h);
+      result.last_state_g.push_back(r.g);
+    }
+  }
+
+  return result;
+}
+
 RobotData LaCAM::GetTopNPerClusterByH(const RobotData &input, double range, double min_h, double max_h, size_t N, bool shuffle = false)
 {
   if (input.trajectories.empty())
@@ -838,6 +957,128 @@ RobotData LaCAM::GetTopNPerClusterByH(const RobotData &input, double range, doub
       result.last_state_g.push_back(current_cluster[i].g);
     }
   }
+  return result;
+}
+
+// stochastic version, where motions per cluster are picked based on h-value probabilistically
+RobotData LaCAM::GetTopNPerClusterByHStochastic(
+    const RobotData &input,
+    double range,
+    double min_h,
+    double max_h,
+    size_t N,
+    bool shuffle = false,
+    bool stochastic = false)
+{
+  if (input.trajectories.empty())
+    return {};
+
+  double threshold = range * (max_h - min_h);
+
+  struct IndexedData
+  {
+    size_t index;
+    double h;
+    double g;
+    dynobench::Trajectory traj;
+  };
+
+  std::vector<IndexedData> data;
+  data.reserve(input.trajectories.size());
+  for (size_t i = 0; i < input.trajectories.size(); ++i)
+  {
+    data.push_back({i, input.last_state_h[i], input.last_state_g[i], input.trajectories[i]});
+  }
+
+  // Sort by h ascending (lower h first)
+  std::sort(data.begin(), data.end(), [](const IndexedData &a, const IndexedData &b)
+            {
+              if (a.h != b.h)
+                return a.h < b.h;
+              return a.g < b.g; });
+
+  RobotData result;
+  std::vector<IndexedData> current_cluster;
+  double cluster_start_value = data[0].h;
+
+  std::random_device rd;
+  std::mt19937 gen(rd());
+
+  auto pick_from_cluster = [&](std::vector<IndexedData> &cluster)
+  {
+    if (cluster.empty())
+      return;
+    size_t take = std::min(N, cluster.size());
+
+    if (stochastic)
+    {
+      // --- stochastic weighted sampling by h ---
+      double min_h_c = std::min_element(cluster.begin(), cluster.end(),
+                                        [](auto &a, auto &b)
+                                        { return a.h < b.h; })
+                           ->h;
+
+      // weights proportional to exp(alpha * (h - min_h))
+      double alpha = 2.0; // controls bias strength (larger = more bias)
+      std::vector<double> weights;
+      weights.reserve(cluster.size());
+      for (auto &c : cluster)
+        weights.push_back(std::exp(alpha * (c.h - min_h_c)));
+
+      std::discrete_distribution<> dist(weights.begin(), weights.end());
+      std::vector<bool> used(cluster.size(), false);
+
+      size_t picked = 0;
+      while (picked < take)
+      {
+        size_t idx = dist(gen);
+        if (!used[idx])
+        {
+          used[idx] = true;
+          result.trajectories.push_back(cluster[idx].traj);
+          result.last_state_h.push_back(cluster[idx].h);
+          result.last_state_g.push_back(cluster[idx].g);
+          ++picked;
+        }
+      }
+    }
+    else if (shuffle)
+    {
+      std::shuffle(cluster.begin(), cluster.end(), gen);
+      for (size_t i = 0; i < take; ++i)
+      {
+        result.trajectories.push_back(cluster[i].traj);
+        result.last_state_h.push_back(cluster[i].h);
+        result.last_state_g.push_back(cluster[i].g);
+      }
+    }
+    else
+    {
+      // deterministic top-N
+      for (size_t i = 0; i < take; ++i)
+      {
+        result.trajectories.push_back(cluster[i].traj);
+        result.last_state_h.push_back(cluster[i].h);
+        result.last_state_g.push_back(cluster[i].g);
+      }
+    }
+  };
+
+  // --- Cluster loop ---
+  for (const auto &d : data)
+  {
+    if (std::fabs(d.h - cluster_start_value) > threshold)
+    {
+      pick_from_cluster(current_cluster);
+      current_cluster.clear();
+      cluster_start_value = d.h;
+    }
+    current_cluster.push_back(d);
+  }
+
+  // Final cluster
+  pick_from_cluster(current_cluster);
+
   return result;
 }
 

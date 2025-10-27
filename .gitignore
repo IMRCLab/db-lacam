@@ -1,6 +1,10 @@
 buildRelease/
 new_format_motions/
 results/
+<<<<<<< Updated upstream
+=======
+results_test/
+>>>>>>> Stashed changes
 results_paper/
 example/livelock/
 .vscode/

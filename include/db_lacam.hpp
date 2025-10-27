@@ -140,7 +140,9 @@ struct LaCAM
   void get_applicable_trajs_precise_sort_actions(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id);
 
   RobotData GetTopNPerClusterByH(const RobotData &input, double range, double min_h, double max_h, size_t N, bool shuffle);
+  RobotData GetTopNPerClusterByHStochastic(const RobotData &input, double range, double min_h, double max_h, size_t N, bool shuffle, bool stochastic);
   RobotData GetTopNPerClusterByRelativeDistance(const RobotData &input, size_t N, double threshold);
+  RobotData GetTopNPerClusterByRelativeDistanceStochastic(const RobotData &input, size_t N, double threshold);
   RobotData GetFilteredUniqueTopByH(const RobotData &input, double min_distance, size_t robot_id);
   bool check_and_add(const double h_value);
   // DEBUG

@@ -99,42 +99,36 @@ def main():
     # "circle6_integrator",
     # "circle8_integrator",
     # "circle10_integrator",
-    # "circle2_unicycle",
-    # "circle4_unicycle",
-    # "circle6_unicycle",
-    # "circle8_unicycle",
-    # "circle10_unicycle",
-    # "alcove_unicycle",
-    # "atgoal_unicycle",
-    ## 3D case
+    "circle2_unicycle",
+    "circle4_unicycle",
+    "circle6_unicycle",
+    "circle8_unicycle",
+    "circle10_unicycle",
+    "alcove_unicycle",
+    "atgoal_unicycle",
+    # 3D case
     # "forest4",
-    # "corridor4",
-    # "circle6",
-    # "circle7_swap",
-    # "passage6",
-    # "passage10",
-    ## scalability test
-    # "test_n10_0_unicycle",
-    # "test_n20_0_unicycle",
-    # "test_n30_0_unicycle",
-    # "test_n40_0_unicycle",
-    # "test_n50_0_unicycle",
-    ## livelock scenarios
+    # scalability test
+    "test_n10_0_unicycle",
+    "test_n20_0_unicycle",
+    "test_n30_0_unicycle",
+    "test_n40_0_unicycle",
+    "test_n50_0_unicycle",
   ]
-  for kind in ["unicycle_sphere"]: #"unicycle",
-    for n in [8]:
-      for k in range(200):
-        instances.append("livelock_n{}_{}_{}".format(n,k, kind))
+  # for kind in ["unicycle_sphere"]: #"unicycle",
+  #   for n in [8]:
+  #     for k in range(200):
+  #       instances.append("livelock_n{}_{}_{}".format(n,k, kind))
 
   instances_n = ["test_n10_0_unicycle", "test_n20_0_unicycle", "test_n30_0_unicycle", "test_n40_0_unicycle", "test_n50_0_unicycle"] 
 
   algs = [
-    # "db-cbs",
-    # "db-ecbs",
-    # "db-pibt",
+    "db-cbs",
+    "db-ecbs",
+    "db-pibt",
     "db-lacam",
   ]
-  trials = 1 * 1
+  trials = 1 * 5
   timelimit_2d = 1 * 60 
   timelimit_n = 5 * 60 # scalability 
   timelimit_max = 0 # plot needs higher timelimit

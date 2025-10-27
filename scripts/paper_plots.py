@@ -112,7 +112,7 @@ def plot_results(instances, num_trials, normalize_cost=False):
 
    # === Plot setup ===
     fig, axes = plt.subplots(
-        3, 1, sharex=True, figsize=(9, 4),
+        3, 1, sharex=True, figsize=(9, 3.5),
         gridspec_kw={'height_ratios': [0.25, 1, 1], 'hspace': 0}
     )
     ax_fail, ax_time, ax_cost = axes
@@ -209,12 +209,12 @@ def plot_results(instances, num_trials, normalize_cost=False):
         frameon=True,
         facecolor="white",  # background color for contrast
         edgecolor='black',  # optional: border for better visibility
-        fontsize=11
+        fontsize=10
     )
 
     # === Layout tweaks ===
     plt.subplots_adjust(top=0.90, bottom=0.18)
-    # plt.savefig("../results/ICAPS26/results_plot_markers_normalized.pdf", format="pdf", bbox_inches="tight") if normalize_cost else plt.savefig("../results/results_plot_markers.pdf", format="pdf", bbox_inches="tight")
+    plt.savefig("../results/ICAPS26/results_plot_markers_normalized_s.pdf", format="pdf", bbox_inches="tight") if normalize_cost else plt.savefig("../results/results_plot_markers.pdf", format="pdf", bbox_inches="tight")
     plt.show()
 
 # used for scalability plot
@@ -337,37 +337,37 @@ def plot_results_runtime(instances, num_trials, font_size=18):
 
 if __name__ == "__main__":
   instances = [
-#   "alcove_unicycle",
-#   "atgoal_unicycle",
-#   "circle2_unicycle",
-#   "circle4_unicycle",
-#   "circle6_unicycle",
-#   "circle8_unicycle",
-#   "circle10_unicycle",
+  "alcove_unicycle",
+  "atgoal_unicycle",
+  "circle2_unicycle",
+  "circle4_unicycle",
+  "circle6_unicycle",
+  "circle8_unicycle",
+  "circle10_unicycle",
   # scalability test
-  "test_n10_0_unicycle",
-  "test_n20_0_unicycle",
-  "test_n30_0_unicycle",
-  "test_n40_0_unicycle",
-  "test_n50_0_unicycle",
+#   "test_n10_0_unicycle",
+#   "test_n20_0_unicycle",
+#   "test_n30_0_unicycle",
+#   "test_n40_0_unicycle",
+#   "test_n50_0_unicycle",
   ]
-#   for kind in ["unicycle","unicycle_sphere"]: 
-#     for n in [8]:
-#       for k in range(10):
-#         instances.append("gen_p10_n{}_{}_{}".format(n,k, kind))
-#   instances.append("passage6")
-#   instances.append("door4")
-#   instances.append("forest4")
-#   instances.append("forest10")
-#   instances.append("swap8_hetero")
-#   instances.append("random10_0_hetero")
-#   instances.append("random10_1_hetero")
-#   instances.append("random10_2_hetero")
-#   instances.append("random10_3_hetero")
+  for kind in ["unicycle","unicycle_sphere"]: 
+    for n in [8]:
+      for k in range(10):
+        instances.append("gen_p10_n{}_{}_{}".format(n,k, kind))
+  instances.append("passage6")
+  instances.append("door4")
+  instances.append("forest4")
+  instances.append("forest10")
+  instances.append("swap8_hetero")
+  instances.append("random10_0_hetero")
+  instances.append("random10_1_hetero")
+  instances.append("random10_2_hetero")
+  instances.append("random10_3_hetero")
   
                    
-  num_trials = 5  # max number of trials per instance
-#   plot_results(instances, num_trials, True)
-  plot_results_runtime(instances, num_trials)
+  num_trials = 10  # max number of trials per instance
+  plot_results(instances, num_trials, True)
+#   plot_results_runtime(instances, num_trials)
 
 

@@ -80,7 +80,7 @@ def clustering_analysis(a, i, itr):
     plt.savefig("../results/ICAPS26/clustering/clustering_analysis.pdf", format="pdf", bbox_inches="tight") 
 
 def clustering_analysis_scatter(a, list2, itr):
-    folder = "/home/akmarak-laptop/IMRC/db-lacam/results/"
+    folder = "/home/akmarak-laptop/IMRC/db-lacam/results/ICAPS26/livelock/"
     colors = ['#4477AA', '#CCBB44']
     labels = ['GOC', 'SC-GOC']  # display names for legend
     font_size = 18
@@ -155,6 +155,71 @@ def clustering_analysis_scatter(a, list2, itr):
     plt.tight_layout()
     plt.savefig("../results/ICAPS26/scatter_plot_clustering.pdf", format="pdf", bbox_inches="tight") 
     plt.show()
+
+def clustering_analysis_bar(a, list2, itr):
+    folder = "/home/akmarak-laptop/IMRC/db-lacam/results/ICAPS26/livelock/"
+    base_alg = a[1]  # SC-GOC (denominator)
+    compare_alg = a[0]  # GOC (numerator)
+    font_size = 18
+
+    def collect_ratios(instances):
+        ratios = []
+        used_instances = 0
+
+        for i_instance in instances:
+            instance_costs = {}
+            for a_instance in a:
+                total_cost = 0
+                valid = False
+                for it in range(itr):
+                    yaml_file = f"{folder}{a_instance}/{i_instance}/db-lacam/00{it}/stats.yaml"
+                    try:
+                        with open(yaml_file, 'r') as file:
+                            data = yaml.safe_load(file)
+                            if data and "stats" in data and "cost" in data["stats"][0]:
+                                total_cost += data["stats"][0]['cost']
+                                valid = True
+                    except FileNotFoundError:
+                        pass
+
+                instance_costs[a_instance] = total_cost / itr if valid else np.nan
+
+            # Use only if both valid
+            if not any(np.isnan(instance_costs[k]) for k in a):
+                ratio = instance_costs[compare_alg] / instance_costs[base_alg]
+                ratios.append(ratio)
+                used_instances += 1
+
+        print(f"Used {used_instances}/{len(instances)} instances (both algorithms solved).")
+        return np.array(ratios), used_instances
+
+    # Collect ratios (GOC/SC-GOC)
+    ratios, used_instances = collect_ratios(list2)
+
+    # Sort ratios in ascending order
+    sorted_indices = np.argsort(ratios)
+    ratios_sorted = ratios[sorted_indices]
+
+    # Bar plot
+    plt.figure(figsize=(8, 4))
+    x = np.arange(used_instances)
+    plt.bar(x, ratios_sorted, color='#4477AA', alpha=0.8)
+
+    # Highlight ratio=1 line
+    plt.axhline(1.0, color='gray', linestyle='--', linewidth=1)
+
+    # Labels and style
+    plt.ylabel(r"Normalized Cost (GOC/SC-GOC)", fontsize=font_size-2)
+    plt.xlabel("Instances", fontsize=font_size)
+    plt.xticks([])
+    plt.yticks(fontsize=font_size)
+    plt.grid(axis='y', linestyle='dashed', alpha=0.4)
+    plt.tight_layout()
+    plt.savefig("../results/ICAPS26/bar_plot_clustering.pdf", format="pdf", bbox_inches="tight") 
+    plt.show()
+    print(f"Mean ratio: {np.mean(ratios_sorted):.3f}, Median ratio: {np.median(ratios_sorted):.3f}")
+
+    return ratios_sorted
 
 def heuristic_estimation_analysis(a, i, itr):
     folder = "/home/akmarak-laptop/IMRC/db-lacam/results/ICAPS26/heuristic-estimation/"
@@ -396,7 +461,8 @@ def main():
   for n in [8]:
       for k in range(200):
         i_with.append("livelock_n{}_{}_unicycle_sphere".format(n,k))
-  clustering_analysis_scatter(a, i_with, 1)
+#   clustering_analysis_scatter(a, i_with, 1)
+  clustering_analysis_bar(a, i_with, 1)
 
 # 2. heuristic estimation using db-A* and EST on demand
     # a = ["reverse-search", "est"]

@@ -209,13 +209,13 @@ def clustering_analysis_bar(a, list2, itr):
     plt.axhline(1.0, color='gray', linestyle='--', linewidth=1)
 
     # Labels and style
-    plt.ylabel(r"Normalized Cost (GOC/SC-GOC)", fontsize=font_size-2)
+    plt.ylabel(r"GOC cost/SC-GOC cost", fontsize=font_size)
     plt.xlabel("Instances", fontsize=font_size)
     plt.xticks([])
     plt.yticks(fontsize=font_size)
     plt.grid(axis='y', linestyle='dashed', alpha=0.4)
     plt.tight_layout()
-    plt.savefig("../results/ICAPS26/bar_plot_clustering.pdf", format="pdf", bbox_inches="tight") 
+    plt.savefig("../results/ICAPS26/bar_plot_clustering_stochastic.pdf", format="pdf", bbox_inches="tight") 
     plt.show()
     print(f"Mean ratio: {np.mean(ratios_sorted):.3f}, Median ratio: {np.median(ratios_sorted):.3f}")
 
@@ -435,7 +435,8 @@ def main():
 #   ]
 #   clustering_analysis(a, i, 5)
 #  1.1. clustering methods h-based vs. state-based
-  a = ["h-based2", "state-based2"]
+#   a = ["h-based2", "state-based2"]
+  a = ["h-based-stochastic", "state-based-stochastic"]
   i_without = [
     'gen_p10_n8_0_unicycle_sphere',
     'gen_p10_n8_1_unicycle_sphere',
@@ -445,18 +446,18 @@ def main():
     'gen_p10_n8_9_unicycle_sphere',
   ]
   i_with = [
-    'gen_p10_n8_4_unicycle_sphere',
-    'gen_p10_n8_5_unicycle_sphere',
-    'gen_p10_n8_6_unicycle_sphere',
-    'gen_p10_n8_8_unicycle_sphere',
-    'livelock1',
-    'livelock3',
-    'livelock4',
-    'livelock5',
-    'livelock6',
-    'livelock7',
-    'livelock8',
-    'livelock9',
+    # 'gen_p10_n8_4_unicycle_sphere',
+    # 'gen_p10_n8_5_unicycle_sphere',
+    # 'gen_p10_n8_6_unicycle_sphere',
+    # 'gen_p10_n8_8_unicycle_sphere',
+    # 'livelock1',
+    # 'livelock3',
+    # 'livelock4',
+    # 'livelock5',
+    # 'livelock6',
+    # 'livelock7',
+    # 'livelock8',
+    # 'livelock9',
   ]
   for n in [8]:
       for k in range(200):

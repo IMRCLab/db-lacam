@@ -140,7 +140,7 @@ def main():
     "db-pibt",
     "db-lacam",
   ]
-  trials = 1 * 1
+  trials = 1 * 10
   timelimit_2d = 1 * 60 
   timelimit_n = 5 * 60 # scalability 
   timelimit_max = 0 # plot needs higher timelimit

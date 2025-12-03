@@ -1,0 +1,62 @@
+environment:
+  min: [0, 0]
+  max: [10, 10]
+  obstacles:
+    - type: box # o1
+      center: [5, 8.5]
+      size: [6, 1]
+    - type: box # o2
+      center: [7.5, 7]
+      size: [1, 4]
+    - type: box # o3
+      center: [4.5, 6.5]
+      size: [3, 1]
+    - type: box # o4
+      center: [5.5, 5]
+      size: [1, 4]
+    - type: box # o5
+      center: [6.5, 3.5]
+      size: [3, 1]
+    - type: box # o6
+      center: [1.5, 4]
+      size: [1, 6]
+    - type: box # o7
+      center: [3, 3.5]
+      size: [2, 1]
+    - type: box # o8
+      center: [6, 1.5]
+      size: [4, 1]
+    - type: box # o9
+      center: [9.5, 2.5]
+      size: [1, 5]
+robots:
+  - type: unicycle1_v0 # r1
+    start: [0.5,9.5,0] 
+    goal: [3.5,0.75,4.71] 
+  - type: unicycle1_v0 # r2
+    start: [8.5,4.5,4.71] 
+    goal: [5.5,2.5,3.14] 
+  - type: unicycle1_v0 # r3
+    start: [4.5,5.5,3.14] 
+    goal: [0.5,2.5,4.71] 
+  - type: unicycle1_v0 # r4
+    start: [4.5,4.5,4.71] 
+    goal: [0.5,0.5,3.14]
+  - type: unicycle1_v0 # r5
+    start: [2.5,2.5,0] 
+    goal: [9.5,9.5,1.57] 
+  - type: unicycle1_v0 # r6
+    start: [0.5,5.5,1.57] 
+    goal: [6.5,7.5,0]
+  - type: unicycle1_v0 # r7
+    start: [7.5,0.5,0] 
+    goal: [0.5,5.5,4.71] 
+  - type: unicycle1_v0 # r8
+    start: [2.5,7.5,0] 
+    goal: [9.5,7.5,0]
+  - type: unicycle1_v0 # r9
+    start: [0.5,7,1.57] 
+    goal: [6,9.5,0]
+  - type: unicycle1_v0 # r10
+    start: [6.5,6,4.71] 
+    goal: [9.5,6,1.57]

@@ -9,7 +9,7 @@ import matplotlib.patches as mpatches
 # global normalization - max cost per instance
 def plot_results(instances, num_trials, normalize_cost=False):
    
-    results_path = "../results_paper"
+    results_path = "../results_with_maze"
     planners = {
         "db-cbs": {"marker": "1", "color": "#88CCEE"},   
         "db-ecbs": {"marker": "2", "color": "#009988"},  
@@ -33,18 +33,7 @@ def plot_results(instances, num_trials, normalize_cost=False):
     "circle6_unicycle":"circle-u-n6",
     "circle8_unicycle":"circle-u-n8",
     "circle10_unicycle":"circle-u-n10",
-    # d
-    'gen_p10_n8_0_unicycle_sphere': "random-n8-u\u209B",
-    'gen_p10_n8_1_unicycle_sphere': "random-n8-u\u209B",
-    'gen_p10_n8_2_unicycle_sphere': "random-n8-u\u209B",
-    'gen_p10_n8_3_unicycle_sphere': "random-n8-u\u209B",
-    'gen_p10_n8_4_unicycle_sphere': "random-n8-u\u209B",
-    'gen_p10_n8_5_unicycle_sphere': "random-n8-u\u209B",
-    'gen_p10_n8_6_unicycle_sphere': "random-n8-u\u209B",
-    'gen_p10_n8_7_unicycle_sphere': "random-n8-u\u209B",
-    'gen_p10_n8_8_unicycle_sphere': "random-n8-u\u209B",
-    'gen_p10_n8_9_unicycle_sphere': "random-n8-u\u209B",
-    # e 
+    # d 
     'gen_p10_n8_0_unicycle': "random-n8-u",
     'gen_p10_n8_1_unicycle': "random-n8-u",
     'gen_p10_n8_2_unicycle': "random-n8-u",
@@ -55,16 +44,29 @@ def plot_results(instances, num_trials, normalize_cost=False):
     'gen_p10_n8_7_unicycle': "random-n8-u",
     'gen_p10_n8_8_unicycle': "random-n8-u",
     'gen_p10_n8_9_unicycle': "random-n8-u",
+    # e
+    'gen_p10_n8_0_unicycle_sphere': "random-n8-u\u209B",
+    'gen_p10_n8_1_unicycle_sphere': "random-n8-u\u209B",
+    'gen_p10_n8_2_unicycle_sphere': "random-n8-u\u209B",
+    'gen_p10_n8_3_unicycle_sphere': "random-n8-u\u209B",
+    'gen_p10_n8_4_unicycle_sphere': "random-n8-u\u209B",
+    'gen_p10_n8_5_unicycle_sphere': "random-n8-u\u209B",
+    'gen_p10_n8_6_unicycle_sphere': "random-n8-u\u209B",
+    'gen_p10_n8_7_unicycle_sphere': "random-n8-u\u209B",
+    'gen_p10_n8_8_unicycle_sphere': "random-n8-u\u209B",
+    'gen_p10_n8_9_unicycle_sphere': "random-n8-u\u209B",
     # f
-    "passage6":"passage-n6-3D",
+    "maze_unicycle":"maze-n10",
     # g
-    "door4":"door-n4-3D",
+    "passage6":"passage-n6-3D",
     # h
+    "door4":"door-n4-3D",
+    # i
     "forest4":"forest-n4-3D",
     "forest10":"forest-n10-3D",
-    # i
+    # j
     "swap8_hetero":"swap-n8-hetero",
-    # i
+    # k
     "random10_0_hetero":"random-n10-hetero",
     "random10_1_hetero":"random-n10-hetero",
     "random10_2_hetero":"random-n10-hetero",
@@ -106,8 +108,8 @@ def plot_results(instances, num_trials, normalize_cost=False):
             for p in planners:
                 data[p][inst]["cost"] = [c / max_cost for c in data[p][inst]["cost"]]
 
-    group_names = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]
-    group_sizes = [1,    1,   5,   10,   10, 1,   1,   2,   1,   4] 
+    group_names = ["a", "b", "c", "d", "e", "f","g", "h", "i", "j", "k"]
+    group_sizes = [1,    1,   5,   10,  10,  1,  1,   1,   2,   1,   4] 
     assert sum(group_sizes) == len(instances), "Group sizes must sum to total instances"
 
    # === Plot setup ===
@@ -209,12 +211,12 @@ def plot_results(instances, num_trials, normalize_cost=False):
         frameon=True,
         facecolor="white",  # background color for contrast
         edgecolor='black',  # optional: border for better visibility
-        fontsize=10
+        fontsize=9.5
     )
 
     # === Layout tweaks ===
     plt.subplots_adjust(top=0.90, bottom=0.18)
-    plt.savefig("../results/ICAPS26/results_plot_markers_normalized_s.pdf", format="pdf", bbox_inches="tight") if normalize_cost else plt.savefig("../results/results_plot_markers.pdf", format="pdf", bbox_inches="tight")
+    plt.savefig("../results/ICAPS26/results_maze_plot_markers_normalized.pdf", format="pdf", bbox_inches="tight") if normalize_cost else plt.savefig("../results/results_plot_markers.pdf", format="pdf", bbox_inches="tight")
     plt.show()
 
 # used for scalability plot
@@ -355,6 +357,7 @@ if __name__ == "__main__":
     for n in [8]:
       for k in range(10):
         instances.append("gen_p10_n{}_{}_{}".format(n,k, kind))
+  instances.append("maze_unicycle")
   instances.append("passage6")
   instances.append("door4")
   instances.append("forest4")

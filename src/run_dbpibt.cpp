@@ -345,6 +345,7 @@ int main(int argc, char *argv[])
       std::cout << "elapsed:" << std::setw(6) << duration_total.count() << "s"
                 << "  loop_cnt:" << std::setw(8) << loop_cnt << std::endl;
       solution.to_yaml_format(outputFile.c_str());
+      time_planner.print();
       return 0;
     }
     time_planner.time_sort_order += timed_fun_void([&]
@@ -353,6 +354,7 @@ int main(int argc, char *argv[])
     loop_cnt++;
     // prepare _to
     Q_to.clear();
+    auto start = std::chrono::high_resolution_clock::now();
     // call pibt
     success = dbpibt.set_new_config(Q_from, Q_to, dbNode_from, dbNode_to, M_to, order, rolled_robot_data);
     std::cout << "set new config: " << success << std::endl;
@@ -363,6 +365,9 @@ int main(int argc, char *argv[])
     }
     else
     {
+      auto end = std::chrono::high_resolution_clock::now();
+      std::chrono::duration<double, std::micro> duration = end - start;
+      std::cout << "single horizon planning took " << duration.count() << " microseconds\n";
       for (size_t j = 0; j < robots.size(); j++)
       {
         if (!M_to[j].is_empty())

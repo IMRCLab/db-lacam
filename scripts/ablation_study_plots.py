@@ -418,6 +418,108 @@ def time_analysis_plot(data_iterations):
     plt.savefig("../results/ICAPS26/results_time_analysis.pdf", format="pdf", bbox_inches="tight")
     plt.show()
 
+# for db-pibt and db-lacam comparison
+def plot_group_success_bar(instances, num_trials,
+                           method_a="db-pibt", method_b="db-lacam",
+                           results_path="../results_with_maze",
+                           group_names=None, group_sizes=None):
+ 
+    if group_names is None:
+        group_names = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"]
+    if group_sizes is None:
+        group_sizes = [1,    1,   5,   10,  10,  1,  1,   1,   2,   1,   4] 
+    assert sum(group_sizes) == len(instances), "Group sizes must sum to total instances"
+
+    name_map = {
+        "db-cbs": "db-CBS",
+        "db-ecbs": "db-ECBS",
+        "db-lacam": "db-LaCAM"
+    }
+    color_map = {
+        "db-cbs": "#88CCEE",
+        "db-ecbs": "#009988",
+        "db-pibt": "#E7B503",  
+        "db-lacam": "#993404"
+    }
+
+    def instance_success(planner, inst):
+        """Percentage of successful trials for this (planner, instance)."""
+        success = 0
+        for trial in range(num_trials):
+            stats_path = os.path.join(results_path, inst, planner, f"{trial:03d}", "stats.yaml")
+            if not os.path.exists(stats_path):
+                continue
+            try:
+                with open(stats_path, "r") as f:
+                    stats = yaml.safe_load(f)
+            except Exception:
+                continue
+            if not stats or "stats" not in stats or not stats["stats"]:
+                continue
+            first = stats["stats"][0]
+            if "t" in first and "cost" in first:
+                success += 1
+        return 100.0 * success / num_trials if num_trials > 0 else 0.0
+
+    # Split into groups
+    groups = []
+    idx = 0
+    for size in group_sizes:
+        groups.append(instances[idx:idx + size])
+        idx += size
+
+    def group_success(planner):
+        """Compute mean success rate for each group."""
+        rates = []
+        for inst_list in groups:
+            vals = [instance_success(planner, inst) for inst in inst_list]
+            rates.append(np.mean(vals) if vals else 0)
+        return np.array(rates)
+
+    success_a = group_success(method_a)
+    success_b = group_success(method_b)
+
+    # === Plot ===
+    x = np.arange(len(group_names))
+    width = 0.35
+
+    fig, ax = plt.subplots(figsize=(9, 4))
+    bars_a = ax.bar(x - width/2, success_a, width, color=color_map.get(method_a, "gray"),
+                    label=name_map.get(method_a, method_a))
+    bars_b = ax.bar(x + width/2, success_b, width, color=color_map.get(method_b, "gray"),
+                    label=name_map.get(method_b, method_b))
+
+    # Annotate bars
+    for bars in [bars_a, bars_b]:
+        for b in bars:
+            h = b.get_height()
+
+    # Axis labels and style
+    font_size = 16
+    ax.set_xticks(x)
+    ax.set_xticklabels(group_names, fontsize=font_size)
+    ax.set_ylabel("Success rate (%)", fontsize=font_size)
+    ax.set_xlabel("Instance groups", fontsize=font_size)
+    ax.set_ylim(0, 110)
+    ax.yaxis.grid(True, linestyle="--", alpha=0.5)
+    ax.tick_params(axis='y', labelsize=font_size)
+
+    # Legend on top, centered, outside plot
+    fig.legend(
+        loc="upper center",
+        bbox_to_anchor=(0.5, 1.02),
+        ncol=2,
+        frameon=False,
+        facecolor="white",
+        edgecolor="black",
+        fontsize=font_size
+    )
+
+    plt.tight_layout(rect=[0, 0, 1, 0.95])  # leave space for legend
+    plt.savefig("../results/ICAPS26/success_rate_dbpibt.pdf", format="pdf", bbox_inches="tight") 
+    # plt.show()
+    return fig, ax
+
 def main():
 # 1. clustering methods h-based vs. state-based
 #   a = ["h-based", "state-based"]
@@ -436,16 +538,16 @@ def main():
 #   clustering_analysis(a, i, 5)
 #  1.1. clustering methods h-based vs. state-based
 #   a = ["h-based2", "state-based2"]
-  a = ["h-based-stochastic", "state-based-stochastic"]
-  i_without = [
-    'gen_p10_n8_0_unicycle_sphere',
-    'gen_p10_n8_1_unicycle_sphere',
-    'gen_p10_n8_2_unicycle_sphere',
-    'gen_p10_n8_3_unicycle_sphere',
-    'gen_p10_n8_7_unicycle_sphere',
-    'gen_p10_n8_9_unicycle_sphere',
-  ]
-  i_with = [
+#   a = ["h-based-stochastic", "state-based-stochastic"]
+#   i_without = [
+#     'gen_p10_n8_0_unicycle_sphere',
+#     'gen_p10_n8_1_unicycle_sphere',
+#     'gen_p10_n8_2_unicycle_sphere',
+#     'gen_p10_n8_3_unicycle_sphere',
+#     'gen_p10_n8_7_unicycle_sphere',
+#     'gen_p10_n8_9_unicycle_sphere',
+#   ]
+#   i_with = [
     # 'gen_p10_n8_4_unicycle_sphere',
     # 'gen_p10_n8_5_unicycle_sphere',
     # 'gen_p10_n8_6_unicycle_sphere',
@@ -458,12 +560,12 @@ def main():
     # 'livelock7',
     # 'livelock8',
     # 'livelock9',
-  ]
-  for n in [8]:
-      for k in range(200):
-        i_with.append("livelock_n{}_{}_unicycle_sphere".format(n,k))
+#   ]
+#   for n in [8]:
+#       for k in range(200):
+#         i_with.append("livelock_n{}_{}_unicycle_sphere".format(n,k))
 #   clustering_analysis_scatter(a, i_with, 1)
-  clustering_analysis_bar(a, i_with, 1)
+#   clustering_analysis_bar(a, i_with, 1)
 
 # 2. heuristic estimation using db-A* and EST on demand
     # a = ["reverse-search", "est"]
@@ -501,5 +603,33 @@ def main():
     #         print(file_path)
     # time_analysis_plot(data_iterations)
 
+# 4. db-pibt vs. db-lacam performance plot for the Appendix
+    instances = [
+    "alcove_unicycle",
+    "atgoal_unicycle",
+    "circle2_unicycle",
+    "circle4_unicycle",
+    "circle6_unicycle",
+    "circle8_unicycle",
+    "circle10_unicycle",
+    ]
+    for kind in ["unicycle","unicycle_sphere"]: 
+        for n in [8]:
+            for k in range(10):
+                instances.append("gen_p10_n{}_{}_{}".format(n,k, kind))
+    instances.append("maze_unicycle")
+    instances.append("passage6")
+    instances.append("door4")
+    instances.append("forest4")
+    instances.append("forest10")
+    instances.append("swap8_hetero")
+    instances.append("random10_0_hetero")
+    instances.append("random10_1_hetero")
+    instances.append("random10_2_hetero")
+    instances.append("random10_3_hetero")
+  
+                   
+    num_trials = 10  # max number of trials per instance
+    plot_group_success_bar(instances, num_trials)
 if __name__ == "__main__":
   main()

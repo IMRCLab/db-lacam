@@ -98,6 +98,7 @@ def main():
     "reb_p0_n10_1_unicycle",
     "reb_p0_n10_2_unicycle",
     "reb_p0_n10_3_unicycle",
+    "reb_p0_n10_4_unicycle",
 
     "reb_p0_n20_0_unicycle",
     "reb_p0_n20_1_unicycle",
@@ -112,17 +113,20 @@ def main():
     "reb_p0_n30_2_unicycle",
     "reb_p0_n30_3_unicycle",
     "reb_p0_n30_4_unicycle",
-    "reb_p0_n20_5_unicycle",
+    "reb_p0_n30_5_unicycle",
+    "reb_p0_n30_6_unicycle",
 
     "reb_p0_n40_0_unicycle",
     "reb_p0_n40_1_unicycle",
     "reb_p0_n40_2_unicycle",
     "reb_p0_n40_3_unicycle",
     "reb_p0_n40_4_unicycle",
+    "reb_p0_n40_5_unicycle",
 
     "reb_p0_n50_0_unicycle",
     "reb_p0_n50_1_unicycle",
     "reb_p0_n50_2_unicycle",
+    "reb_p0_n50_3_unicycle",
   ]
   
   algs = [
@@ -155,7 +159,7 @@ def main():
   write_table(instances, algs, Path("../results"), "table.pdf", trials, timelimit_max)
   # paper_tables.write_table_2d(trials, timelimit)
   # paper_tables.write_table_3d(trials, timelimit)
-  # paper_tables.write_table_scalability(trials, timelimit)
+  paper_tables.write_table_scalability(trials, timelimit)
 
 
 if __name__ == '__main__':

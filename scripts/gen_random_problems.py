@@ -96,7 +96,7 @@ def gen_env(min, max, obs_density, N, filename):
     while len(r["robots"]) < N:
         type = str(np.random.choice(["unicycle1_v0"]))  # can add more types if needed
 
-        for _ in range(100):  # attempt multiple times before giving up
+        for _ in range(10):  # attempt multiple times before giving up
             start = np.random.uniform([min[0] + 0.5, min[1] + 0.5, -np.pi], [max[0] - 0.5, max[1] - 0.5, np.pi])
             goal = np.random.uniform([min[0] + 0.5, min[1] + 0.5, -np.pi], [max[0] - 0.5, max[1] - 0.5, np.pi])
 
@@ -111,12 +111,12 @@ def gen_env(min, max, obs_density, N, filename):
                 "goal": goal.tolist()
             })
 
-            if not check_problem(r):  # assuming check_problem validates path feasibility
-                r["robots"].pop()
-            else:
-                break
-        else:
-            print(f"Could not place robot {len(r['robots'])} after 100 tries")
+        #     if not check_problem(r):  # assuming check_problem validates path feasibility
+        #         r["robots"].pop()
+        #     else:
+        #         break
+        # else:
+        #     print(f"Could not place robot {len(r['robots'])} after 100 tries")
 
     with open(filename, "w") as f:
         yaml.dump(r, f)
@@ -124,13 +124,13 @@ def gen_env(min, max, obs_density, N, filename):
 
 def main():
     min = np.array([0,0])
-    max = np.array([20,20])
-    obs_density = 1 # percent
-    K = 1 # num instances
+    max = np.array([30,30])
+    obs_density = 0 # percent
+    K = 10 # num instances
 
-    for N in [20]: # 4, 8, 12
+    for N in [30]: # 4, 8, 12
         for k in range(K):
-            filename = "../example/test_p{}_n{}_{}_unicycle.yaml".format(obs_density, N, k)
+            filename = "../example/reb_p{}_n{}_{}_unicycle.yaml".format(obs_density, N, k)
             gen_env(min, max, obs_density / 100.0, N, filename)
 
 if __name__ == '__main__':

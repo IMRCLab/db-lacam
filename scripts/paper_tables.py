@@ -352,12 +352,187 @@ def write_table_scalability(trials, timelimit):
     f.write(r"\end{document}")
 
   benchmark_table.gen_pdf(output_path)
+
+def write_table_scalability_std(trials, timelimit):
+  instances = [
+    "reb_p0_n10_0_unicycle",
+    "reb_p0_n10_1_unicycle",
+    "reb_p0_n10_2_unicycle",
+    "reb_p0_n10_3_unicycle",
+    "reb_p0_n10_4_unicycle",
+
+    "reb_p0_n20_0_unicycle",
+    "reb_p0_n20_1_unicycle",
+    "reb_p0_n20_2_unicycle",
+    "reb_p0_n20_3_unicycle",
+    "reb_p0_n20_4_unicycle",
+    "reb_p0_n20_5_unicycle",
+    "reb_p0_n20_6_unicycle",
+
+    "reb_p0_n30_0_unicycle",
+    "reb_p0_n30_1_unicycle",
+    "reb_p0_n30_2_unicycle",
+    "reb_p0_n30_3_unicycle",
+    "reb_p0_n30_4_unicycle",
+    # "reb_p0_n30_5_unicycle",
+
+    "reb_p0_n40_0_unicycle",
+    "reb_p0_n40_1_unicycle",
+    "reb_p0_n40_2_unicycle",
+    "reb_p0_n40_3_unicycle",
+    "reb_p0_n40_4_unicycle",
+    "reb_p0_n40_5_unicycle",
+
+    "reb_p0_n50_0_unicycle",
+    "reb_p0_n50_1_unicycle",
+    "reb_p0_n50_2_unicycle",
+    "reb_p0_n50_3_unicycle",
+  ]
+
+  algs = [
+    # "db-cbs",
+    # "db-ecbs",
+    # "db-pibt",
+    "db-lacam",
+  ]
+
+  instance_names = {
+    "reb_p0_n10_0_unicycle" : "p10-0",
+    "reb_p0_n10_1_unicycle" : "p10-1",
+    "reb_p0_n10_2_unicycle" : "p10-2",
+    "reb_p0_n10_3_unicycle" : "p10-3",
+    "reb_p0_n10_4_unicycle" : "p10-4",
+
+    "reb_p0_n20_0_unicycle" : "p20-0",
+    "reb_p0_n20_1_unicycle" : "p20-1",
+    "reb_p0_n20_2_unicycle" : "p20-2",
+    "reb_p0_n20_3_unicycle" : "p20-3",
+    "reb_p0_n20_4_unicycle" : "p20-4",
+    "reb_p0_n20_5_unicycle" : "p20-5",
+    "reb_p0_n20_6_unicycle" : "p20-6",
+
+    "reb_p0_n30_0_unicycle" : "p30-0",
+    "reb_p0_n30_1_unicycle" : "p30-1",
+    "reb_p0_n30_2_unicycle" : "p30-2",
+    "reb_p0_n30_3_unicycle" : "p30-3",
+    "reb_p0_n30_4_unicycle" : "p30-4",
+
+    "reb_p0_n40_0_unicycle" : "p40-0",
+    "reb_p0_n40_1_unicycle" : "p40-1",
+    "reb_p0_n40_2_unicycle" : "p40-2",
+    "reb_p0_n40_3_unicycle" : "p40-3",
+    "reb_p0_n40_4_unicycle" : "p40-4",
+    "reb_p0_n40_5_unicycle" : "p40-5",
+
+    "reb_p0_n50_0_unicycle" : "p50-0",
+    "reb_p0_n50_1_unicycle" : "p50-1",
+    "reb_p0_n50_2_unicycle" : "p50-2",
+    "reb_p0_n50_3_unicycle" : "p50-3",
+  }
+
+  alg_names = {
+    # "db-cbs": "db-CBS",
+    # "db-ecbs": "db-ECBS",
+    # "db-pibt": "db-PIBT",
+    "db-lacam": "db-LaCAM",
+  }
+
+  result = benchmark_table.compute_results_with_std(instances, algs, Path("../results/scalability/"), trials, timelimit)
+  output_path = Path("../results/paper_table_scalability_std.pdf")
+  with open(output_path.with_suffix(".tex"), "w") as f:
+
+    f.write(r"\documentclass{standalone}" + "\n")
+    f.write(r"\usepackage{xcolor}" + "\n")
+    f.write(r"\begin{document}" + "\n")
+    f.write(r"% GENERATED - DO NOT EDIT - " + output_path.name + "\n")
+
+    out = r"\begin{tabular}{c || c"
+    for alg in algs:
+      if (alg == "db-lacam"):
+        out += r" || r|r|r|r"
+      else:
+        out += r" || r|r|r"
+    out += "}\n"
+    f.write(out)
+    out = r"\# & Instance"
+    for k, alg in enumerate(algs):
+      if k == len(algs) - 1:
+        if (alg == "db-lacam"):
+          out += r" & \multicolumn{4}{c}{"
+        else:
+          out += r" & \multicolumn{3}{c}{" 
+      else:
+        if (alg == "db-lacam"):
+          out += r" & \multicolumn{4}{c||}{"
+        else:
+          out += r" & \multicolumn{3}{c||}{"
+      out += alg_names[alg]
+      out += r"}"
+    out += r"\\"
+    f.write(out)
+    out = r"& "
+    for alg in algs:
+      if (alg == "db-lacam"):
+        out += r" & $p$ & $t^{\mathrm{st}} [s]$ & $J^{\mathrm{st}} [s]$ & $J^{f} [s]$"
+      else:
+        out += r" & $p$ & $t^{\mathrm{st}} [s]$ & $J^{\mathrm{st},f} [s]$"
+    out += r"\\"
+    f.write(out)
+    f.write(r"\hline")
+
+    r_number = 0
+    for instance in instances:
+      print(instance)
+      if instance == "<<HLINE>>":
+        f.write(r"\hline")
+        f.write("\n")
+        continue
+
+      out = ""
+      out += r"\hline"
+      out += "\n"
+      out += "{} & ".format(r_number+1)
+      if instance in instance_names:
+        out += instance_names[instance]
+      else:
+        out += "{} ".format(instance.replace("_", "\_"))
+
+      for alg in algs:
+        if alg == "db-lacam":
+          keys = ['success', 't^st_mean', 'J^st_mean', 'J^f_mean']
+        else:
+            keys = ['success', 't^st_mean', 'J^st_mean']
+        out += benchmark_table.generate_latex_row_cells(result[instance], alg, algs, keys, digits=1, show_std=True, is_anytime=False)
+      out += r"\\"
+      f.write(out + "\n")
+
+      # for alg in algs:
+      #   out = benchmark_table.print_and_highlight_best_max(out, 'success', result[instance], alg, algs)
+      #   out = benchmark_table.print_and_highlight_best(out, 't^st_mean', result[instance], alg, algs)
+      #   out = benchmark_table.print_and_highlight_best(out, 'J^st_mean', result[instance], alg, algs)
+      #   if (alg == "db-lacam"):
+      #     out = benchmark_table.print_and_highlight_best(out, 'J^f_mean', result[instance], alg, algs)
+      # out += r"\\"
+      # f.write(out)
+      r_number += 1
+
+    
+    f.write("\n")
+   
+    f.write(r"\end{tabular}")
+    f.write("\n")
+    f.write(r"\end{document}")
+
+  benchmark_table.gen_pdf(output_path)
+
 def main():
   trials = 1 * 5
-  timelimit = 1*60
+  timelimit = 5*60
   # write_table_2d(trials, timelimit) 
-  write_table_3d(trials, timelimit) 
+  # write_table_3d(trials, timelimit) 
   # write_table_scalability(trials, timelimit) 
+  write_table_scalability_std(trials, timelimit) 
+
 
 if __name__ == '__main__':
     main()

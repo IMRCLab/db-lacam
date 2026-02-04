@@ -83,12 +83,142 @@ def compute_results(instances, algs, results_path, trials, T, regret=False):
     all_result[instance] = result
   return all_result
 
+# support std, mean
+# supports std, energy cost also
+def compute_results_with_std(instances, algs, results_path, trials, T):
+  all_result = dict()
+
+  if isinstance(trials, int):
+    trials = [trials]*len(instances)
+
+  for instance, itrials in zip(instances, trials):
+    result = dict()
+    for alg in algs:
+      result_folder = results_path / instance / alg
+      stat_files = [str(p) for p in result_folder.glob("**/stats.yaml")]
+      initial_time_regrets = []
+
+      # load data
+      initial_times = []
+      initial_time_regrets = []
+      initial_costs = []
+      final_costs = []
+
+      for stat_file in stat_files:
+        final_cost_base = None
+        initial_time_base = None
+      
+        with open(stat_file) as sf:
+          stats = yaml.safe_load(sf)
+        if stats is not None and "stats" in stats and stats["stats"] is not None:
+          last_cost = None
+          for k, d in enumerate(stats["stats"]):
+            # skip results that were after our time horizon
+            if d["t"] > T:
+              break
+            if k == 0:
+              initial_times.append(d["t"])
+              initial_costs.append(d["cost"])
+              if initial_time_base is not None:
+                initial_time_regrets.append((d["t"] - initial_time_base)/d["t"] * 100)
+
+            last_cost = d["cost"]
+          
+          if last_cost is not None:
+            final_costs.append(last_cost)
+
+      success_rate = len(initial_times)/itrials # success rate is rounded up. Numbers < 0.5 are zeroed for the table
+      result[alg] = {
+        'success': len(initial_times)/itrials,
+        't^st_mean': np.mean(initial_times) if success_rate > 0.05 else None,
+        't^st_std': np.std(initial_times) if success_rate > 0.05 else None,
+
+        'J^st_mean': np.mean(initial_costs) if success_rate > 0.05 else None,
+        'J^st_std': np.std(initial_costs) if success_rate > 0.05 else None,
+
+        'J^f_mean': np.mean(final_costs) if success_rate > 0.05 else None,
+        'J^f_std': np.std(final_costs) if success_rate > 0.05 else None,
+      }
+      
+    all_result[instance] = result
+  return all_result
+
 def gen_pdf(output_path):
   # run pdflatex
   subprocess.run(['pdflatex', output_path.with_suffix(".tex")], check=True, cwd=output_path.parent)
   # delete temp files
   output_path.with_suffix(".aux").unlink()
   output_path.with_suffix(".log").unlink()
+  
+
+# add std into the table
+def generate_latex_row_cells(result, alg, algs, keys, digits=1, show_std=True, is_anytime=False):
+    def format_val_std(val, std, is_best):
+      if val == "*":
+          return r"\ensuremath{\star}"
+      elif val is None:
+          return r"\textemdash"
+
+      # main value
+      if is_best:
+          out = r"\ensuremath{\mathbf{" + f"{val:.{digits}f}" + r"}}"
+      else:
+          out = r"\ensuremath{" + f"{val:.{digits}f}" + r"}"
+
+      # std
+      if show_std and std is not None:
+          try:
+              std_f = float(std)
+              out += r" {\scriptsize\textcolor{gray}{\ensuremath{\pm " + f"{std_f:.{digits}f}" + r"}}}"
+          except:
+              pass
+
+      return out
+
+    row = ""
+    for key in keys:
+        row += " & "
+
+        def is_best_min(val, key):
+            return val is not None and val != "*" and all(
+                round(val, digits) <= round(result[a].get(key), digits)
+                for a in algs if result[a].get(key) not in [None, "*"]
+            )
+
+        if key in ['J^st_mean', 'J^f_mean']:
+            val = result[alg].get(key)
+            std = result[alg].get(key.replace('_mean', '_std'))
+            top = format_val_std(val, std, is_best_min(val, key))
+
+            # secondary metric (E / Er)
+            if key.startswith('Jr'):
+                key2 = 'Er^st_mean' if is_anytime else 'Er^f_mean'
+            else:
+                key2 = 'E^st_mean' if is_anytime else 'E^f_mean'
+
+            val2 = result[alg].get(key2)
+            std2 = result[alg].get(key2.replace('_mean', '_std'))
+
+            if val2 is not None:
+                bottom = format_val_std(val2, std2, is_best=False)
+                row += r"\begin{tabular}[t]{@{}l@{}}" + top + r" \\" + bottom + r"\end{tabular}"
+            else:
+                row += r"\begin{tabular}[t]{@{}l@{}}" + top + r"\end{tabular}"
+
+        else:
+            val = result[alg].get(key)
+            if key == 'success':
+                is_best = val is not None and val != "*" and all(
+                    round(val, digits) >= round(result[a].get(key), digits)
+                    for a in algs if result[a].get(key) not in [None, "*"]
+                )
+                row += format_val_std(val, None, is_best)
+            else:
+                std = result[alg].get(key.replace('_mean', '_std'))
+                row += format_val_std(val, std, is_best_min(val, key))
+
+    return row
+
 
 def print_and_highlight_best(out, key, result, alg, algs, digits=1):
   out += " & "

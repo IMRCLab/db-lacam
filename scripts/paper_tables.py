@@ -505,15 +505,6 @@ def write_table_scalability_std(trials, timelimit):
         out += benchmark_table.generate_latex_row_cells(result[instance], alg, algs, keys, digits=1, show_std=True, is_anytime=False)
       out += r"\\"
       f.write(out + "\n")
-
-      # for alg in algs:
-      #   out = benchmark_table.print_and_highlight_best_max(out, 'success', result[instance], alg, algs)
-      #   out = benchmark_table.print_and_highlight_best(out, 't^st_mean', result[instance], alg, algs)
-      #   out = benchmark_table.print_and_highlight_best(out, 'J^st_mean', result[instance], alg, algs)
-      #   if (alg == "db-lacam"):
-      #     out = benchmark_table.print_and_highlight_best(out, 'J^f_mean', result[instance], alg, algs)
-      # out += r"\\"
-      # f.write(out)
       r_number += 1
 
     

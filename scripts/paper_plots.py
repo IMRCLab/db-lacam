@@ -335,42 +335,165 @@ def plot_results_runtime(instances, num_trials, font_size=18):
     plt.savefig("../results/ICAPS26/results_runtime_new.pdf", format="pdf", bbox_inches="tight")
     plt.show()
 
+# std on runtime for scalability test
+def plot_results_runtime_std(instances, num_trials, font_size=18):
+    results_path = "../results/scalability/"
 
+    planners = {
+        "db-cbs":   {"color": "#88CCEE"},
+        "db-ecbs":  {"color": "#009988"},
+        "db-lacam": {"color": "#993404"},
+    }
+
+    # group x-axis categories
+    robot_counts = [10, 20, 30, 40, 50]
+
+    # storage: raw runtimes
+    data = {p: {inst: [] for inst in instances} for p in planners}
+
+    # load stats
+    for inst in instances:
+        for planner in planners:
+            for trial in range(num_trials):
+                trial_dir = os.path.join(results_path, inst, planner, f"{trial:03d}")
+                stats_file = os.path.join(trial_dir, "stats.yaml")
+                if not os.path.exists(stats_file):
+                    continue
+
+                with open(stats_file, "r") as f:
+                    stats = yaml.safe_load(f)
+
+                if not stats or "stats" not in stats or not stats["stats"]:
+                    continue
+
+                first = stats["stats"][0]
+                if "t" in first:
+                    data[planner][inst].append(first["t"])
+
+    # plot
+    x = np.arange(len(robot_counts))
+    fig, ax = plt.subplots(figsize=(7, 4))
+    ax.yaxis.grid(True, linestyle='--', alpha=0.6)
+    ax.xaxis.grid(True, linestyle='--', alpha=0.6)
+
+    for planner, style in planners.items():
+        color = style["color"]
+
+        means = []
+        stds  = []
+
+        # group instances by robot count
+        for n in robot_counts:
+            grouped_vals = []
+            for inst in instances:
+                if f"_n{n}_" in inst:
+                    grouped_vals.extend(data[planner][inst])
+            grouped_vals = np.array(grouped_vals)
+            if len(grouped_vals) > 0:
+                means.append(grouped_vals.mean())
+                stds.append(grouped_vals.std())
+            else:
+                means.append(np.nan)
+                stds.append(np.nan)
+
+        means = np.array(means)
+        stds  = np.array(stds)
+
+        # mean line
+        ax.plot(x, means, marker="o", linewidth=2, color=color, label=planner)
+
+        # shaded ± std region
+        ax.fill_between(
+            x,
+            means - stds,
+            means + stds,
+            color=color,
+            alpha=0.25
+        )
+
+    # labels
+    ax.set_xlabel("Number of Robots", fontsize=font_size)
+    ax.set_ylabel("Runtime [s]", fontsize=font_size)
+    ax.set_xticks(x)
+    ax.set_xticklabels([str(n) for n in robot_counts], fontsize=font_size)
+    ax.tick_params(axis='both', labelsize=font_size - 2)
+
+    # legend
+    name_map = {
+        "db-cbs": "db-CBS",
+        "db-ecbs": "db-ECBS",
+        "db-lacam": "db-LaCAM",
+    }
+    legend_patches = [
+        mpatches.Patch(color=style["color"], label=name_map[p])
+        for p, style in planners.items()
+    ]
+    ax.legend(
+        handles=legend_patches,
+        ncol=len(planners),
+        loc='upper center',
+        bbox_to_anchor=(0.5, 1.18),
+        fontsize=font_size - 2,
+        frameon=False
+    )
+
+    plt.tight_layout()
+    plt.savefig("../results/ICAPS26/results_runtime_mean_std_shadow.pdf",
+                format="pdf", bbox_inches="tight")
+    plt.show()
 
 if __name__ == "__main__":
-  instances = [
-  "alcove_unicycle",
-  "atgoal_unicycle",
-  "circle2_unicycle",
-  "circle4_unicycle",
-  "circle6_unicycle",
-  "circle8_unicycle",
-  "circle10_unicycle",
-  # scalability test
-#   "test_n10_0_unicycle",
-#   "test_n20_0_unicycle",
-#   "test_n30_0_unicycle",
-#   "test_n40_0_unicycle",
-#   "test_n50_0_unicycle",
-  ]
-  for kind in ["unicycle","unicycle_sphere"]: 
-    for n in [8]:
-      for k in range(10):
-        instances.append("gen_p10_n{}_{}_{}".format(n,k, kind))
-  instances.append("maze_unicycle")
-  instances.append("passage6")
-  instances.append("door4")
-  instances.append("forest4")
-  instances.append("forest10")
-  instances.append("swap8_hetero")
-  instances.append("random10_0_hetero")
-  instances.append("random10_1_hetero")
-  instances.append("random10_2_hetero")
-  instances.append("random10_3_hetero")
+#   instances = [
+#   "alcove_unicycle",
+#   "atgoal_unicycle",
+#   "circle2_unicycle",
+#   "circle4_unicycle",
+#   "circle6_unicycle",
+#   "circle8_unicycle",
+#   "circle10_unicycle",
+#   # scalability test
+# #   "test_n10_0_unicycle",
+# #   "test_n20_0_unicycle",
+# #   "test_n30_0_unicycle",
+# #   "test_n40_0_unicycle",
+# #   "test_n50_0_unicycle",
+#   ]
+#   for kind in ["unicycle","unicycle_sphere"]: 
+#     for n in [8]:
+#       for k in range(10):
+#         instances.append("gen_p10_n{}_{}_{}".format(n,k, kind))
+#   instances.append("maze_unicycle")
+#   instances.append("passage6")
+#   instances.append("door4")
+#   instances.append("forest4")
+#   instances.append("forest10")
+#   instances.append("swap8_hetero")
+#   instances.append("random10_0_hetero")
+#   instances.append("random10_1_hetero")
+#   instances.append("random10_2_hetero")
+#   instances.append("random10_3_hetero")
   
                    
-  num_trials = 10  # max number of trials per instance
-  plot_results(instances, num_trials, True)
+#   num_trials = 10  # max number of trials per instance
+#   plot_results(instances, num_trials, True)
 #   plot_results_runtime(instances, num_trials)
+
+# rebuttal, scalability test
+# Usage
+    instances = [
+        "reb_p0_n10_0_unicycle", "reb_p0_n10_1_unicycle", "reb_p0_n10_2_unicycle",
+        "reb_p0_n10_3_unicycle", "reb_p0_n10_4_unicycle",
+        "reb_p0_n20_0_unicycle", "reb_p0_n20_1_unicycle", "reb_p0_n20_2_unicycle",
+        "reb_p0_n20_3_unicycle", "reb_p0_n20_4_unicycle", "reb_p0_n20_5_unicycle",
+        "reb_p0_n20_6_unicycle",
+        "reb_p0_n30_0_unicycle", "reb_p0_n30_1_unicycle", "reb_p0_n30_2_unicycle",
+        "reb_p0_n30_3_unicycle", "reb_p0_n30_4_unicycle",
+        "reb_p0_n40_0_unicycle", "reb_p0_n40_1_unicycle", "reb_p0_n40_2_unicycle",
+        "reb_p0_n40_3_unicycle", "reb_p0_n40_4_unicycle", "reb_p0_n40_5_unicycle",
+        "reb_p0_n50_0_unicycle", "reb_p0_n50_1_unicycle", "reb_p0_n50_2_unicycle"
+        # "reb_p0_n50_3_unicycle"
+    ]
+
+    plot_results_runtime_std(instances, num_trials=5, font_size=18)
 
 

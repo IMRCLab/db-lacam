@@ -3,6 +3,7 @@ new_format_motions/
 results/
 results_test/
 results_10/
+example/livelock/
 .vscode/
 buildDebug/
 deps/

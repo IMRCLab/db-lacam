@@ -36,11 +36,11 @@ def run_visualize(script, filename_env, filename_result):
 def execute_task(task: ExecutionTask):
   scripts_path = Path("../scripts")
   results_path = Path("../results")
-  env_path = Path().resolve() / "../example"
+  env_path = Path().resolve() / "../example/scalability"
   env = (env_path / task.instance).with_suffix(".yaml") 
   assert(env.is_file())
 
-  cfg = env_path / "algorithms.yaml" # using single alg.yaml
+  cfg = env_path / "../algorithms.yaml" # using single alg.yaml
   assert(cfg.is_file())
 
   with open(cfg) as f:
@@ -94,62 +94,48 @@ def execute_task(task: ExecutionTask):
 def main():
   parallel = True
   instances = [
-    # "circle2_integrator",
-    # "circle4_integrator",
-    # "circle6_integrator",
-    # "circle8_integrator",
-    # "circle10_integrator",
-    "circle2_unicycle",
-    "circle4_unicycle",
-    "circle6_unicycle",
-    "circle8_unicycle",
-    "circle10_unicycle",
-    "alcove_unicycle",
-    "atgoal_unicycle",
-    "maze_unicycle",
-    # 3D case
-    "forest4",
-    "forest10",
-    "door4",
-    "circle6",
-    "circle7_swap",
-    "passage6",
-    # heterogeneous test
-    "swap8_hetero",
-    "random10_0_hetero",
-    "random10_1_hetero",
-    "random10_2_hetero",
-    "random10_3_hetero",
-    # scalability test
-    "test_n10_0_unicycle",
-    "test_n20_0_unicycle",
-    "test_n30_0_unicycle",
-    "test_n40_0_unicycle",
-    "test_n50_0_unicycle",
+    "reb_p0_n10_0_unicycle",
+    "reb_p0_n10_1_unicycle",
+    "reb_p0_n10_2_unicycle",
+    "reb_p0_n10_3_unicycle",
+
+    "reb_p0_n20_0_unicycle",
+    "reb_p0_n20_1_unicycle",
+    "reb_p0_n20_2_unicycle",
+    "reb_p0_n20_3_unicycle",
+    "reb_p0_n20_4_unicycle",
+    "reb_p0_n20_5_unicycle",
+    "reb_p0_n20_6_unicycle",
+
+    "reb_p0_n30_0_unicycle",
+    "reb_p0_n30_1_unicycle",
+    "reb_p0_n30_2_unicycle",
+    "reb_p0_n30_3_unicycle",
+    "reb_p0_n30_4_unicycle",
+    "reb_p0_n20_5_unicycle",
+
+    "reb_p0_n40_0_unicycle",
+    "reb_p0_n40_1_unicycle",
+    "reb_p0_n40_2_unicycle",
+    "reb_p0_n40_3_unicycle",
+    "reb_p0_n40_4_unicycle",
+
+    "reb_p0_n50_0_unicycle",
+    "reb_p0_n50_1_unicycle",
+    "reb_p0_n50_2_unicycle",
   ]
-  for kind in ["unicycle","unicycle_sphere"]: 
-    for n in [8]:
-      for k in range(10):
-        instances.append("gen_p10_n{}_{}_{}".format(n,k, kind))
-
-  instances_n = ["test_n10_0_unicycle", "test_n20_0_unicycle", "test_n30_0_unicycle", "test_n40_0_unicycle", "test_n50_0_unicycle"] 
-
+  
   algs = [
     "db-cbs",
     "db-ecbs",
     "db-pibt",
     "db-lacam",
   ]
-  trials = 1 * 10
-  timelimit_2d = 1 * 60 
-  timelimit_n = 5 * 60 # scalability 
+  trials = 1 * 5
+  timelimit = 5 * 60 # scalability 
   timelimit_max = 0 # plot needs higher timelimit
   tasks = []
   for instance in instances:
-    if instance in instances_n:
-        timelimit = timelimit_n
-    else:
-        timelimit = timelimit_2d
     timelimit_max = max(timelimit_max, timelimit)
     for alg in algs:
       for trial in range(trials):

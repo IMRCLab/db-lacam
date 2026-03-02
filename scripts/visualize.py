@@ -183,12 +183,12 @@ class Animation:
             t = matplotlib.transforms.Affine2D().rotate_around(
                 pos[0], pos[1], 0)
             self.robot_patches[k][0].set_transform(t + self.ax.transData)
-        elif self.robot_types[k] == 'unicycle1_sphere_v0':
+        elif self.robot_types[k] == 'unicycle1_sphere_v0' or self.robot_types[k] == 'unicycle1_v0':
             pos = state[:2]
             yaw = state[2]
             xy = np.asarray(pos)
             self.robot_patches[k][0].center = xy
-            pos2 = xy + np.array([np.cos(yaw), np.sin(yaw)])*self.big_radius*0.8
+            pos2 = xy + np.array([np.cos(yaw), np.sin(yaw)])*self.radius*0.8
             self.robot_patches[k][1].center = pos2
         elif self.robot_types[k] == 'unicycle1_v0' or self.robot_types[k] == 'car_first_order_0' or self.robot_types[k] == 'unicycle2_v0':
             pos = state[:2]
@@ -237,11 +237,11 @@ class Animation:
     elif type == 'integrator2_2d_v0':
         pos = state[:2]
         patches.append(draw_sphere_patch(self.ax, state, self.radius, 0, **kwargs))
-    elif type == 'unicycle1_sphere_v0':
+    elif type == 'unicycle1_v0' or 'unicycle1_sphere_v0':
         pos = state[:2]
         yaw = state[2]
-        pos2 = pos + np.array([np.cos(yaw), np.sin(yaw)])*self.big_radius*0.8
-        patches.append(draw_sphere_patch(self.ax, pos, self.big_radius, 0, **kwargs))
+        pos2 = pos + np.array([np.cos(yaw), np.sin(yaw)])*self.radius
+        patches.append(draw_sphere_patch(self.ax, pos, self.radius, 0, **kwargs))
         kwargs['facecolor'] = 'black'
         patches.append(draw_sphere_patch(self.ax, pos2, 0.03, 0, **kwargs))
     elif type == 'unicycle1_v0' or type == 'car_first_order_0' or type == 'unicycle2_v0':

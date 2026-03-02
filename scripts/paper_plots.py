@@ -411,6 +411,8 @@ def plot_results_runtime_std(instances, num_trials, font_size=18):
             alpha=0.25
         )
 
+    print(means)
+    print(stds)
     # labels
     ax.set_xlabel("Number of Robots", fontsize=font_size)
     ax.set_ylabel("Runtime [s]", fontsize=font_size)

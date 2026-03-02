@@ -126,7 +126,7 @@ def main():
     "reb_p0_n50_0_unicycle",
     "reb_p0_n50_1_unicycle",
     "reb_p0_n50_2_unicycle",
-    # "reb_p0_n50_3_unicycle",
+    "reb_p0_n50_3_unicycle",
   ]
   
   algs = [

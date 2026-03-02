@@ -374,7 +374,6 @@ def write_table_scalability_std(trials, timelimit):
     "reb_p0_n30_2_unicycle",
     "reb_p0_n30_3_unicycle",
     "reb_p0_n30_4_unicycle",
-    # "reb_p0_n30_5_unicycle",
 
     "reb_p0_n40_0_unicycle",
     "reb_p0_n40_1_unicycle",
@@ -390,9 +389,9 @@ def write_table_scalability_std(trials, timelimit):
   ]
 
   algs = [
-    # "db-cbs",
-    # "db-ecbs",
-    # "db-pibt",
+    "db-cbs",
+    "db-ecbs",
+    "db-pibt",
     "db-lacam",
   ]
 
@@ -431,9 +430,9 @@ def write_table_scalability_std(trials, timelimit):
   }
 
   alg_names = {
-    # "db-cbs": "db-CBS",
-    # "db-ecbs": "db-ECBS",
-    # "db-pibt": "db-PIBT",
+    "db-cbs": "db-CBS",
+    "db-ecbs": "db-ECBS",
+    "db-pibt": "db-PIBT",
     "db-lacam": "db-LaCAM",
   }
 

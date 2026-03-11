@@ -1,5 +1,9 @@
 # db-lacam
-Fast kinodynamic planner combining LaCam and db-CBS
+
+We propose discontinuity-Bounded LaCAM (db-LaCAM), a planner that
+utilizes a precomputed set of motion primitives that respect robot dynamics to generate horizon-length motion sequences, while allowing a user-defined discontinuity between successive motions. The planner db-LaCAM is resolution-complete with respect to motion primitives and supports arbitrary robot dynamics. 
+
+Resources: [Paper (PDF)](https://arxiv.org/pdf/2512.06796) | [Video](https://www.youtube.com/watch?v=K7xUFpH7a48) | [Table (PDF)](docs/table.pdf)
 
 ## Get primitives
 
@@ -27,9 +31,18 @@ cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="/opt/openrobots/" ..
 make -j
 ```
 
-## Running
+## Run the benchmark
 
 ```
 cd buildRelease
-./test-dbpibt -i ../example/swap1_unicycle.yaml -o ../results/pibt.yaml --cfg ../example/algorithms.yaml --t 3000 
+python3 ../scripts/benchmark.py 
 ```
+
+## Run the planner db-lacam
+
+```
+cd buildRelease
+./db_lacam -i ../example/forest4.yaml  -o ../results/forest4.yaml --stats ../results/forest4_stats.yaml --cfg ../example/algorithms.yaml -t 30000000 
+```
+
+

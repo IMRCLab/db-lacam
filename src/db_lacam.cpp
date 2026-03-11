@@ -342,6 +342,7 @@ MultiRobotTrajectory LaCAM::solve()
   std::cout << "per iteration: " << std::fixed << std::setprecision(3)
             << avg_ms << " ms\n";
   std::cout << "cost: " << std::fixed << cost * 0.1 << std::endl;
+  // export_node_expansion();
   return solution;
 }
 
@@ -425,6 +426,8 @@ void LaCAM::get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> d
     // m_time_planner.time_hfun += timed_fun_void([&]
     //                                            { last_state_h = h_funs[robot_id]->h(traj.goal); });
     last_state_h = h_funs[robot_id]->h(traj.goal);
+    // plot expanded motions (rolled out, not sorted)
+    // expanded_trajs[robot_id].push_back(traj);
     if (last_state_h == -1.0)
     {
       est(traj.goal, problem, planner_options, robots[robot_id], robot_id, last_state_h,

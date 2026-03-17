@@ -213,12 +213,12 @@ db-lacam:
     cluster_range: 0.05
     cluster_n: 1
   '*door4':
-    delta_0: 0.9 # 0.5
-    goal_delta: 0.9
+    delta_0: 0.5 
+    goal_delta: 0.5
     num_primitives_0: 300 
     heuristic1_delta: 0.9
     heuristic1_num_primitives_0: 300 
-    cluster_range: 0.1
+    cluster_range: 0.05
     cluster_n: 1
   '*circle6':
     delta_0: 0.5 
@@ -264,5 +264,13 @@ db-lacam:
   '*gen_p10_n8_9_unicycle_sphere':
     cluster_range: 0.05 
     cluster_distance: 0.5
-
-  
+  '*_hetero':
+    delta_0: 0.5 
+    goal_delta: 0.5
+    num_primitives_0: 500 
+    heuristic1_delta: 0.9
+    heuristic1_num_primitives_0: 500 
+    cluster_range: 0.02
+    cluster_distance: 1.0
+    cluster_n: 1
+    refine_solution: false

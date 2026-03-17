@@ -106,13 +106,20 @@ def main():
     "circle10_unicycle",
     "alcove_unicycle",
     "atgoal_unicycle",
+    "maze_unicycle",
     # 3D case
     "forest4",
     "forest10",
-    "corridor4",
+    "door4",
     "circle6",
     "circle7_swap",
     "passage6",
+    # heterogeneous test
+    "swap8_hetero",
+    "random10_0_hetero",
+    "random10_1_hetero",
+    "random10_2_hetero",
+    "random10_3_hetero",
     # scalability test
     "test_n10_0_unicycle",
     "test_n20_0_unicycle",

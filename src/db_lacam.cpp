@@ -44,7 +44,7 @@ HNode::~HNode()
 
 LaCAM::LaCAM(const dynobench::Problem _problem,
              std::vector<std::shared_ptr<AStarNode>> _dbNodes,
-             Expander &_expander,
+             std::vector<Expander> &_expanders,
              std::vector<ompl::NearestNeighbors<std::shared_ptr<AStarNode>> *> &_heuristics_nn,
              Planner_options _planner_options,
              std::vector<std::shared_ptr<dynobench::Model_robot>> _robots,
@@ -54,7 +54,7 @@ LaCAM::LaCAM(const dynobench::Problem _problem,
              const Deadline *_timelimit)
     : problem(_problem),
       dbNodes(_dbNodes),
-      expander(_expander),
+      expanders(_expanders),
       heuristics_nn(_heuristics_nn),
       planner_options(_planner_options),
       robots(_robots),
@@ -69,11 +69,13 @@ LaCAM::LaCAM(const dynobench::Problem _problem,
       loop_cnt(0)
 
 {
-  tmp_traj_wrapper.allocate_size(/*max_traj_size*/ 100, robots.at(0)->nx, robots.at(0)->nu);
+  // tmp_traj_wrapper.allocate_size(/*max_traj_size*/ 100, robots.at(0)->nx, robots.at(0)->nu);
   heuristics.resize(robots.size());
+  fake_traj_wrappers.resize(robots.size());
 
   for (size_t i = 0; i < robots.size(); ++i)
   {
+    fake_traj_wrappers[i].allocate_size(/*max_traj_size*/ 100, robots.at(i)->nx, robots.at(i)->nu);
     heuristics[i] = nigh_factory2<std::shared_ptr<AStarNode>>(problem.robotTypes[i], robots[i]);
     auto h_fun = std::make_shared<HeuRoadmapBwdNearestR<std::shared_ptr<AStarNode>, AStarNode>>(
         robots[i], heuristics[i], problem.goals[i], /*use_nn*/ true);
@@ -291,8 +293,6 @@ MultiRobotTrajectory LaCAM::solve()
         auto H = OPEN.front();
         H->livelock = true;
         H->unguided = Node_ans->unguided;
-        // H->clearSearchTree();
-        // H->search_tree.push(new LNode());
       }
     }
   }
@@ -345,85 +345,16 @@ MultiRobotTrajectory LaCAM::solve()
   return solution;
 }
 
-// OPTION 1: no clustering, sort based on h-value
-void LaCAM::get_applicable_trajs_precise_no_clustering(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id)
-{
-  // clear
-  tmp_lazy_trajs.clear();
-  robot_data.clear();
-  // i. expand applicable motions
-  m_time_planner.time_lazy_expand += timed_fun_void(
-      [&]
-      { expander.expand_lazy(db_node->state_eig, tmp_lazy_trajs); });
-
-  auto ff = validity_checker(robots[robot_id]);
-  double gScore = 0;
-  double hScore = 0;
-  Eigen::VectorXd x0 = db_node->state_eig;
-  h_values.clear();
-  for (size_t j = 0; j < tmp_lazy_trajs.size(); j++)
-  {
-    // i. rollout and keep the valid
-    auto &lazy_traj = tmp_lazy_trajs[j];
-    std::vector<Eigen::VectorXd> us = lazy_traj.motion->traj.actions;
-    std::vector<Eigen::VectorXd>
-        xs(us.size() + 1,
-           Eigen::VectorXd::Zero(robots[robot_id]->nx));
-    int num_valid_states = -1;
-    m_time_planner.time_rollout += timed_fun_void([&]
-                                                  { robots[robot_id]->rollout(x0, us, xs, &ff,
-                                                                              &num_valid_states); });
-    if (num_valid_states && num_valid_states < xs.size())
-    {
-      std::cout << "rollout, state violations" << std::endl;
-      continue;
-    }
-    // ii. check for similarity
-    hScore = h_funs[robot_id]->h(xs.back());
-    double cost_motion = us.size() * robots[robot_id]->ref_dt;
-    gScore = db_node->gScore + cost_motion;
-
-    if (!check_and_add(hScore))
-      continue;
-    // iii. check for collision with the env.
-    dynobench::Trajectory traj;
-    traj.states.clear();
-    traj.actions.clear();
-    traj.start = x0;
-    traj.states = xs;
-    traj.actions = us;
-    traj.goal = traj.states.back();
-
-    Motion motion;
-    m_time_planner.time_traj_to_motion += timed_fun_void([&]
-                                                         { traj_to_motion(traj, *(robots[robot_id]), motion, /*compute collision*/ true); });
-    fcl::DefaultCollisionData<double> collision_data;
-    m_time_planner.time_collisions += timed_fun_void([&]
-                                                     {
-    assert(motion.collision_manager);
-    assert(robots[robot_id]->env.get());
-    motion.collision_manager->collide(robots[robot_id]->env.get(), &collision_data,
-                                      fcl::DefaultCollisionFunction<double>); });
-    if (collision_data.result.isCollision())
-      continue;
-    // iv. save it into robot_data
-    robot_data.trajectories.push_back(traj);
-    robot_data.last_state_g.push_back(gScore);
-    robot_data.last_state_h.push_back(hScore);
-  }
-  robot_data.sort_by_h();
-}
-
 // exhaustive, does check all motions for collision, clustering
 void LaCAM::get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id, bool livelock = false)
 {
-  // std::cout << "robot " << robot_id << " get applicable trajs" << std::endl;
   // clear
   tmp_lazy_trajs.clear();
   tmp_traj_wrappers.clear();
   robot_data.clear();
+  tmp_traj_wrapper = fake_traj_wrappers[robot_id];
   // i. expand applicable motions
-  expander.expand_lazy(db_node->state_eig, tmp_lazy_trajs);
+  expanders[robot_id].expand_lazy(db_node->state_eig, tmp_lazy_trajs);
   auto ff = validity_checker(robots[robot_id]);
   int num_valid_states = -1;
   double gScore = 0;
@@ -516,148 +447,7 @@ void LaCAM::get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> d
   else
     robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ planner_options.cluster_range, min_h, max_h, planner_options.cluster_n, /*shuffle*/ planner_options.cluster_shuffle);
 }
-// OPTION 3: sort actions based on epsilon
-void LaCAM::get_applicable_trajs_precise_sort_actions(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id)
-{
-  // clear
-  tmp_lazy_trajs.clear();
-  robot_data.clear();
-  // i. expand applicable motions
-  m_time_planner.time_lazy_expand += timed_fun_void(
-      [&]
-      { expander.expand_lazy(db_node->state_eig, tmp_lazy_trajs); });
 
-  std::vector<std::vector<Eigen::VectorXd>> all_actions;
-  all_actions.resize(tmp_lazy_trajs.size());
-
-  std::transform(tmp_lazy_trajs.begin(), tmp_lazy_trajs.end(), all_actions.begin(),
-                 [](const LazyTraj &traj)
-                 {
-                   return traj.motion->traj.actions;
-                 });
-  double eps = 0.5; // FINE-TUNE
-  auto diverse_actions = filter_diverse(all_actions, eps);
-
-  auto ff = validity_checker(robots[robot_id]);
-  double gScore = 0;
-  double hScore = 0;
-  Eigen::VectorXd x0 = db_node->state_eig;
-  h_values.clear();
-  for (size_t j = 0; j < all_actions.size(); j++)
-  {
-    // i. rollout and keep the valid
-    std::vector<Eigen::VectorXd> us = all_actions[j];
-    std::vector<Eigen::VectorXd>
-        xs(us.size() + 1,
-           Eigen::VectorXd::Zero(robots[robot_id]->nx));
-    int num_valid_states = -1;
-    m_time_planner.time_rollout += timed_fun_void([&]
-                                                  { robots[robot_id]->rollout(x0, us, xs, &ff,
-                                                                              &num_valid_states); });
-    if (num_valid_states && num_valid_states < xs.size())
-    {
-      std::cout << "rollout, state violations" << std::endl;
-      continue;
-    }
-    // ii. check for similarity
-    hScore = h_funs[robot_id]->h(xs.back());
-    double cost_motion = us.size() * robots[robot_id]->ref_dt;
-    gScore = db_node->gScore + cost_motion;
-    // iii. check for collision with the env.
-    dynobench::Trajectory traj;
-    traj.states.clear();
-    traj.actions.clear();
-    traj.start = x0;
-    traj.states = xs;
-    traj.actions = us;
-    traj.goal = traj.states.back();
-
-    Motion motion;
-    m_time_planner.time_traj_to_motion += timed_fun_void([&]
-                                                         { traj_to_motion(traj, *(robots[robot_id]), motion, /*compute collision*/ true); });
-    fcl::DefaultCollisionData<double> collision_data;
-    m_time_planner.time_collisions += timed_fun_void([&]
-                                                     {
-    assert(motion.collision_manager);
-    assert(robots[robot_id]->env.get());
-    motion.collision_manager->collide(robots[robot_id]->env.get(), &collision_data,
-                                      fcl::DefaultCollisionFunction<double>); });
-    if (collision_data.result.isCollision())
-      continue;
-    // iv. save it into robot_data
-    robot_data.trajectories.push_back(traj);
-    robot_data.last_state_g.push_back(gScore);
-    robot_data.last_state_h.push_back(hScore);
-  }
-  robot_data.sort_by_h();
-}
-
-// simply check it some motion with similar h-value has been explored
-bool LaCAM::check_and_add(const double h_value)
-{
-  for (double h : h_values)
-  {
-    if (std::fabs(h - h_value) < /*eps*/ 0.5)
-    {
-      return false; // too similar, skip
-    }
-  }
-  h_values.push_back(h_value);
-  return true;
-}
-RobotData LaCAM::GetFilteredUniqueTopByH(const RobotData &input, double min_distance, size_t robot_id)
-{
-  if (input.trajectories.empty())
-    return {};
-
-  struct IndexedData
-  {
-    size_t index;
-    double h;
-    double g;
-    dynobench::Trajectory traj;
-  };
-
-  std::vector<IndexedData> data;
-  for (size_t i = 0; i < input.trajectories.size(); ++i)
-  {
-    data.push_back({i, input.last_state_h[i], input.last_state_g[i], input.trajectories[i]});
-  }
-
-  // Sort by h (lowest first)
-  std::sort(data.begin(), data.end(), [](const IndexedData &a, const IndexedData &b)
-            {
-              if (a.h != b.h)
-                return a.h < b.h;
-              return a.g < b.g; });
-
-  RobotData result;
-
-  for (const auto &d : data)
-  {
-    const auto &new_final_state = d.traj.states.back();
-
-    bool too_close = false;
-    for (const auto &existing_traj : result.trajectories)
-    {
-      const auto &existing_final_state = existing_traj.states.back(); // (new_final_state - existing_final_state).norm() < min_distance
-      if (robots[robot_id]->distance(new_final_state, existing_final_state) < min_distance)
-      {
-        too_close = true;
-        break;
-      }
-    }
-
-    if (!too_close)
-    {
-      result.trajectories.push_back(d.traj);
-      result.last_state_h.push_back(d.h);
-      result.last_state_g.push_back(d.g);
-    }
-  }
-
-  return result;
-}
 // 1. cluster based on state distance
 // 2. sorted based on h afterwards
 // 3. inner-out style re-arranging, where the middle element is the best.

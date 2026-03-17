@@ -233,7 +233,7 @@ bool db_PIBT::has_inter_robot_collision(dynobench::Trajectory robot_traj, size_t
   {
     // state-by-state check
     size_t N = std::min(ego_traj.size(), other_traj.size());
-    assert(ego_traj.size() == other_traj.size());
+    // assert(ego_traj.size() == other_traj.size());
     for (size_t s = 0; s < N; ++s)
     {
       result.clear();

@@ -9,7 +9,7 @@ import matplotlib.patches as mpatches
 # global normalization - max cost per instance
 def plot_results(instances, num_trials, normalize_cost=False):
    
-    results_path = "../results_10"
+    results_path = "../results_with_maze"
     planners = {
         "db-cbs": {"marker": "1", "color": "#88CCEE"},   
         "db-ecbs": {"marker": "2", "color": "#009988"},  
@@ -33,18 +33,7 @@ def plot_results(instances, num_trials, normalize_cost=False):
     "circle6_unicycle":"circle-u-n6",
     "circle8_unicycle":"circle-u-n8",
     "circle10_unicycle":"circle-u-n10",
-    # d
-    'gen_p10_n8_0_unicycle_sphere': "random-n8-u\u209B",
-    'gen_p10_n8_1_unicycle_sphere': "random-n8-u\u209B",
-    'gen_p10_n8_2_unicycle_sphere': "random-n8-u\u209B",
-    'gen_p10_n8_3_unicycle_sphere': "random-n8-u\u209B",
-    'gen_p10_n8_4_unicycle_sphere': "random-n8-u\u209B",
-    'gen_p10_n8_5_unicycle_sphere': "random-n8-u\u209B",
-    'gen_p10_n8_6_unicycle_sphere': "random-n8-u\u209B",
-    'gen_p10_n8_7_unicycle_sphere': "random-n8-u\u209B",
-    'gen_p10_n8_8_unicycle_sphere': "random-n8-u\u209B",
-    'gen_p10_n8_9_unicycle_sphere': "random-n8-u\u209B",
-    # e 
+    # d 
     'gen_p10_n8_0_unicycle': "random-n8-u",
     'gen_p10_n8_1_unicycle': "random-n8-u",
     'gen_p10_n8_2_unicycle': "random-n8-u",
@@ -55,17 +44,33 @@ def plot_results(instances, num_trials, normalize_cost=False):
     'gen_p10_n8_7_unicycle': "random-n8-u",
     'gen_p10_n8_8_unicycle': "random-n8-u",
     'gen_p10_n8_9_unicycle': "random-n8-u",
+    # e
+    'gen_p10_n8_0_unicycle_sphere': "random-n8-u\u209B",
+    'gen_p10_n8_1_unicycle_sphere': "random-n8-u\u209B",
+    'gen_p10_n8_2_unicycle_sphere': "random-n8-u\u209B",
+    'gen_p10_n8_3_unicycle_sphere': "random-n8-u\u209B",
+    'gen_p10_n8_4_unicycle_sphere': "random-n8-u\u209B",
+    'gen_p10_n8_5_unicycle_sphere': "random-n8-u\u209B",
+    'gen_p10_n8_6_unicycle_sphere': "random-n8-u\u209B",
+    'gen_p10_n8_7_unicycle_sphere': "random-n8-u\u209B",
+    'gen_p10_n8_8_unicycle_sphere': "random-n8-u\u209B",
+    'gen_p10_n8_9_unicycle_sphere': "random-n8-u\u209B",
     # f
-    "passage6":"passage-n6-3D",
+    "maze_unicycle":"maze-n10",
     # g
-    "corridor4":"corridor-n4-3D",
+    "passage6":"passage-n6-3D",
     # h
-    "circle6":"circle-n6-3D",
+    "door4":"door-n4-3D",
     # i
-    "circle7_swap":"circle-n7-3D",
-    # j
+    "forest4":"forest-n4-3D",
     "forest10":"forest-n10-3D",
-    "forest4":"forest-n4-3D"
+    # j
+    "swap8_hetero":"swap-n8-hetero",
+    # k
+    "random10_0_hetero":"random-n10-hetero",
+    "random10_1_hetero":"random-n10-hetero",
+    "random10_2_hetero":"random-n10-hetero",
+    "random10_3_hetero":"random-n10-hetero"
     }
 
     data = {p: {inst: {"time": [], "cost": [], "fail": 0} for inst in instances} for p in planners}
@@ -103,13 +108,13 @@ def plot_results(instances, num_trials, normalize_cost=False):
             for p in planners:
                 data[p][inst]["cost"] = [c / max_cost for c in data[p][inst]["cost"]]
 
-    group_names = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]
-    group_sizes = [1,    1,   5,   10,   10,   1,   1,   1,   1, 2] 
+    group_names = ["a", "b", "c", "d", "e", "f","g", "h", "i", "j", "k"]
+    group_sizes = [1,    1,   5,   10,  10,  1,  1,   1,   2,   1,   4] 
     assert sum(group_sizes) == len(instances), "Group sizes must sum to total instances"
 
    # === Plot setup ===
     fig, axes = plt.subplots(
-        3, 1, sharex=True, figsize=(9, 4),
+        3, 1, sharex=True, figsize=(9, 3.5),
         gridspec_kw={'height_ratios': [0.25, 1, 1], 'hspace': 0}
     )
     ax_fail, ax_time, ax_cost = axes
@@ -183,6 +188,9 @@ def plot_results(instances, num_trials, normalize_cost=False):
     # remove the free space before the first label
     for ax in axes:
         ax.set_xlim(-0.5, len(instances) - 0.5)
+        ymin, ymax = ax.get_ylim()
+        ymargin = 0.04 * (ymax - ymin)
+        ax.set_ylim(ymin - ymargin, ymax + ymargin)
     # === Legend ===
     import matplotlib.lines as mlines
     legend_handles = []
@@ -203,21 +211,21 @@ def plot_results(instances, num_trials, normalize_cost=False):
         frameon=True,
         facecolor="white",  # background color for contrast
         edgecolor='black',  # optional: border for better visibility
-        fontsize=11
+        fontsize=9.5
     )
 
     # === Layout tweaks ===
     plt.subplots_adjust(top=0.90, bottom=0.18)
-    plt.savefig("../results/ICAPS26/results_plot_markers_normalized.pdf", format="pdf", bbox_inches="tight") if normalize_cost else plt.savefig("../results/results_plot_markers.pdf", format="pdf", bbox_inches="tight")
+    plt.savefig("../results/ICAPS26/results_maze_plot_markers_normalized.pdf", format="pdf", bbox_inches="tight") if normalize_cost else plt.savefig("../results/results_plot_markers.pdf", format="pdf", bbox_inches="tight")
     plt.show()
 
 # used for scalability plot
 def plot_results_runtime(instances, num_trials, font_size=18):
-    results_path = "../results"
+    results_path = "../results/ICAPS26/n50"
     planners = {
         "db-cbs": {"color": "#88CCEE"},   
         "db-ecbs": {"color": "#009988"},  
-        "db-pibt": {"color": "#E7B503"},  
+        # "db-pibt": {"color": "#E7B503"},  
         "db-lacam": {"color": "#993404"}     
     }
 
@@ -439,10 +447,9 @@ if __name__ == "__main__":
     for n in [8]:
       for k in range(10):
         instances.append("gen_p10_n{}_{}_{}".format(n,k, kind))
+  instances.append("maze_unicycle")
   instances.append("passage6")
-  instances.append("corridor4")
-  instances.append("circle6")
-  instances.append("circle7_swap")
+  instances.append("door4")
   instances.append("forest4")
   instances.append("forest10")
   num_trials = 10  # max number of trials per instance

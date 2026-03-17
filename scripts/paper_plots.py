@@ -335,6 +335,96 @@ def plot_results_runtime(instances, num_trials, font_size=18):
     plt.savefig("../results/ICAPS26/results_runtime_new.pdf", format="pdf", bbox_inches="tight")
     plt.show()
 
+# group sizes are pre-defined based on examples I have
+def plot_group_success_bar(instances, num_trials,
+                           method_a="db-pibt", method_b="db-lacam",
+                           results_path="../results_paper",
+                           group_names=None, group_sizes=None):
+
+    # Default groups (must match the instance ordering)
+    if group_names is None:
+        group_names = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]
+    if group_sizes is None:
+        group_sizes = [1, 1, 5, 10, 10, 1, 1, 1, 1, 2]
+    assert sum(group_sizes) == len(instances), "Group sizes must sum to total instances"
+
+    name_map = {
+        "db-pibt": "db-PIBT",
+        "db-lacam": "db-LaCAM"
+    }
+    color_map = {
+        "db-pibt": "#E7B503",
+        "db-lacam": "#993404"
+    }
+    font_size = 14
+    def instance_success(planner, inst):
+        """Percentage of successful trials for this (planner, instance)."""
+        success = 0
+        for trial in range(num_trials):
+            stats_path = os.path.join(results_path, inst, planner, f"{trial:03d}", "stats.yaml")
+            if not os.path.exists(stats_path):
+                continue
+            try:
+                with open(stats_path, "r") as f:
+                    stats = yaml.safe_load(f)
+            except Exception:
+                continue
+            if not stats or "stats" not in stats or not stats["stats"]:
+                continue
+            first = stats["stats"][0]
+            if "t" in first and "cost" in first:
+                success += 1
+        return 100.0 * success / num_trials if num_trials > 0 else 0.0
+
+    # Split into groups
+    groups = []
+    idx = 0
+    for size in group_sizes:
+        groups.append(instances[idx:idx + size])
+        idx += size
+
+    def group_success(planner):
+        """Compute mean success rate for each group."""
+        rates = []
+        for inst_list in groups:
+            vals = [instance_success(planner, inst) for inst in inst_list]
+            rates.append(np.mean(vals) if vals else 0)
+        return np.array(rates)
+
+    success_a = group_success(method_a)
+    success_b = group_success(method_b)
+
+    # === Plot ===
+    x = np.arange(len(group_names))
+    width = 0.35
+
+    fig, ax = plt.subplots(figsize=(9, 4))
+    ax.bar(x - width/2, success_a, width, color=color_map.get(method_a, "gray"),
+                    label=name_map.get(method_a, method_a))
+    ax.bar(x + width/2, success_b, width, color=color_map.get(method_b, "gray"),
+                    label=name_map.get(method_b, method_b))
+
+    ax.set_ylabel("Success rate (%)", fontsize=font_size)
+    ax.set_xlabel("Instance groups", fontsize = font_size)
+    ax.set_xticks(x)
+    ax.set_xticklabels(group_names, fontsize=font_size)
+    ax.set_ylim(0, 110)
+    ax.yaxis.grid(True, linestyle="--", alpha=0.5)
+    ax.tick_params(axis='y', labelsize=font_size)
+    # Legend on top, centered, outside plot
+    fig.legend(
+        loc="upper center",
+        bbox_to_anchor=(0.5, 1.03),
+        ncol=2,
+        frameon=False,
+        facecolor="white",
+        edgecolor="black",
+        fontsize=font_size
+    )
+    plt.tight_layout(rect=[0, 0, 1, 0.95])  # leave space for legend
+    plt.savefig("../results/ICAPS26/success_rate.pdf", format="pdf", bbox_inches="tight")
+    plt.show()
+    return fig, ax
 
 
 if __name__ == "__main__":
@@ -362,15 +452,9 @@ if __name__ == "__main__":
   instances.append("door4")
   instances.append("forest4")
   instances.append("forest10")
-  instances.append("swap8_hetero")
-  instances.append("random10_0_hetero")
-  instances.append("random10_1_hetero")
-  instances.append("random10_2_hetero")
-  instances.append("random10_3_hetero")
-  
-                   
   num_trials = 10  # max number of trials per instance
-  plot_results(instances, num_trials, True)
+#   plot_results(instances, num_trials, True)
 #   plot_results_runtime(instances, num_trials)
+plot_group_success_bar(instances, num_trials=5)
 
 

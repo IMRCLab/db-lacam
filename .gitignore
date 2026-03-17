@@ -6,5 +6,6 @@ results_10/
 .vscode/
 buildDebug/
 deps/
+example/livelock/
 scripts/__pycache__/
 .github/

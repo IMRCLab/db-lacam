@@ -45,4 +45,7 @@ cd buildRelease
 ./db_lacam -i ../example/forest4.yaml  -o ../results/forest4.yaml --stats ../results/forest4_stats.yaml --cfg ../example/algorithms.yaml -t 30000000 
 ```
 
+## License
+
+This software is released under the MIT License, see [LICENSE.txt](LICENSE.txt).
 

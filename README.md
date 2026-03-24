@@ -1,9 +1,12 @@
 # db-lacam
 
 We propose discontinuity-Bounded LaCAM (db-LaCAM), a planner that
-utilizes a precomputed set of motion primitives that respect robot dynamics to generate horizon-length motion sequences, while allowing a user-defined discontinuity between successive motions. The planner db-LaCAM is resolution-complete with respect to motion primitives and supports arbitrary robot dynamics. 
+utilizes a precomputed set of motion primitives that respect robot dynamics to generate horizon-length motion sequences, while allowing a user-defined discontinuity between successive motions. The planner db-LaCAM supports arbitrary robot dynamics and can handle heterogeneous team of robots. 
 
 Resources: [Paper (PDF)](https://arxiv.org/pdf/2512.06796) | [Video](https://www.youtube.com/watch?v=K7xUFpH7a48) | [Table (PDF)](docs/table.pdf)
+
+
+<img src="docs/icaps.gif" width="600"/>
 
 ## Get primitives
 

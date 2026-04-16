@@ -45,7 +45,20 @@ python3 ../scripts/benchmark.py
 
 ```
 cd buildRelease
-./db_lacam -i ../example/forest4.yaml  -o ../results/forest4.yaml --stats ../results/forest4_stats.yaml --cfg ../example/algorithms.yaml -t 30000000 
+./db_lacam -i ../example/forest4.yaml  -o ../results/forest4_output.yaml --stats ../results/forest4_stats.yaml --cfg ../example/algorithms.yaml -t 30000000 
+```
+## Visualize the output of the planner 3D (saves the video as .html)
+
+```
+cd buildRelease
+python3 ../scripts/visualize_3D.py ../example/forest4.yaml --result ../results/forest4_output.yaml
+```
+
+## Visualize the output of the planner 2D (saves the video as .mp4)
+
+```
+cd buildRelease
+python3 ../scripts/visualize.py ../example/alcove-unicycle.yaml --result ../results/alcove_unicycle_output.yaml --video ../results/alcove_unicycle_video.mp4
 ```
 
 ## License

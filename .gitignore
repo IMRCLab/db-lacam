@@ -1,11 +1,5 @@
-buildRelease/
 new_format_motions/
 results/
-results_test/
-results_10/
-.vscode/
-buildDebug/
+build/
 deps/
-example/livelock/
-scripts/__pycache__/
 .github/

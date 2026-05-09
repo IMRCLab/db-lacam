@@ -43,7 +43,7 @@
 #include "dbcbs_utils.hpp"
 
 namespace fs = std::filesystem;
-#define DYNOBENCH_BASE "../dynoplan/dynobench/"
+#define BASE "../../../" // w.r.t db-lacam/build
 using duration = std::chrono::duration<double>;
 using namespace dynoplan;
 
@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
   }
   auto start_time = std::chrono::steady_clock::now();
   YAML::Node cfg = YAML::LoadFile(cfgFile);
-  // cfg = cfg["db-lacam"]["default"];
+  cfg = cfg["db-lacam"]["default"];
   // setup dblacam options
   Planner_options planner_options;
   planner_options.delta = cfg["delta_0"].as<float>();
@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
   Time_planner time_planner;
   // define the problem
   dynobench::Problem problem(inputFile);
-  problem.models_base_path = DYNOBENCH_BASE + std::string("models/");
+  problem.models_base_path = BASE + std::string("robot_types/");
   YAML::Node env = YAML::LoadFile(inputFile);
   // create robots
   std::vector<std::shared_ptr<dynobench::Model_robot>> robots;
@@ -123,19 +123,19 @@ int main(int argc, char *argv[])
     std::shared_ptr<dynobench::Model_robot> robot = dynobench::robot_factory(
         (problem.models_base_path + robotType + ".yaml").c_str(), problem.p_lb, problem.p_ub);
     robots.push_back(robot);
-    if (robotType == "unicycle1_v0" || robotType == "unicycle1_sphere_v0")
+    if (robotType == "unicycle_first_order" || robotType == "unicycle_sphere_first_order")
     {
       motionsFile = "../new_format_motions/unicycle1_v0/spread/unicycle1_v0.bin.im.bin.sp.bin";
     }
-    else if (robotType == "unicycle1_3d_v0") // hetero test with 3D robot
-    {
-      motionsFile = "../new_format_motions/unicycle1_3d_v0/unicycle1_3d_v0.bin.im.bin.sp.bin";
-    }
-    else if (robotType == "integrator1_2d_v0")
+    else if (robotType == "single_integrator")
     {
       motionsFile = "../new_format_motions/integrator1_2d_v0/unit_length2/integrator1_2d_v0.bin.im.bin.sp.bin";
     }
-    else if (robotType == "integrator2_3d_v0")
+    else if (robotType == "double_integrator_2d")
+    {
+      motionsFile = "../new_format_motions/integrator2_2d_v0/integrator2_2d_v0.bin.im.bin.sp.bin.yaml";
+    }
+    else if (robotType == "double_integrator_3d")
     {
       motionsFile = "../new_format_motions/integrator2_3d_v0/short/integrator2_3d_v0.bin.im.bin.sp.bin";
     }
@@ -151,7 +151,7 @@ int main(int argc, char *argv[])
   {
     auto &robot = robots[i];
     auto &type = problem.robotTypes[i];
-    load_env(*robot, problem); // env enable, smarter needed
+    load_env(*robot, problem); 
     // Load motions only once per robot type
     if (robot_motions.find(type) == robot_motions.end())
     {
@@ -287,14 +287,6 @@ int main(int argc, char *argv[])
       size_t rand_len = dist(gen);
       std::vector<int> ids_tmp(all_ids.begin(), all_ids.begin() + rand_len);
 
-      // Option 2: pick based on ratio = actual_cost / lower_bound_cost
-      // for (size_t j = 0; j < robots.size(); j++)
-      // {
-      //   ratios.push_back(solution.trajectories[j].cost / lower_bound_costs[j]);
-      // }
-      // std::uniform_int_distribution<> dist(1, robots.size());
-      // const auto num_refine_robots = std::max(1, std::min(dist(gen), int(robots.size() / 2)));
-      // std::vector<int> ids_tmp = pick_subset_robots(ratios, /*N*/ num_refine_robots, gen);
       double old_cost = 0.;
       const auto deadline_tmp = Deadline(timelimit - elapsed.count());
       for (size_t i = 0; i < robots.size(); i++)

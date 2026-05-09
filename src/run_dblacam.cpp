@@ -246,12 +246,17 @@ int main(int argc, char *argv[])
   duration first_run_time = end_time - start_time;
   std::cout << "Time taken (total): " << first_run_time.count() * 1000 << " ms" << std::endl;
   double cost = solution.get_cost();
+  double makespan = solution.get_makespan_steps();
+  double control_effort = solution.get_control_effort();
   time_planner.print();
-  solution.to_yaml_format(outputFile.c_str()); // save just in case
+  solution.to_yaml_format(outputFile.c_str());
   // save stats
   stats << "stats: " << "\n";
-  stats << "  - t: " << first_run_time.count() << "\n";
-  stats << "    cost: " << cost * 0.1 << "\n";
+  stats << "  - computation time: " << first_run_time.count() << "\n";
+  stats << "    sum of cost: " << cost * 0.1 << "\n";
+  stats << "    makespan: " << makespan << "\n";
+  stats << "    control effort: " << control_effort << "\n";
+
   stats.flush();
 
   if (first_run_time.count() * 1000 < timelimit && planner_options.refine_solution)

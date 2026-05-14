@@ -237,9 +237,20 @@ int main(int argc, char *argv[])
   MultiRobotTrajectory dynamic_obstacles;
   LaCAM lacam(problem, dbN_start, expanders, heuristics_rev, planner_options, robots, time_planner, dynamic_obstacles, /*verbose*/ 1, &deadline);
   MultiRobotTrajectory solution = lacam.solve();
+  // extract the output/stats
+  std::filesystem::path p(inputFile);
+  std::string instanceName = p.filename().string(); 
   if (solution.is_empty())
   {
     std::cout << "LaCAM failed!" << std::endl;
+    stats << "stats: " << "\n";
+    stats << "  - instance: " << instanceName << "\n";
+    stats << "    success: " << false << "\n";
+    stats << "    elapsed_time_sec: " <<  ".nan\n";
+    stats << "    makespan_sec: " <<  ".nan\n";
+    stats << "    sum_of_costs_sec: " <<  ".nan\n";
+    stats << "    total_control_effort: " <<  ".nan\n";
+    stats.flush();
     return false;
   }
   auto end_time = std::chrono::steady_clock::now();
@@ -252,11 +263,12 @@ int main(int argc, char *argv[])
   solution.to_yaml_format(outputFile.c_str());
   // save stats
   stats << "stats: " << "\n";
-  stats << "  - computation time: " << first_run_time.count() << "\n";
-  stats << "    sum of cost: " << cost * 0.1 << "\n";
-  stats << "    makespan: " << makespan << "\n";
-  stats << "    control effort: " << control_effort << "\n";
-
+  stats << "  - instance: " << instanceName << "\n";
+  stats << "    success: " << true << "\n";
+  stats << "    elapsed_time_sec: " << first_run_time.count() << "\n";
+  stats << "    makespan_sec: " << makespan << "\n";
+  stats << "    sum_of_costs_sec: " << cost * 0.1 << "\n";
+  stats << "    total_control_effort: " << control_effort << "\n";
   stats.flush();
 
   if (first_run_time.count() * 1000 < timelimit && planner_options.refine_solution)

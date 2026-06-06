@@ -90,42 +90,6 @@ target_link_libraries(run_dbpibt PRIVATE
   ${LZ4_LIBRARIES}
   PUBLIC Eigen3::Eigen)
 
-# db_cbs
-add_executable(db_cbs
-  src/db_cbs.cpp
-)
-
-target_include_directories(db_cbs PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/include
-)
-
-target_link_libraries(db_cbs PRIVATE 
-  idbastar::optimization
-  idbastar::tdbastar
-  ${Boost_LIBRARIES}
-  ${YAML_LIBRARIES}
-  ${OMPL_LIBRARIES}
-  ${FCL_LIBRARIES}
-)
-
-# db_ecbs
-add_executable(db_ecbs
-  src/db_ecbs.cpp
-)
-
-target_include_directories(db_ecbs PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/dynoplan/include
-)
-
-target_link_libraries(db_ecbs PRIVATE 
-  idbastar::optimization
-  idbastar::tdbastar_epsilon
-  ${Boost_LIBRARIES}
-  ${YAML_LIBRARIES}
-  ${OMPL_LIBRARIES}
-  ${FCL_LIBRARIES}
-)
-
 # db_lacam
 add_library(db_lacam
   src/db_lacam.cpp

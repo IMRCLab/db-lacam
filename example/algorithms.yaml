@@ -1,67 +1,3 @@
-db-cbs:
-  default:
-    delta_0: 0.5
-    goal_delta: 0.75
-    delta_rate: 0.9
-    num_primitives_0: 200
-    num_primitives_rate: 1.5
-    alpha: 0.5
-    filter_duplicates: True
-    heuristic1: "reverse-search"
-    heuristic1_delta: 0.9
-    heuristic1_num_primitives_0: 200
-  '*_integrator':
-    delta_0: 0.5
-    num_primitives_0: 200 
-    heuristic1_delta: 0.5
-    heuristic1_num_primitives_0: 100
-  '*_unicycle_sphere':
-    delta_0: 0.9
-  '*alcove_unicycle':
-    delta_0: 0.5
-    num_primitives_0: 200
-    heuristic1_delta: 0.9
-    heuristic1_num_primitives_0: 200
-    goal_delta: 0.5 
-  '*atgoal_unicycle':
-    delta_0: 0.5
-    num_primitives_0: 200
-    heuristic1_delta: 0.9
-    heuristic1_num_primitives_0: 200 
-    goal_delta: 0.5
-  '*forest4':
-    delta_0: 0.3
-    num_primitives_0: 300 
-    heuristic1_delta: 0.5
-    heuristic1_num_primitives_0: 100 
-  '*wall4':
-    delta_0: 0.3
-    num_primitives_0: 300 
-    heuristic1_delta: 0.9
-    heuristic1_num_primitives_0: 200 
-db-ecbs:
-  default:
-    delta_0: 0.5 
-    goal_delta: 0.75
-    delta_rate: 0.9
-    num_primitives_0: 200
-    num_primitives_rate: 1.5
-    alpha: 0.5
-    filter_duplicates: True
-    heuristic1: "reverse-search"
-    heuristic1_delta: 0.9
-    heuristic1_num_primitives_0: 200 
-    suboptimality_factor: 2 # 1.3 
-    execute_joint_optimization: True
-  '*_unicycle_sphere':
-    delta_0: 0.9
-    heuristic1_delta: 0.9
-    suboptimality_factor: 3.0
-  '*_trailer':
-    delta_0: 0.75 
-    suboptimality_factor: 1.3 
-  '*alcove_unicycle':
-    num_primitives_0: 300 
 db-pibt:
   default:
     delta_0: 0.5 # 0.01 for grid
@@ -150,12 +86,12 @@ db-lacam:
   default:
     delta_0: 0.5 # 0.01 for grid
     goal_delta: 0.5
-    num_primitives_0: 500 
+    num_primitives_0: 200 
     alpha: 0.5 # 0.01 for grid
     filter_duplicates: True
     heuristic1: "reverse-search" 
     heuristic1_delta: 0.9
-    heuristic1_num_primitives_0: 500 
+    heuristic1_num_primitives_0: 100 
     cluster_range: 0.05
     cluster_distance: 1.0
     cluster_n: 1

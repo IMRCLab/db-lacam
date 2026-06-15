@@ -163,7 +163,7 @@ MultiRobotTrajectory LaCAM::solve()
                                                      { H->order = get_sorted_order(robots, H->Q, problem.goals); });
     if (H->parent != nullptr)
       // check goal condition
-      if (H_goal == nullptr && is_close_config(H, problem.goals, /*threshold*/ 0.75))
+      if (H_goal == nullptr && is_close_config(H, problem.goals, /*goal_threshold*/ 0.5))
       {
         H_goal = H;
         solver_info(2, "found solution!");

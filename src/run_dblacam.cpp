@@ -43,7 +43,7 @@
 #include "dbcbs_utils.hpp"
 
 namespace fs = std::filesystem;
-#define BASE "../../../" // w.r.t db-lacam/build
+#define BASE "../../" // mrmp benchmark dir
 using duration = std::chrono::duration<double>;
 using namespace dynoplan;
 
@@ -125,19 +125,19 @@ int main(int argc, char *argv[])
     robots.push_back(robot);
     if (robotType == "unicycle_first_order" || robotType == "unicycle_sphere_first_order")
     {
-      motionsFile = "../new_format_motions/unicycle1_v0/spread/unicycle1_v0.bin.im.bin.sp.bin";
+      motionsFile = "db-lacam/new_format_motions/unicycle1_v0/spread/unicycle1_v0.bin.im.bin.sp.bin";
     }
     else if (robotType == "single_integrator")
     {
-      motionsFile = "../new_format_motions/integrator1_2d_v0/unit_length2/integrator1_2d_v0.bin.im.bin.sp.bin";
+      motionsFile = "db-lacam/new_format_motions/integrator1_2d_v0/unit_length2/integrator1_2d_v0.bin.im.bin.sp.bin";
     }
     else if (robotType == "double_integrator_2d")
     {
-      motionsFile = "../new_format_motions/integrator2_2d_v0/integrator2_2d_v0.bin.im.bin.sp.bin.yaml";
+      motionsFile = "db-lacam/new_format_motions/integrator2_2d_v0/integrator2_2d_v0.bin.im.bin.sp.bin.yaml";
     }
     else if (robotType == "double_integrator_3d")
     {
-      motionsFile = "../new_format_motions/integrator2_3d_v0/short/integrator2_3d_v0.bin.im.bin.sp.bin";
+      motionsFile = "db-lacam/new_format_motions/integrator2_3d_v0/short/integrator2_3d_v0.bin.im.bin.sp.bin";
     }
     else
     {

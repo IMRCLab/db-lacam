@@ -139,7 +139,7 @@ struct LaCAM
 
   void get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> db_node, RobotData &robot_data, size_t robot_id, bool livelock);
 
-  RobotData GetTopNPerClusterByH(const RobotData &input, double range, double min_h, double max_h, size_t N, bool shuffle);
+  RobotData GetTopNPerClusterByH(const RobotData &input, double range, double min_h, double max_h, size_t N, bool shuffle=false, std::optional<unsigned int> seed= std::nullopt);
   RobotData GetTopNPerClusterByRelativeDistance(const RobotData &input, size_t N, double threshold);
   // DEBUG
   void export_node_expansion();

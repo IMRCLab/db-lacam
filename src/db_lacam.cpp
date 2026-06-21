@@ -445,7 +445,8 @@ void LaCAM::get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> d
     robot_data = GetTopNPerClusterByRelativeDistance(tmp_data, 1, /*threshold*/ planner_options.cluster_distance);
   }
   else
-    robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ planner_options.cluster_range, min_h, max_h, planner_options.cluster_n, /*shuffle*/ planner_options.cluster_shuffle);
+    robot_data = GetTopNPerClusterByH(tmp_data, /*range*/ planner_options.cluster_range, min_h, max_h, planner_options.cluster_n, 
+                  /*shuffle*/ planner_options.cluster_shuffle, planner_options.seed);
 }
 
 // 1. cluster based on state distance
@@ -553,7 +554,7 @@ RobotData LaCAM::GetTopNPerClusterByRelativeDistance(
   return result;
 }
 
-RobotData LaCAM::GetTopNPerClusterByH(const RobotData &input, double range, double min_h, double max_h, size_t N, bool shuffle = false)
+RobotData LaCAM::GetTopNPerClusterByH(const RobotData &input, double range, double min_h, double max_h, size_t N, bool shuffle, std::optional<unsigned int> seed)
 {
   if (input.trajectories.empty())
     return {};
@@ -612,9 +613,8 @@ RobotData LaCAM::GetTopNPerClusterByH(const RobotData &input, double range, doub
   {
     if (shuffle)
     {
-      std::random_device rd;
-      std::mt19937 gen(rd());
-      std::shuffle(current_cluster.begin(), current_cluster.end(), gen);
+      std::mt19937 rng(seed ? *seed : std::random_device{}());
+      std::shuffle(current_cluster.begin(), current_cluster.end(), rng);
     }
     size_t take = std::min(N, current_cluster.size());
     for (size_t i = 0; i < take; ++i)

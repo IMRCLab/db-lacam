@@ -32,6 +32,7 @@ struct Planner_options
   bool refine_solution = false;  // refined the solution using 1) Large Neighborhood Search
   bool cluster_shuffle = false;  // shuffle each subcluster
   double cluster_distance = 1.0; // distance threshold for state-based clustering
+  std::optional<unsigned int> seed;
 
   void print() const
   {

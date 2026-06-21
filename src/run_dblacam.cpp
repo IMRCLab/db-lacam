@@ -57,18 +57,21 @@ int main(int argc, char *argv[])
   std::string statsFile;
   std::string cfgFile;
   double timelimit;
+  std::optional<unsigned int> seed;
 
-  desc.add_options()("help", "produce help message")(
-      "input,i", po::value<std::string>(&inputFile)->required(),
-      "input file (yaml)")("output,o", po::value<std::string>(&outputFile)->required(),
-                           "output file (yaml)")("stats,s", po::value<std::string>(&statsFile)->required(),
-                                                 "stats file (yaml)")("cfg,c", po::value<std::string>(&cfgFile)->required(),
-                                                                      "configuration file (yaml)")("time_limit,t", po::value<double>(&timelimit)->required(),
-                                                                                                   "time limit for search");
+
+  desc.add_options()("help", "produce help message")
+      ("input,i", po::value<std::string>(&inputFile)->required(),"input file (yaml)")
+      ("output,o", po::value<std::string>(&outputFile)->required(),"output file (yaml)")
+      ("stats", po::value<std::string>(&statsFile)->required(),"stats file (yaml)")
+      ("cfg,c", po::value<std::string>(&cfgFile)->required(),"configuration file (yaml)")
+      ("time_limit,t", po::value<double>(&timelimit)->required(),"time limit for search")
+      ("seed", po::value<unsigned int>(), "random seed (default: deterministic)");
+  
+  po::variables_map vm;
+  po::store(po::parse_command_line(argc, argv, desc), vm);
   try
   {
-    po::variables_map vm;
-    po::store(po::parse_command_line(argc, argv, desc), vm);
     po::notify(vm);
 
     if (vm.count("help") != 0u)
@@ -83,6 +86,15 @@ int main(int argc, char *argv[])
               << std::endl;
     std::cerr << desc << std::endl;
     return 1;
+  }
+    // set seeds
+  seed = vm.count("seed")
+         ? std::optional<unsigned int>(vm["seed"].as<unsigned int>())
+         : std::optional<unsigned int>(42); // determenistic behavior
+  if (seed.has_value()) {
+    std::cout << "db-LaCAM uses seed " << seed.value() << std::endl;
+  } else {
+      std::cout << "db-LaCAM uses seed (default) " << std::endl;
   }
   create_dir_if_necessary(statsFile);
   std::ofstream stats(statsFile, std::ios::app);
@@ -106,6 +118,7 @@ int main(int argc, char *argv[])
   planner_options.cluster_distance = cfg["cluster_distance"].as<double>();
   planner_options.merged_aabb = cfg["merged_aabb"].as<bool>();
   planner_options.refine_solution = cfg["refine_solution"].as<bool>();
+  planner_options.seed = seed;
   planner_options.print();
   bool use_nn = false;
   Time_planner time_planner;
@@ -158,10 +171,10 @@ int main(int argc, char *argv[])
       planner_options.motionsFile = all_motionsFile[i];
       load_motion_primitives_new(planner_options.motionsFile, *robot, robot_motions[type],
                                  planner_options.max_motions, /*cut_actions*/ false,
-                                 /*shuffle*/ false,
-                                 /*check_cols*/ true);
+                                 /*shuffle*/ true,
+                                 /*check_cols*/ true, seed);
       disable_motions(robot, type, planner_options.delta, /*filter duplicates*/ true,
-                      /*alpha*/ 0.5, planner_options.max_motions, robot_motions[type]);
+                      /*alpha*/0.5, planner_options.max_motions, robot_motions[type]);
     }
     planner_options.motions_ptrs[i] = &robot_motions[type];
   }

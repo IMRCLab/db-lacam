@@ -43,6 +43,10 @@ python3 ../scripts/benchmark.py
 
 ## Run the planner db-lacam
 
+To run the db-LaCAM planner standalone, follow these changes: 
+1. Update [default](https://github.com/IMRCLab/db-lacam/blob/main/example/algorithms.yaml#L150) parameters with instance-specific parameters. For example, use [this](https://github.com/IMRCLab/db-lacam/blob/main/example/algorithms.yaml#L199-L206) for the forest4.yaml instance.
+2. Uncomment [this](https://github.com/IMRCLab/db-lacam/blob/main/src/run_dblacam.cpp#L96) line.
+   
 ```
 cd buildRelease
 ./db_lacam -i ../example/forest4.yaml  -o ../results/forest4_output.yaml --stats ../results/forest4_stats.yaml --cfg ../example/algorithms.yaml -t 30000000 

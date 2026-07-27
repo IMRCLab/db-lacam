@@ -120,7 +120,7 @@ int main(int argc, char *argv[])
   planner_options.refine_solution = cfg["refine_solution"].as<bool>();
   planner_options.seed = seed;
   planner_options.print();
-  bool use_nn = false;
+  bool check_vel_magnitude = false; // only dynamics with speed limit
   Time_planner time_planner;
   // define the problem
   dynobench::Problem problem(inputFile);
@@ -138,19 +138,19 @@ int main(int argc, char *argv[])
     robots.push_back(robot);
     if (robotType == "unicycle_first_order" || robotType == "unicycle_sphere_first_order")
     {
-      motionsFile = "db-lacam/new_format_motions/unicycle1_v0/spread/unicycle1_v0.bin.im.bin.sp.bin";
+      motionsFile = "db-lacam/new_format_motions/unicycle1_v0/my_motions.bin.im.bin.sp.bin";
     }
     else if (robotType == "single_integrator")
     {
-      motionsFile = "db-lacam/new_format_motions/integrator1_2d_v0/unit_length2/integrator1_2d_v0.bin.im.bin.sp.bin";
+      motionsFile = "db-lacam/new_format_motions/integrator1_2d_v0/integrator1_2d_v0.bin.im.bin.sp.bin";
     }
     else if (robotType == "double_integrator_2d")
     {
-      motionsFile = "db-lacam/new_format_motions/integrator2_2d_v0/integrator2_2d_v0.bin.im.bin.sp.bin.yaml";
+      motionsFile = "db-lacam/new_format_motions/integrator2_2d_v0/my_motions.bin.im.bin.sp.bin";
     }
     else if (robotType == "double_integrator_3d")
     {
-      motionsFile = "db-lacam/new_format_motions/integrator2_3d_v0/short/integrator2_3d_v0.bin.im.bin.sp.bin";
+      motionsFile = "db-lacam/new_format_motions/integrator2_3d_v0/integrator2_3d_v0.bin.im.bin.sp.bin";
     }
     else
     {
@@ -173,8 +173,11 @@ int main(int argc, char *argv[])
                                  planner_options.max_motions, /*cut_actions*/ false,
                                  /*shuffle*/ true,
                                  /*check_cols*/ true, seed);
-      disable_motions(robot, type, planner_options.delta, /*filter duplicates*/ true,
-                      /*alpha*/0.5, planner_options.max_motions, robot_motions[type]);
+      if (type == "double_integrator_2d")
+        check_vel_magnitude = true;
+      filter_motions(robot, type, planner_options.delta, /*filter duplicates*/true, /*alpha*/0.5,
+          planner_options.max_motions, check_vel_magnitude, robot_motions[type]);
+      check_vel_magnitude = false;
     }
     planner_options.motions_ptrs[i] = &robot_motions[type];
   }

@@ -420,8 +420,6 @@ void LaCAM::get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> d
                                       fcl::DefaultCollisionFunction<double>); });
     if (collision_data.result.isCollision())
       continue;
-    tmp_data.trajectories.push_back(traj);
-    tmp_data.last_state_g.push_back(traj_wrap.last_state_g);
     // m_time_planner.time_hfun += timed_fun_void([&]
     //                                            { last_state_h = h_funs[robot_id]->h(traj.goal); });
     last_state_h = h_funs[robot_id]->h(traj.goal);
@@ -435,6 +433,9 @@ void LaCAM::get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> d
       }
     }
     tmp_data.last_state_h.push_back(last_state_h);
+    tmp_data.trajectories.push_back(traj);
+    tmp_data.last_state_g.push_back(traj_wrap.last_state_g);
+    
     if (last_state_h < min_h)
       min_h = last_state_h;
     if (last_state_h > max_h)

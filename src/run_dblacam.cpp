@@ -283,7 +283,7 @@ int main(int argc, char *argv[])
   stats << "    success: " << true << "\n";
   stats << "    elapsed_time_sec: " << first_run_time.count() << "\n";
   stats << "    makespan_sec: " << makespan << "\n";
-  stats << "    sum_of_costs_sec: " << cost * 0.1 << "\n";
+  stats << "    sum_of_costs_sec: " << cost << "\n";
   stats << "    total_control_effort: " << control_effort << "\n";
   stats.flush();
 

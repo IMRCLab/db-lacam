@@ -44,6 +44,7 @@
 
 namespace fs = std::filesystem;
 #define BASE "../../" // mrmp benchmark dir
+// #define BASE "../../../../" // w.r.t db-LaCAM/build
 using duration = std::chrono::duration<double>;
 using namespace dynoplan;
 
@@ -142,15 +143,16 @@ int main(int argc, char *argv[])
     }
     else if (robotType == "single_integrator")
     {
-      motionsFile = "db-lacam/motion_primitives/integrator1_2d_v0/integrator1_2d_v0.bin.im.bin.sp.bin";
+      motionsFile = "db-lacam/motion_primitives/integrator1_2d_v0/my_motions.bin.im.bin.sp.bin";
     }
     else if (robotType == "double_integrator_2d")
     {
       motionsFile = "db-lacam/motion_primitives/integrator2_2d_v0/my_motions.bin.im.bin.sp.bin";
+      // motionsFile = "../motion_primitives/integrator2_2d_v0/my_motions.bin.im.bin.sp.bin";
     }
     else if (robotType == "double_integrator_3d")
     {
-      motionsFile = "db-lacam/motion_primitives/integrator2_3d_v0/integrator2_3d_v0.bin.im.bin.sp.bin";
+      motionsFile = "db-lacam/motion_primitives/integrator2_3d_v0/my_motions.bin.im.bin.sp.bin";
     }
     else
     {

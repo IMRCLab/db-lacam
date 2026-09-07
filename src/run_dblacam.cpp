@@ -43,7 +43,7 @@
 #include "dbcbs_utils.hpp"
 
 namespace fs = std::filesystem;
-#define DYNOBENCH_BASE "../dynoplan/dynobench/"
+#define DYNOBENCH_BASE "planners/db_lacam/dynoplan/dynobench/"
 using duration = std::chrono::duration<double>;
 using namespace dynoplan;
 
@@ -55,15 +55,13 @@ int main(int argc, char *argv[])
   std::string inputFile;
   std::string outputFile;
   std::string statsFile;
-  std::string cfgFile;
   double timelimit;
 
   desc.add_options()("help", "produce help message")(
-      "input,i", po::value<std::string>(&inputFile)->required(),
-      "input file (yaml)")("output,o", po::value<std::string>(&outputFile)->required(),
-                           "output file (yaml)")("stats,s", po::value<std::string>(&statsFile)->required(),
-                                                 "stats file (yaml)")("cfg,c", po::value<std::string>(&cfgFile)->required(),
-                                                                      "configuration file (yaml)")("time_limit,t", po::value<double>(&timelimit)->required(),
+      "input,i", po::value<std::string>(&inputFile)->required(), "input file (yaml)")
+      ("output,o", po::value<std::string>(&outputFile)->required(), "output file (yaml)")
+      ("stats,s", po::value<std::string>(&statsFile)->required(), "stats file (yaml)")
+      ("time_limit,t", po::value<double>(&timelimit)->required(),
                                                                                                    "time limit for search");
   try
   {
@@ -91,9 +89,10 @@ int main(int argc, char *argv[])
     std::cerr << "Failed to open stats.yaml file.\n";
     return 1;
   }
+  std::string cfgFile = "planners/db_lacam/example/algorithms.yaml";
   auto start_time = std::chrono::steady_clock::now();
   YAML::Node cfg = YAML::LoadFile(cfgFile);
-  // cfg = cfg["db-lacam"]["default"];
+  cfg = cfg["db-lacam"]["default"];
   // setup dblacam options
   Planner_options planner_options;
   planner_options.delta = cfg["delta_0"].as<float>();
@@ -123,21 +122,13 @@ int main(int argc, char *argv[])
     std::shared_ptr<dynobench::Model_robot> robot = dynobench::robot_factory(
         (problem.models_base_path + robotType + ".yaml").c_str(), problem.p_lb, problem.p_ub);
     robots.push_back(robot);
-    if (robotType == "unicycle1_v0" || robotType == "unicycle1_sphere_v0")
+    if (robotType == "integrator2_2d_v0")
     {
-      motionsFile = "../new_format_motions/unicycle1_v0/spread/unicycle1_v0.bin.im.bin.sp.bin";
-    }
-    else if (robotType == "unicycle1_3d_v0") // hetero test with 3D robot
-    {
-      motionsFile = "../new_format_motions/unicycle1_3d_v0/unicycle1_3d_v0.bin.im.bin.sp.bin";
-    }
-    else if (robotType == "integrator1_2d_v0")
-    {
-      motionsFile = "../new_format_motions/integrator1_2d_v0/unit_length2/integrator1_2d_v0.bin.im.bin.sp.bin";
+      motionsFile = "planners/db_lacam/motion_primitives/integrator2_2d_v0/integrator2_2d_v0.bin.im.bin.sp.bin";
     }
     else if (robotType == "integrator2_3d_v0")
     {
-      motionsFile = "../new_format_motions/integrator2_3d_v0/short/integrator2_3d_v0.bin.im.bin.sp.bin";
+      motionsFile = "planners/db_lacam/motion_primitives/integrator2_3d_v0/integrator2_3d_v0.bin.im.bin.sp.bin";
     }
     else
     {

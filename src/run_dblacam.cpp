@@ -44,6 +44,7 @@
 
 namespace fs = std::filesystem;
 #define DYNOBENCH_BASE "planners/db_lacam/dynoplan/dynobench/"
+// #define DYNOBENCH_BASE "../dynoplan/dynobench/"
 using duration = std::chrono::duration<double>;
 using namespace dynoplan;
 
@@ -90,6 +91,7 @@ int main(int argc, char *argv[])
     return 1;
   }
   std::string cfgFile = "planners/db_lacam/example/algorithms.yaml";
+  // std::string cfgFile = "../example/algorithms.yaml";
   auto start_time = std::chrono::steady_clock::now();
   YAML::Node cfg = YAML::LoadFile(cfgFile);
   cfg = cfg["db-lacam"]["default"];
@@ -125,10 +127,12 @@ int main(int argc, char *argv[])
     if (robotType == "integrator2_2d_v0")
     {
       motionsFile = "planners/db_lacam/motion_primitives/integrator2_2d_v0/integrator2_2d_v0.bin.im.bin.sp.bin";
+      // motionsFile = "../motion_primitives/integrator2_2d_v0/integrator2_2d_v0.bin.im.bin.sp.bin";
     }
     else if (robotType == "integrator2_3d_v0")
     {
       motionsFile = "planners/db_lacam/motion_primitives/integrator2_3d_v0/integrator2_3d_v0.bin.im.bin.sp.bin";
+      // motionsFile = "../motion_primitives/integrator2_3d_v0/integrator2_3d_v0.bin.im.bin.sp.bin";
     }
     else
     {
@@ -278,14 +282,6 @@ int main(int argc, char *argv[])
       size_t rand_len = dist(gen);
       std::vector<int> ids_tmp(all_ids.begin(), all_ids.begin() + rand_len);
 
-      // Option 2: pick based on ratio = actual_cost / lower_bound_cost
-      // for (size_t j = 0; j < robots.size(); j++)
-      // {
-      //   ratios.push_back(solution.trajectories[j].cost / lower_bound_costs[j]);
-      // }
-      // std::uniform_int_distribution<> dist(1, robots.size());
-      // const auto num_refine_robots = std::max(1, std::min(dist(gen), int(robots.size() / 2)));
-      // std::vector<int> ids_tmp = pick_subset_robots(ratios, /*N*/ num_refine_robots, gen);
       double old_cost = 0.;
       const auto deadline_tmp = Deadline(timelimit - elapsed.count());
       for (size_t i = 0; i < robots.size(); i++)

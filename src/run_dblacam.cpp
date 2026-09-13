@@ -278,6 +278,10 @@ int main(int argc, char *argv[])
   double makespan = solution.get_makespan_steps();
   double control_effort = solution.get_control_effort();
   time_planner.print();
+  if(!solution.sanity_check()){
+    std::cout << "Bound Violations!" << std::endl;
+    return false;
+  }
   solution.to_yaml_format(outputFile.c_str());
   // save stats
   stats << "stats: " << "\n";

@@ -141,10 +141,6 @@ int main(int argc, char *argv[])
     {
       motionsFile = "db-lacam/motion_primitives/unicycle1_v0/my_motions.bin.im.bin.sp.bin";
     }
-    else if (robotType == "single_integrator")
-    {
-      motionsFile = "db-lacam/motion_primitives/integrator1_2d_v0/my_motions.bin.im.bin.sp.bin";
-    }
     else if (robotType == "double_integrator_2d")
     {
       motionsFile = "db-lacam/motion_primitives/integrator2_2d_v0/my_motions.bin.im.bin.sp.bin";

@@ -123,7 +123,7 @@ MultiRobotTrajectory LaCAM::solve()
   while (!OPEN.empty() && !is_expired(timelimit))
   {
     ++loop_cnt;
-    if (loop_cnt > 20000)
+    if (loop_cnt > 2000)
     {
       if (ANYTIME)
         break;
@@ -163,7 +163,7 @@ MultiRobotTrajectory LaCAM::solve()
                                                      { H->order = get_sorted_order(robots, H->Q, problem.goals); });
     if (H->parent != nullptr)
       // check goal condition
-      if (H_goal == nullptr && is_close_config(H, problem.goals, /*goal_threshold*/ 0.5))
+      if (H_goal == nullptr && is_close_config(H, problem.goals, /*goal_threshold*/ planner_options.goal_delta))
       {
         H_goal = H;
         solver_info(2, "found solution!");
@@ -199,6 +199,7 @@ MultiRobotTrajectory LaCAM::solve()
 
       dbN_to.push_back(std::make_shared<AStarNode>());
       double distance_to_goal = robots[r]->distance(H->dbN[r]->state_eig, problem.goals[r]);
+      // std::cout << r << ", state: " << H->dbN[r]->state_eig.transpose() << ", goal: " << problem.goals[r].transpose() << std::endl;
       std::cout << "robot " << r << " distance to goal: " << distance_to_goal << std::endl;
     }
     // HL Nodes can be revisitied, fix it?
@@ -269,7 +270,7 @@ MultiRobotTrajectory LaCAM::solve()
       Node_ans->unguided.clear();
       for (size_t p = 0; p < robots.size(); p++)
       {
-        if (robots[0]->distance(Q_to[p], problem.goals[p]) > 0.75)
+        if (robots[0]->distance(Q_to[p], problem.goals[p]) > 0.5)
         {
           double h0 = H->dbN[p]->hScore;
           double h1 = H->parent->dbN[p]->hScore;
@@ -331,7 +332,7 @@ MultiRobotTrajectory LaCAM::solve()
       p++;
     }
   }
-  solution.trimTrajectories(); // remove zeros action-states
+  solution.trimTrajectories(problem.goals, robots[0]->translation_invariance); // remove zeros action-states
   double cost = solution.get_cost();
   auto end_time = std::chrono::steady_clock::now();
   auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();

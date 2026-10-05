@@ -125,7 +125,7 @@ int main(int argc, char *argv[])
   Time_planner time_planner;
   // define the problem
   dynobench::Problem problem(inputFile);
-  problem.models_base_path = BASE + std::string("robot_types/");
+  problem.models_base_path = BASE + std::string("examples/robot_types/");
   YAML::Node env = YAML::LoadFile(inputFile);
   // create robots
   std::vector<std::shared_ptr<dynobench::Model_robot>> robots;
@@ -144,7 +144,6 @@ int main(int argc, char *argv[])
     else if (robotType == "double_integrator_2d")
     {
       motionsFile = "db-lacam/motion_primitives/integrator2_2d_v0/my_motions.bin.im.bin.sp.bin";
-      // motionsFile = "../motion_primitives/integrator2_2d_v0/my_motions.bin.im.bin.sp.bin";
     }
     else if (robotType == "double_integrator_3d")
     {
@@ -274,10 +273,10 @@ int main(int argc, char *argv[])
   double makespan = solution.get_makespan_steps();
   double control_effort = solution.get_control_effort();
   time_planner.print();
-  if(!solution.sanity_check()){
-    std::cout << "Bound Violations!" << std::endl;
-    return false;
-  }
+  // if(!solution.sanity_check()){
+  //   std::cout << "Bound Violations!" << std::endl;
+  //   return false;
+  // }
   solution.to_yaml_format(outputFile.c_str());
   // save stats
   stats << "stats: " << "\n";

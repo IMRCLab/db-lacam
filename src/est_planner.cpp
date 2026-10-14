@@ -40,6 +40,7 @@ void est(const Eigen::VectorXd &state,
 {
   int expansions = 0;
   bool success = false;
+  double est_goal_delta = 0.9; // planner_options.goal_delta
   std::vector<Eigen::VectorXd> expanded_nodes;
   if (!reverse_search)
     planner_options.max_expands = 5000; // limit the expansion for the forward search
@@ -94,7 +95,7 @@ void est(const Eigen::VectorXd &state,
   start_node->came_from = nullptr;
   start_node->is_in_open = true;
   start_node->reaches_goal =
-      (robot->distance(state, problem.goals[robot_id]) <= planner_options.goal_delta);
+      (robot->distance(state, problem.goals[robot_id]) <= est_goal_delta);
   DYNO_CHECK_GEQ(start_node->hScore, 0, "hScore should be positive");
   DYNO_CHECK_LEQ(start_node->hScore, 1e5, "hScore should be bounded");
   T_n->add(start_node);
@@ -179,7 +180,7 @@ void est(const Eigen::VectorXd &state,
     {
       best_distance_to_goal = distance_to_goal;
     }
-    if (distance_to_goal <= planner_options.goal_delta)
+    if (distance_to_goal <= est_goal_delta)
     {
       // std::cout << "State reached the goal" << std::endl;
       status = Terminate_status::SOLVED;
@@ -250,7 +251,7 @@ void est(const Eigen::VectorXd &state,
       // check if the mid state close to goal
       size_t mid_index = traj.states.size() / 2;
       Eigen::VectorXd tmp_mid_state = traj.states.at(mid_index); // middle of the motion
-      if (robot->distance(tmp_mid_state, problem.goals[robot_id]) <= planner_options.goal_delta)
+      if (robot->distance(tmp_mid_state, problem.goals[robot_id]) <= est_goal_delta)
       {
         status = Terminate_status::SOLVED;
         // std::cout << "MID state reached the goal" << std::endl;
@@ -284,7 +285,7 @@ void est(const Eigen::VectorXd &state,
       double hScore = h_fun->h(tmp_node->state_eig);
       double cost_motion = us.size() * robot->ref_dt;
       double gScore = best_node->gScore + cost_motion;
-      T_n->nearestR(tmp_node, (1. - planner_options.alpha) * planner_options.delta, neighbors_n); // R can be customized
+      T_n->nearestR(tmp_node, (1. - planner_options.alpha) * planner_options.delta, neighbors_n); // R can be customized, (1. - planner_options.alpha) * planner_options.delta
       if (!neighbors_n.size())
       {
         // STATE is NOVEL, we add the node
@@ -303,7 +304,6 @@ void est(const Eigen::VectorXd &state,
       }
       else
       {
-
         for (auto &n : neighbors_n)
         {
           // STATE is not novel, we udpate
@@ -325,6 +325,7 @@ void est(const Eigen::VectorXd &state,
             {
               n->is_in_open = true;
               n->handle = open.push(n);
+              T_n->add(n);
             }
           }
         }

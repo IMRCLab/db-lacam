@@ -126,14 +126,6 @@ bool db_PIBT::funcPIBT(size_t robot_id,
                                                                { valid = is_motion_valid(robot_id, traj, M_to); });
     if (!valid)
       continue;
-    // check for collision with moving obstacles - only in refinement stage
-    if (!dyn_obstacles.is_empty())
-    {
-      int start_indx = std::lround(dbN_from.at(robot_id)->gScore / robots.at(robot_id)->ref_dt);
-      valid = is_motion_valid_dyn_obstacles(robot_id, start_indx, traj);
-    }
-    if (!valid)
-      continue;
     // reserve the motion
     Q_to[robot_id] = next_state;
     dbN_to[robot_id]->state_eig = next_state;
@@ -167,6 +159,10 @@ bool db_PIBT::funcPIBT(size_t robot_id,
     }
     if (!success)
       continue;
+    // std::cout << "taken actions" << std::endl;
+    // for (auto a : traj.actions){
+    //   std::cout << a.transpose() << std::endl;
+    // }
     std::cout << "robot " << robot_id << " end: " << next_state.format(dynobench::FMT) << std::endl;
     return true;
   }
@@ -210,50 +206,24 @@ bool db_PIBT::has_inter_robot_collision(dynobench::Trajectory robot_traj, size_t
   const auto &other_traj = other_robot_traj.states;
   fcl::CollisionRequestd request;
   fcl::CollisionResultd result;
-  // check only the first state of the other robot traj. Not for dynamic obstacles
-  if (lazy_check)
+  // state-by-state check
+  size_t N = std::min(ego_traj.size(), other_traj.size());
+  for (size_t s = 0; s < N; ++s)
   {
-    update_obj(other_robot_id, other_traj.front());
-    for (size_t s = 0; s < ego_traj.size(); ++s)
+    result.clear();
+
+    update_obj(robot_id, ego_traj[s], false);
+    update_obj(other_robot_id, other_traj[s], dynamic_obs);
+    
+    fcl::collide(robot_objs[robot_id], robot_objs[other_robot_id], request, result);
+
+    if (result.isCollision())
     {
-      result.clear();
-      time_planner.time_collisions += timed_fun_void([&]
-                                                     {
-      update_obj(robot_id, ego_traj[s]);                                            
-      fcl::collide(robot_objs[robot_id], robot_objs[other_robot_id], request, result); });
-
-      if (result.isCollision())
-      {
-        std::cout << "collision between robots, skip the motion!" << std::endl;
-        return true; // collision detected
-      }
-    }
-  }
-  else
-  {
-    // state-by-state check
-    size_t N = std::min(ego_traj.size(), other_traj.size());
-    // assert(ego_traj.size() == other_traj.size());
-    for (size_t s = 0; s < N; ++s)
-    {
-      result.clear();
-
-      update_obj(robot_id, ego_traj[s], false);
-      update_obj(other_robot_id, other_traj[s], dynamic_obs);
-      if (dynamic_obs)
-      {
-        fcl::collide(robot_objs[robot_id], dyn_objs[other_robot_id], request, result);
-      }
-      else
-      {
-        fcl::collide(robot_objs[robot_id], robot_objs[other_robot_id], request, result);
-      }
-
-      if (result.isCollision())
-      {
-        std::cout << "collision between robots (synchronized mode), skip!" << std::endl;
-        return true;
-      }
+      std::cout << "collision between robots!" << std::endl;
+      // std::cout << "states" << std::endl;
+      // std::cout << ego_traj[s].transpose() << std::endl;
+      // std::cout << other_traj[s].transpose() << std::endl;
+      return true;
     }
   }
   return false;
@@ -270,7 +240,7 @@ bool db_PIBT::is_motion_valid(size_t robot_id,
     // collision with other robot
     if (has_inter_robot_collision(traj, robot_id, M_to[other_robot_id], other_robot_id))
     {
-      std::cout << "invalid motion, skip" << std::endl;
+      std::cout << "invalid motion, colliding with planned robot " << other_robot_id << std::endl;
       return false;
     }
   }

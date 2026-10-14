@@ -13,15 +13,15 @@ db-pibt:
     merged_aabb: false
 db-lacam:
   default:
-    delta_0: 0.9
+    delta_0: 0.5
     goal_delta: 0.5
-    num_primitives_0: 300 
+    num_primitives_0: 50
     alpha: 0.5 
     filter_duplicates: True
     heuristic1: "reverse-search" 
     heuristic1_delta: 0.9
     heuristic1_num_primitives_0: 100 
-    cluster_range: 0.05
+    cluster_range: 0.01 # increase gives decrease in the 'after-clustering' motions' number
     cluster_distance: 0.5 # 0.75, 1.0
     cluster_n: 1
     cluster_shuffle: false

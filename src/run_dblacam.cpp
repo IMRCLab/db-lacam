@@ -43,8 +43,8 @@
 #include "dbcbs_utils.hpp"
 
 namespace fs = std::filesystem;
-#define BASE "../../" // mrmp benchmark dir
-// #define BASE "../../../../" // w.r.t db-LaCAM/build
+// #define BASE "../../" // mrmp benchmark dir
+#define BASE "../../../../" // w.r.t db-LaCAM/build
 using duration = std::chrono::duration<double>;
 using namespace dynoplan;
 
@@ -143,7 +143,7 @@ int main(int argc, char *argv[])
     }
     else if (robotType == "double_integrator_2d")
     {
-      motionsFile = "db-lacam/motion_primitives/integrator2_2d_v0/my_motions.bin.im.bin.sp.bin";
+      motionsFile = "../motion_primitives/integrator2_2d_v0/500/spread/my_motions.bin.im.bin.sp.bin";
     }
     else if (robotType == "double_integrator_3d")
     {
@@ -172,7 +172,7 @@ int main(int argc, char *argv[])
                                  /*check_cols*/ true, seed);
       if (type == "double_integrator_2d")
         check_vel_magnitude = true;
-      filter_motions(robot, type, planner_options.delta, /*filter duplicates*/true, /*alpha*/0.5,
+      filter_motions(robot, type, planner_options.delta, /*filter duplicates*/false, /*alpha*/0.5,
           planner_options.max_motions, check_vel_magnitude, robot_motions[type]);
       check_vel_magnitude = false;
     }
@@ -211,6 +211,7 @@ int main(int argc, char *argv[])
     problem.starts = problem_original.starts;
     problem.goals = problem_original.goals;
   }
+  // return 0;
   // for LaCam
   std::vector<std::shared_ptr<AStarNode>> dbN_start;
   std::vector<double> lower_bound_costs;
@@ -277,6 +278,7 @@ int main(int argc, char *argv[])
   //   std::cout << "Bound Violations!" << std::endl;
   //   return false;
   // }
+  // lacam.export_node_expansion();
   solution.to_yaml_format(outputFile.c_str());
   // save stats
   stats << "stats: " << "\n";

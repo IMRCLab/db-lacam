@@ -172,7 +172,7 @@ int main(int argc, char *argv[])
                                  planner_options.max_motions, /*cut_actions*/ false,
                                  /*shuffle*/ true,
                                  /*check_cols*/ true, seed);
-      if (type == "double_integrator_2d")
+      if (type == "double_integrator_2d" || type == "single_integrator_2d")
         check_vel_magnitude = true;
       filter_motions(robot, type, planner_options.delta, /*filter duplicates*/false, /*alpha*/0.5,
           planner_options.max_motions, check_vel_magnitude, robot_motions[type]);
@@ -231,6 +231,8 @@ int main(int argc, char *argv[])
         for (size_t j = 0; j < std::min(motions.size(), planner_options.max_motions);
             ++j)
         {
+          if (motions.at(j).disabled)
+            continue;
           T_m->add(&motions.at(j));
         } });
     expanders.emplace_back(robots[i].get(), T_m, planner_options.alpha * planner_options.delta, true);

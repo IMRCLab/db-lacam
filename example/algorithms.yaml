@@ -43,6 +43,7 @@ db-lacam:
     refine_solution: false
     merged_aabb: false
   double_integrator_2d:
+    heuristic1_distance: 1.0
     delta_0: 0.5
     goal_delta: 0.5
     num_primitives_0: 500

@@ -22,7 +22,7 @@ db-lacam:
     heuristic1: "reverse-search" 
     heuristic1_delta: 0.5
     heuristic1_num_primitives_0: 500 
-    heuristic1_distance: 0.5
+    heuristic1_distance: 1.0
     cluster_range: 0.05 
     cluster_distance: 0.5 
     cluster_n: 1
@@ -35,7 +35,7 @@ db-lacam:
     heuristic1: "reverse-search" 
     heuristic1_delta: 0.5
     heuristic1_num_primitives_0: 500 
-    heuristic1_distance: 1.0
+    heuristic1_distance: 0.5
     cluster_range: 0.05 
     cluster_distance: 0.2
     cluster_n: 1
@@ -50,7 +50,21 @@ db-lacam:
     filter_duplicates: True
     heuristic1: "reverse-search" 
     heuristic1_delta: 0.5
+    heuristic1_distance: 0.5
     heuristic1_num_primitives_0: 500 
+    cluster_range: 0.05 
+    cluster_distance: 0.5
+    cluster_n: 1
+  double_integrator_3d:
+    delta_0: 0.9
+    goal_delta: 0.5
+    num_primitives_0: 300
+    alpha: 0.5 
+    filter_duplicates: True
+    heuristic1: "reverse-search" 
+    heuristic1_delta: 0.9
+    heuristic1_num_primitives_0: 300 
+    heuristic1_distance: 1.0
     cluster_range: 0.05 
     cluster_distance: 0.5
     cluster_n: 1

@@ -2,4 +2,5 @@ motion_primitives/
 results/
 build/
 deps/
+debug/
 .github/

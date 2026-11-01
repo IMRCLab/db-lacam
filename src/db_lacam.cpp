@@ -431,16 +431,13 @@ void LaCAM::get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> d
 
     if (last_state_h == -1.0)
     {
-      
-      est(traj.goal, problem, planner_options, robots[robot_id], robot_id, last_state_h,
-          heuristics_nn[robot_id], nullptr, *heuristics[robot_id], /*reverse search*/ false);
-      
-      if (last_state_h == -1.0)
-      {
+      if(heuristics_nn[robot_id]->size() > 5)
+        est(traj.goal, problem, planner_options, robots[robot_id], robot_id, last_state_h,
+            heuristics_nn[robot_id], nullptr, *heuristics[robot_id], /*reverse search*/ false);
+      else  
         last_state_h = robots[robot_id]->distance(traj.goal, problem.goals[robot_id]);
-        continue;
-      }
     }
+
     tmp_data.last_state_h.push_back(last_state_h);
     tmp_data.trajectories.push_back(traj);
     tmp_data.last_state_g.push_back(traj_wrap.last_state_g);

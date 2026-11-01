@@ -78,9 +78,9 @@ def plot_expanded_trajs(
 
     # Draw obstacles
     for obs in env["environment"].get("obstacles", []):
-        if obs["type"] == "box":
+        if obs["shape"]["type"] == "box":
             center = obs["center"]
-            size = obs["size"]
+            size = obs["shape"]["size"]
 
             bottom_left = [
                 center[0] - size[0] / 2,

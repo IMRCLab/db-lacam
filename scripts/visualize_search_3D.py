@@ -1,155 +1,237 @@
-import numpy as np
-
-# visualization related
-import meshcat
-import meshcat.geometry as g
-import meshcat.transformations as tf
-from meshcat.animation import Animation
 import argparse
 import yaml
-import time
-import os
-from pathlib import Path
-import itertools
+import matplotlib.pyplot as plt
 
-def rgb_to_hex(rgb):
-    """Converts RGB color tuple to hex color code."""
-    return '#{:02x}{:02x}{:02x}'.format(int(rgb[0]), int(rgb[1]), int(rgb[2]))
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+from itertools import product
 
-# a simple color cycle (extend if you expect many trajs)
-COLOR_CYCLE = [
-    0xFF0000,  # red
-    0x00FF00,  # green
-    0x0000FF,  # blue
-    0xFF00FF,  # magenta
-    0x00FFFF,  # cyan
-    0xFFFF00,  # yellow
-    0xFFA500,  # orange
-    0x800080,  # purple
-]
 
-def visualize(env_file, trajs_files, result_file=None, show_cost=False):
-    vis = meshcat.Visualizer()
-    anim = Animation()
+def plot_box(ax, center, size):
+    """Draw a 3D box obstacle."""
+    cx, cy, cz = center
+    sx, sy, sz = size
 
-    res = vis.static_html()
+    vertices = [
+        [cx - sx/2, cy - sy/2, cz - sz/2],
+        [cx + sx/2, cy - sy/2, cz - sz/2],
+        [cx + sx/2, cy + sy/2, cz - sz/2],
+        [cx - sx/2, cy + sy/2, cz - sz/2],
+        [cx - sx/2, cy - sy/2, cz + sz/2],
+        [cx + sx/2, cy - sy/2, cz + sz/2],
+        [cx + sx/2, cy + sy/2, cz + sz/2],
+        [cx - sx/2, cy + sy/2, cz + sz/2],
+    ]
 
-    vis["/Cameras/default"].set_transform(
-        tf.translation_matrix([0, 0, 0]).dot(
-            tf.euler_matrix(0, np.radians(-30), np.radians(90))))
-    
-    vis["/Cameras/default/rotated/<object>"].set_transform(
-        tf.translation_matrix([1, 0, 0]))
+    faces = [
+        [vertices[i] for i in [0, 1, 2, 3]],
+        [vertices[i] for i in [4, 5, 6, 7]],
+        [vertices[i] for i in [0, 1, 5, 4]],
+        [vertices[i] for i in [2, 3, 7, 6]],
+        [vertices[i] for i in [1, 2, 6, 5]],
+        [vertices[i] for i in [0, 3, 7, 4]],
+    ]
 
-    # name of the saved file
-    file_name = "octomap_exp_" + os.path.basename(env_file).split('.')[0] + ".html"
+    box = Poly3DCollection(
+        faces,
+        facecolors="black",
+        edgecolors="black",
+        alpha=0.25
+    )
 
-    # get environment info
-    with open(env_file) as f:
-        data = yaml.load(f, Loader=yaml.FullLoader)
-    
-    obstacles = data["environment"]["obstacles"]
-    for k, obs in enumerate(obstacles):
-        center = obs["center"]
-        size = obs["size"]
-        obs_type = obs["type"]
-        if (obs_type == 'octomap'):
-            octomap_stl = obs["octomap_stl"]
-            vis[f"Obstacle{k}"].set_object(
-                g.StlMeshGeometry.from_file(octomap_stl),
-                g.MeshLambertMaterial(opacity=0.4, color=0xFFFFFF)) 
-        elif (obs_type == 'box'):
-            vis[f"Obstacle{k}"].set_object(g.Mesh(g.Box(size)))
-            vis[f"Obstacle{k}"].set_transform(tf.translation_matrix(center))
-        else:
-            print("Unknown Obstacle type!")
+    ax.add_collection3d(box)
 
-    # plot each traj file with a different color
-    traj_idx = 0
-    for traj_file_idx, trajs_file in enumerate(trajs_files):
-        with open(trajs_file) as f:
-            expanded_trajs = yaml.load(f, Loader=yaml.FullLoader)
 
-        color = COLOR_CYCLE[traj_file_idx % len(COLOR_CYCLE)]
-        step = 1
-        for i in range(0, len(expanded_trajs["trajs"]), step):
-            traj = []
-            for s in expanded_trajs["trajs"][i]["states"]:
-                traj.append(s)
-            start = [traj[0][0], traj[0][1], traj[0][2]]
-            position = [[sublist[j] for sublist in traj] for j in range(3)]
-            position = np.array(position)
-            vis[f"expanded_trajs_{traj_file_idx}_{traj_idx}"].set_object(
-                g.Line(g.PointsGeometry(position),
-                       g.LineBasicMaterial(color=color)))
-            vis[f"sphere_{traj_file_idx}_{traj_idx}"].set_object(
-                g.Mesh(g.Sphere(0.01), g.MeshLambertMaterial(color=color)))
-            vis[f"sphere_{traj_file_idx}_{traj_idx}"].set_transform(
-                tf.translation_matrix(start))
+def set_axes_equal(ax):
+    """Set equal scaling for all three axes."""
+    x_limits = ax.get_xlim3d()
+    y_limits = ax.get_ylim3d()
+    z_limits = ax.get_zlim3d()
 
-            traj_idx += 1
-    # start, goal states
-    robots = data["robots"]
-    for r in range(len(robots)):
-        start = robots[r]["start"][:3]
-        goal = robots[r]["goal"][:3]
-        vis[f"sphere_start_{r}"].set_object(
-            g.Mesh(g.Sphere(0.03), g.MeshLambertMaterial(color=0x00FF3300)))  # red
-        vis[f"sphere_start_{r}"].set_transform(tf.translation_matrix(start))
-        vis[f"sphere_goal_{r}"].set_object(
-            g.Mesh(g.Sphere(0.03), g.MeshLambertMaterial(color=0x00FF3300)))  # red
-        vis[f"sphere_goal_{r}"].set_transform(tf.translation_matrix(goal))
+    x_range = abs(x_limits[1] - x_limits[0])
+    y_range = abs(y_limits[1] - y_limits[0])
+    z_range = abs(z_limits[1] - z_limits[0])
 
-    # get results
-    if result_file is not None:
-        with open(result_file) as res_file:
-            result = yaml.load(res_file, Loader=yaml.FullLoader)
-        states = []
-        name_robot = 0
-        max_k = 0
-        for i in range(len(result["result"])):
-            state = []
-            for s in result["result"][i]["states"]:
-                state.append(s)
-            max_k = max(max_k, len(state))
-            states.append(state)
-            position = [[sublist[j] for sublist in state] for j in range(3)]
-            position = np.array(position)
-            vis["Quadrotor" + str(name_robot)].set_object(
-                g.StlMeshGeometry.from_file('../meshes/cf2_assembly.stl'),
-                g.MeshLambertMaterial(color=0x0000FF)) # blue
-            vis["trajectory" + str(name_robot)].set_object(
-                g.Line(g.PointsGeometry(position),
-                       g.LineBasicMaterial(color=0x00FF00))) # green
-            name_robot += 1
-        for k in range(max_k):
-            for l in range(len(states)): # for each robot
-                with anim.at_frame(vis, 10*k) as frame:
-                    if k >= len(states[l]):
-                        robot_state = states[l][-1]
-                    else:
-                        robot_state = states[l][k]
-                    frame["Quadrotor" + str(l)].set_transform(
-                        tf.translation_matrix(robot_state[0:3]).dot(
-                            tf.quaternion_matrix(np.array([1,0,0,0]))))
-            time.sleep(0.1)
+    x_middle = sum(x_limits) / 2
+    y_middle = sum(y_limits) / 2
+    z_middle = sum(z_limits) / 2
 
-    result_folder = Path(trajs_files[0]).resolve().parent
-    vis.set_animation(anim)
-    res = vis.static_html()
-    with open(result_folder / file_name, "w") as f:
-        f.write(res)
-            
+    radius = 0.5 * max(x_range, y_range, z_range)
+
+    ax.set_xlim3d([x_middle - radius, x_middle + radius])
+    ax.set_ylim3d([y_middle - radius, y_middle + radius])
+    ax.set_zlim3d([z_middle - radius, z_middle + radius])
+
+
+def plot_expanded_trajs(
+    filename_env,
+    filenames_trajs,
+    filename_result=None,
+    filename_video=None
+):
+    with open(filename_env) as env_file:
+        env = yaml.safe_load(env_file)
+
+    fig = plt.figure(figsize=(10, 8))
+    ax = fig.add_subplot(111, projection="3d")
+
+    # Environment boundaries
+    env_min = env["environment"]["min"]
+    env_max = env["environment"]["max"]
+
+    ax.set_xlim(env_min[0], env_max[0])
+    ax.set_ylim(env_min[1], env_max[1])
+    ax.set_zlim(env_min[2], env_max[2])
+
+    # Draw obstacles
+    for obs in env["environment"].get("obstacles", []):
+        if obs["shape"]["type"] == "box":
+            plot_box(
+                ax,
+                obs["center"],
+                obs["shape"]["size"]
+            )
+
+    # Coordinate system
+    ax.set_xlabel("x [m]")
+    ax.set_ylabel("y [m]")
+    ax.set_zlabel("z [m]")
+
+    ax.set_title("Expanded 3D Trajectories")
+
+    # Trajectory colors
+    colors = plt.cm.tab10.colors
+    starts = []
+
+    # Plot trajectories
+    for file_idx, filename_trajs in enumerate(filenames_trajs):
+
+        with open(filename_trajs) as motions_file:
+            motions = yaml.safe_load(motions_file)
+
+        trajs = motions["trajs"]
+        color = colors[file_idx % len(colors)]
+
+        for traj_idx, traj in enumerate(trajs):
+            states = traj["states"]
+
+            X = [s[0] for s in states]
+            Y = [s[1] for s in states]
+            Z = [s[2] for s in states]
+
+            starts.append([X[0], Y[0], Z[0]])
+
+            ax.plot(
+                X, Y, Z,
+                color=color,
+                alpha=0.7,
+                label=filename_trajs if traj_idx == 0 else None
+            )
+
+    # Start and goal positions
+    robots = env["robots"]
+
+    for robot_idx, robot in enumerate(robots):
+        start = robot["start"]
+        goal = robot["goal"]
+
+        color = colors[robot_idx % len(colors)]
+
+        ax.scatter(
+            start[0], start[1], start[2],
+            color=color,
+            marker="o",
+            s=60,
+            zorder=6
+        )
+
+        ax.scatter(
+            goal[0], goal[1], goal[2],
+            color=color,
+            marker="x",
+            s=70,
+            linewidths=2,
+            zorder=6
+        )
+
+    # Final solution
+    if filename_result is not None:
+        with open(filename_result, "r") as f:
+            data_sol = yaml.safe_load(f)
+
+        result = data_sol["result"][1]
+
+        states = result["states"]
+
+        x_sol = [s[0] for s in states]
+        y_sol = [s[1] for s in states]
+        z_sol = [s[2] for s in states]
+
+        ax.plot(
+            x_sol,
+            y_sol,
+            z_sol,
+            color="orange",
+            linewidth=2.5,
+            label="Final solution"
+        )
+
+    # Starting positions of expanded trajectories
+    if starts:
+        ax.scatter(
+            [s[0] for s in starts],
+            [s[1] for s in starts],
+            [s[2] for s in starts],
+            s=5,
+            color="black",
+            zorder=3
+        )
+
+    # Equal axis scaling
+    set_axes_equal(ax)
+
+    ax.legend(loc="upper left", fontsize=8)
+
+    fig.tight_layout()
+
+    if filename_video is None:
+        plt.show()
+    else:
+        plt.savefig(filename_video, dpi=200, bbox_inches="tight")
+
+    plt.close(fig)
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('env', help="input file containing map")
-    parser.add_argument('--trajs', nargs='+', help="one or more files with expanded trajectories during the search")
-    parser.add_argument('--result', help="output file containing solution")
-    parser.add_argument('--show_cost', action='store_true', help="indicate if cost vis is needed")
+
+    parser.add_argument("env", help="Input file containing the map")
+
+    parser.add_argument(
+        "--trajs",
+        nargs="+",
+        required=True,
+        help="One or more files containing expanded trajectories"
+    )
+
+    parser.add_argument(
+        "--result",
+        help="File with the final solution"
+    )
+
+    parser.add_argument(
+        "--video",
+        help="Output image filename"
+    )
 
     args = parser.parse_args()
 
-    visualize(args.env, args.trajs, args.result, args.show_cost)
+    plot_expanded_trajs(
+        args.env,
+        args.trajs,
+        args.result,
+        args.video
+    )
+
 
 if __name__ == "__main__":
     main()

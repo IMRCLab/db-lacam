@@ -123,7 +123,7 @@ MultiRobotTrajectory LaCAM::solve()
   while (!OPEN.empty() && !is_expired(timelimit))
   {
     ++loop_cnt;
-    if (loop_cnt > 2000)
+    if (loop_cnt > 5000)
     {
       if (ANYTIME)
         break;
@@ -202,7 +202,6 @@ MultiRobotTrajectory LaCAM::solve()
 
       dbN_to.push_back(std::make_shared<AStarNode>());
       double distance_to_goal = robots[r]->distance(H->dbN[r]->state_eig, problem.goals[r]);
-      // std::cout << r << ", state: " << H->dbN[r]->state_eig.transpose() << ", goal: " << problem.goals[r].transpose() << std::endl;
       std::cout << "robot " << r << " distance to goal: " << distance_to_goal << std::endl;
     }
     // HL Nodes can be revisitied, fix it?
@@ -359,14 +358,18 @@ void LaCAM::get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> d
   tmp_traj_wrapper = fake_traj_wrappers[robot_id];
   // i. expand applicable motions
   expanders[robot_id].expand_lazy(db_node->state_eig, tmp_lazy_trajs);
-  // std::cout << "tmp lazy traj size: " << tmp_lazy_trajs.size() << std::endl;
   auto ff = validity_checker(robots[robot_id]);
   int num_valid_states = -1;
   double gScore = 0;
   double min_h = std::numeric_limits<double>::max();
   double max_h = std::numeric_limits<double>::lowest();
+  size_t max_T = tmp_lazy_trajs.size();
+  // accelerate the search
+  if(robots[0]->name == "Integrator2_2d" || robots[0]->name == "Integrator2_3d"){
+    max_T = std::min(static_cast<size_t>(10), max_T);
+  }
 
-  for (size_t j = 0; j < tmp_lazy_trajs.size(); j++) // 3 for debugging
+  for (size_t j = 0; j < max_T; j++) // 3 for debugging
   {
     auto &lazy_traj = tmp_lazy_trajs[j];
     tmp_traj_wrapper.set_size(lazy_traj.motion->traj.states.size());
@@ -458,7 +461,7 @@ void LaCAM::get_applicable_trajs_precise_exhaustive(std::shared_ptr<AStarNode> d
 
   // std::cout << "robot " << robot_id << " has motions (after clustering) :" << robot_data.trajectories.size() << std::endl;
   // for(auto t : robot_data.trajectories){
-  //   expanded_trajs[robot_id].push_back(t);
+    // expanded_trajs[robot_id].push_back(t);
   // }
 }
 

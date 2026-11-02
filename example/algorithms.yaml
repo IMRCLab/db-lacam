@@ -63,8 +63,8 @@ db-lacam:
     filter_duplicates: True
     heuristic1: "reverse-search" 
     heuristic1_delta: 0.9
-    heuristic1_num_primitives_0: 300 
-    heuristic1_distance: 1.0
+    heuristic1_num_primitives_0: 100 
+    heuristic1_distance: 0.5
     cluster_range: 0.05 
-    cluster_distance: 0.5
+    cluster_distance: 0.5 # 1.
     cluster_n: 1
